@@ -30,7 +30,7 @@ Sub-phase Track: N/A
 | governance/THEO_GROUNDING_CONFORMANCE_STANDARD.md | §5 | "Rule Anchor Table" | this table |
 | governance/CLAUDE_CODE_THEO_BACKEND_GOVERNOR_STANDARD.md | §3 | "Never-Guess" | §3 — v4 mechanism + gpt-5 call mirrored from deployed handlers, not invented |
 | governance/CLAUDE_CODE_THEO_BACKEND_GOVERNOR_STANDARD.md | §4 | "Schema Reality Lock" | §3 — reads/writes only the deployed D1 dottie_* tables |
-| governance/THEO_GOLDEN_HANDLER_STANDARD.md | §4 | "EXACT mirror" | §5 / §CHANGESET — v4 mechanism EXACT-mirrors deployed theo_message_stream; the gpt-5 call EXACT-mirrors deployed dottie_ask |
+| governance/THEO_GOLDEN_HANDLER_STANDARD.md | §4 | "EXACT mirror" | §5 / §CHANGESET — the v4 mechanism + shared helpers EXACT-mirror deployed theo_message_stream; the gpt-5 call is an ALLOWED DELTA (endpoint/scope/body from dottie_ask, error-envelope from theo_message_stream — byte-identical to neither) |
 | governance/THEO_GOLDEN_HANDLER_STANDARD.md | §2 | "deployed `function.json` file as the canonical Primary Reference" | §5 — two deployed primary references inlined (v4 has NO function.json — registration is in-code; noted §2) |
 | governance/THEO_GOLDEN_HANDLER_STANDARD.md | §5.1 | "Structural Mirror Table" | §5 — the mirror table |
 | governance/THEO_EXECUTION_ORCHESTRATION_STANDARD.md | §1D | "ordered, non-skippable" | §9 — Codex → sidecar infra + deploy → curls |
