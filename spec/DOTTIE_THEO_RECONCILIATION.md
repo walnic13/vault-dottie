@@ -56,6 +56,11 @@ The FE calls the `dottie_*` routes below; the handlers are deployed to func-dott
 | Video fetch (`find_video`) | ❌ not wired | REUSE func-theo-tools `theo_find_video` |
 | `sigma_review_agent_stream` | ⛔ N/A | Sigma-specific |
 
+## I. FE render parity — ✅ LIVE (Markdown-Lists package, deployed 2026-08-02)
+| Concern | Status | Disposition |
+| --- | --- | --- |
+| Markdown list markers standalone | ✅ FIXED (dev SWA `brave-dune-0a97c7d03`) | `src/theo/lib/markdown.tsx` `Formatted` now asserts `listStyleType` (`disc`/`decimal`) + `listStylePosition: "outside"` on `ul`/`ol`. Tailwind Preflight (`@tailwind base`) resets `list-style: none`; the byte-verbatim transplant relied on ambient host CSS to restore markers, which standalone Dottie lacks — so enumerations rendered marker-less. The renderer now supplies its own markers, rendering identically standalone or mounted. Render-parity restoration over VA-T1, not a redesign. **Paired with the backend Format-Directive package** (makes gpt-5 *emit* rich Markdown); both are required for full Theo-level richness. Theo carries the same latent standalone gap (masked by its VO mount) — a separate vault-theo package if ever needed. |
+
 ## Summary
 - **Live:** 4 core-chat endpoints + web-search grounding + conversation-management (rename/delete/star — ConvMgmt) + people roster (`dottie_list_people`) + attachments (create/finalize/delete/list + `dottie-content` blob) + **artifacts persistence (upsert/list/get + versions + `dottie-content` blob — Artifacts packages, FE un-gated)**. FE gate/hide package deployed (Projects nav hidden; voice controls gated) so nothing errors on click; the Artifacts nav is now un-hidden (`artifactsPersistence = true`).
 - **Missing & errors today:** voice (2), image/video tools.
@@ -63,4 +68,4 @@ The FE calls the `dottie_*` routes below; the handlers are deployed to func-dott
 
 **Honest status: core chat + grounding + conversation-management + people roster + attachments + artifacts persistence are LIVE; only voice + image/video are still to build.** Closing the rest is a sequenced set of governed backend packages (each `dottie_*` mirroring the Theo original), tracked here. The FE controls for still-missing features stay **gated/hidden** until their backend lands, so nothing errors.
 
-_Reconciled 2026-08-01 by direct FE-gateway grep vs deployed func-dottie functions; conv-management moved to LIVE 2026-08-01 after the ConvMgmt package deploy + golden curls._
+_Reconciled 2026-08-01 by direct FE-gateway grep vs deployed func-dottie functions; conv-management moved to LIVE 2026-08-01 after the ConvMgmt package deploy + golden curls. §I FE render-parity (Markdown list markers) added 2026-08-02 after the Markdown-Lists FE package deploy + bundle verification._
