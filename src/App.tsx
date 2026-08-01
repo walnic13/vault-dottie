@@ -1,31 +1,28 @@
 import { useEffect } from "react";
 import TheoSurface from "./theo/TheoSurface";
-import { theoClient } from "./theo/services/theoClient";
 import { entraAuth } from "./services/entraAuth";
 
-// Dottie — STANDALONE root. Wires the live gateway to its OWN Entra/MSAL session so Dottie works as a
-// standalone SWA (not just mocked): the token provider signs the user in (redirect in prod, popup in dev)
-// and every gateway call carries the api://4e1a1e31…/access_as_user bearer. The base URLs (func-dottie /
-// func-dottie-stream) are baked from VITE_FUNCTIONS_URL / VITE_STREAM_FUNCTIONS_URL at build; when neither
-// is set (bare local dev) the gateway stays on the mock.
+// Dottie — STANDALONE root. Copies Theo's exact contract: the token flows INTO TheoSurface via the
+// `getAccessToken` prop, and TheoSurface configures its OWN gateway from it (see TheoSurface useEffect).
+// Configuring the gateway from here instead would target a different module-federation instance and be
+// overwritten by TheoSurface's own configureGateway({getAccessToken: null}) — the cause of the 401s.
+// The base URLs (func-dottie / func-dottie-stream) are baked from VITE_FUNCTIONS_URL /
+// VITE_STREAM_FUNCTIONS_URL; with neither set (bare local dev) the gateway stays on the mock.
 //
-// When Dottie is MOUNTED in Vault Origin, the host imports the federated `dottieApp/DottieSurface`
-// (= TheoSurface) directly and configures the gateway with the SHELL's token — so this App wrapper (and its
-// self-auth) runs only in the standalone build. TheoSurface itself stays auth-agnostic.
-theoClient.configureGateway({
-  getAccessToken: async () => {
-    await entraAuth.initialize();
-    return entraAuth.getAccessToken(true);
-  },
-});
+// When Dottie is MOUNTED in Vault Origin, the host renders the federated DottieSurface and passes ITS
+// shell token as this same prop — so this standalone wrapper's self-auth only runs standalone.
+const getAccessToken = async (): Promise<string | null> => {
+  await entraAuth.initialize();
+  return entraAuth.getAccessToken(true);
+};
 
 export default function App() {
   useEffect(() => {
-    // Kick sign-in early (redirect/popup) so a fresh visit authenticates before the first data load.
+    // Prime sign-in early (redirect/popup) so a fresh visit authenticates before the first data load.
     void (async () => {
       await entraAuth.initialize();
       await entraAuth.getAccessToken(true);
     })();
   }, []);
-  return <TheoSurface />;
+  return <TheoSurface getAccessToken={getAccessToken} />;
 }
