@@ -26,7 +26,7 @@ The FE calls the `dottie_*` routes below; the handlers are deployed to func-dott
 ## C. People / roster — ✅ backend LIVE (ListPeople package, deployed 2026-08-01)
 | FE call (now) | Backend | Status |
 | --- | --- | --- |
-| `dottie_list_people` (GET) | ListPeople package (Graph OBO; func-dottie) | ✅ backend LIVE (golden curls green: `200` roster of 9, self first; `401` unauth). FE un-gate (`DOTTIE_CAPABILITIES.people`) lands with gate/hide. |
+| `dottie_list_people` (GET) | ListPeople package (Graph OBO; func-dottie) | ✅ LIVE end-to-end (golden curls green: `200` roster of 9, self first; `401` unauth). FE un-gated (`DOTTIE_CAPABILITIES.people = true`) + deployed to dev SWA 2026-08-01. |
 
 ## D. Attachments — ❌ MISSING (5)
 | FE call | What breaks | Disposition |
@@ -57,7 +57,7 @@ The FE calls the `dottie_*` routes below; the handlers are deployed to func-dott
 | `sigma_review_agent_stream` | ⛔ N/A | Sigma-specific |
 
 ## Summary
-- **Live:** 4 core-chat endpoints + web-search grounding + conversation-management (rename/delete/star — ConvMgmt package) + people roster (`dottie_list_people` — ListPeople package; FE un-gate lands with gate/hide).
+- **Live:** 4 core-chat endpoints + web-search grounding + conversation-management (rename/delete/star — ConvMgmt package) + people roster (`dottie_list_people` — ListPeople package, FE un-gated). FE gate/hide package deployed (Projects/Artifacts nav hidden; attachments/voice controls gated) so nothing errors on click.
 - **Missing & errors today:** attachments (5), artifacts-persist (3), voice (2), image/video tools.
 - **DECIDED:** Projects (14) + publish/SPW → HIDE in the UI (revisit later). Everything else → BUILD every missing `dottie_*` backend now, replicating from Theo (Walter 2026-08-01).
 
