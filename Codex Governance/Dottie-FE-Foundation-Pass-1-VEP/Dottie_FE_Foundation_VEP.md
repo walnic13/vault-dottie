@@ -2,6 +2,13 @@
 
 Formalizes, under the frontend governance regime, the Dottie frontend already deployed to the dev SWA (`brave-dune-0a97c7d03`). Dottie's FE is a **byte-verbatim transplant of Theo's deployed, already-governed frontend** (`vault-theo/src/theo/*` — all ~35 components + the Tailwind/TS/Vite/module-federation stack), reproduced faithfully (Governor §4 "reproduce the reference surface, do not redesign"), with a small, enumerated **Dottie delta**: (1) identity rebrand via the `swapBlock` single-point-of-truth (ASSISTANT_NAME → "Dottie", MODEL → gpt-5, Dottie persona), (2) standalone Entra/MSAL auth (`App.tsx` + `entraAuth.ts`) wiring the live gateway via TheoSurface's `getAccessToken` prop, (3) the gateway repointed to Dottie's `dottie_*` endpoints + an OpenAI-shape SSE parse branch, (4) the module-federation remote renamed `dottieApp/DottieSurface`. This VEP grounds and CCT-locks that delta so Codex reviews the standing base and everything after sits on a reviewed foundation. **Retroactive** (the delta is already deployed — Walter directed formalization without reverting); the Gap Disclosure records the follow-on governed packages (markdown/citation fidelity, Responses-API grounding, image/video via the shared tools, VO mount).
 
+## Repair note (rev-2 — addresses Codex REJECT T20 / T13 / T13-T22 / T13)
+Four fixes, all made in the LIVE code (not just the doc) + redeployed:
+- **T20 (CCT incomplete):** the `gateway.live.ts` and `entraAuth.ts` CCT rows now list the COMPLETE literal exported surfaces (no ellipsis/summary).
+- **T13 (stale comments contradict runtime):** `swapBlock.ts` header (was "Theo"/"claude-sonnet-4-6"), `vite.config.ts` (was `theoApp/TheoSurface`/vault-theo-dev), and `gateway.live.ts` header + stream comment (was Theo gateway / `theo_message_stream` / `vaultgpt-func-stream`) corrected to the Dottie runtime; error strings say "Dottie gateway".
+- **T13/T22 (request shape):** the buffered + stream bodies now send **`max_completion_tokens`** (was `max_tokens`), matching `spec/DOTTIE_API_SPEC.md` + the D2/D2-Stream handlers — so the "repointed to the Dottie contract" claim is now true.
+- **T13 (live mis-call):** `listProjectConversations` returns `[]` on the live path (Projects hidden; the `dottie_list_conversations` contract has no `projectId` filter — it no longer silently returns the general list under a project context).
+
 ## Grounding Conformance Receipt
 Role: Claude Code
 Turn Type: Pass 1 — Frontend Verified Evidence Pack
@@ -57,9 +64,9 @@ No ChatGPT advisory cited. No `reporting_*` change. This is a frontend package (
 | Component (file) | Prop / input interface (TS) | Visual authority (VA-id) | Data / contract dependency |
 | ---------------- | --------------------------- | ------------------------ | -------------------------- |
 | `src/App.tsx` (standalone root) | `() => JSX.Element` (no props); wires `getAccessToken: () => Promise<string \| null>` (from `entraAuth`) INTO `<TheoSurface getAccessToken=…/>` | VA-T1 (no visual surface — root wrapper) | `entraAuth.getAccessToken`; `TheoSurface` prop contract (`getAccessToken?`) |
-| `src/services/entraAuth.ts` (MSAL) | `entraAuth.initialize(): Promise<void>`; `getAccessToken(allowInteractive?: boolean): Promise<string \| null>`; reads `VITE_ENTRA_CLIENT_ID/TENANT_ID/API_SCOPE` | VA-T1 (no visual surface) | Entra/MSAL (`@azure/msal-browser`); scope `api://4e1a1e31…/access_as_user`; copied byte-faithful from `vault-origin/src/services/entraAuth.ts` |
-| `src/theo/swapBlock.ts` (identity) | consts: `ASSISTANT_NAME="Dottie"`, `MODEL="gpt-5"`, `MODEL_LABEL="GPT‑5"`, `BASE_PROMPT` (Dottie persona), `ARTIFACT_RULES` (unchanged) | VA-T1 (identity text only; layout unchanged) | consumed by `prompt.ts buildSystemPrompt`, `TheoMain`, `ChatView` (assistantName), model selector label |
-| `src/theo/services/gateway.live.ts` (repoint) | unchanged exported surface (`sendMessageStream`, `listConversations`, `getConversation`, `sendMessage`, `configureGateway`, …) | VA-T1 (no visual surface) | Dottie backend: `dottie_message_stream`/`dottie_message`/`dottie_list_conversations`/`dottie_get_conversation` (per `spec/DOTTIE_API_SPEC.md`); adds OpenAI-chunk parse branch (`choices[0].delta.content`) beside the Anthropic branch |
+| `src/services/entraAuth.ts` (MSAL) | Exported singleton `entraAuth: EntraAuthService`. COMPLETE public method surface: `initialize(): Promise<void>`; `acquireTokenInteractive(): Promise<string \| null>`; `acquireTokenSsoSilent(): Promise<string \| null>`; `getAccessToken(allowInteractive?: boolean): Promise<string \| null>`; `isEnabled(): boolean`; `getCurrentUserId(): Promise<{ userId: string; username: string } \| null>`; `getCachedUserIdSync(): string \| null`; `login(): Promise<void>`. Reads `VITE_ENTRA_CLIENT_ID/TENANT_ID/AUTHORITY/API_SCOPE`. | VA-T1 (no visual surface) | Entra/MSAL (`@azure/msal-browser`); scope `api://4e1a1e31…/access_as_user`; copied byte-faithful from `vault-origin/src/services/entraAuth.ts` |
+| `src/theo/swapBlock.ts` (identity) | consts: `ASSISTANT_NAME="Dottie"`, `WORKSPACE_NAME="Vault Group"`, `PRODUCT_NAME="Origin"`, `USER_NAME=""`, `MODEL="gpt-5"`, `MODEL_LABEL="GPT‑5"`, `BASE_PROMPT` (Dottie persona), `ARTIFACT_RULES`, `SIGMA_REVIEW_PERSONA` (unchanged). Header comment CORRECTED to the Dottie runtime (was stale Theo/claude — T13 fix). | VA-T1 (identity text only; layout unchanged) | consumed by `prompt.ts buildSystemPrompt`, `TheoMain`, `ChatView` (assistantName), model selector label |
+| `src/theo/services/gateway.live.ts` (repoint) | COMPLETE exported surface (verbatim, unchanged signatures): `configureGateway`, `attachmentsAvailable`, `voiceAvailable`, `transcribeAudio`, `synthesizeSpeech`, `sendMessage`, `createAttachmentUpload`, `uploadToBlob`, `finalizeAttachment`, `deleteAttachment`, `listConversations`, `listProjectConversations`, `getConversation`, `renameConversation`, `deleteConversation`, `listConversationAttachments`, `listProjects`, `setProjectVisibility`, `shareProject`, `unshareProject`, `listProjectMembers`, `publishConversation`, `unpublishConversation`, `listPublishedProjectConversations`, `listPeople`, `createProject`, `getOrCreateReviewProject`, `updateProjectInstructions`, `updateProjectDescription`, `renameProject`, `deleteProject`, `listProjectKnowledge`, `addProjectKnowledge`, `addProjectKnowledgeFile`, `removeProjectKnowledge`, `setConversationProject`, `setConversationStarred`, `persistArtifact`, `listServerArtifacts`, `getServerArtifact`, `sendMessageStream`, `sendReviewAgentStream`; interfaces `StreamCitation`, `StreamHandlers`. | VA-T1 (no visual surface) | **Dottie contract (repointed + corrected this rev, per `spec/DOTTIE_API_SPEC.md`):** the 4 served endpoints repointed `theo_*`→`dottie_*`; the stream + buffered bodies now send **`max_completion_tokens`** (was `max_tokens` — T13/T22 fix, matches the D2 contract); OpenAI-chunk parse branch (`choices[0].delta.content`) added beside the Anthropic branch; error strings say "Dottie gateway". `listProjectConversations` returns `[]` on the live path (Projects hidden; the contract has no projectId filter — T13 mis-call fix). The remaining `theo_*` calls (attachments/projects/artifacts/voice/people/publish) are UNBACKED and gated/hidden in the imminent gate-hide FE package (reconciliation §B–§G). |
 | `vite.config.ts` (federation) | `federation({ name: 'dottieApp', exposes: { './DottieSurface': './src/theo/TheoSurface.tsx' }, shared: ['react','react-dom'] })` | n/a (build config) | Module Federation remote consumed by VO shell (VO mount = follow-on package) |
 | `index.html` / dev workflow | `<title>Dottie — Vault</title>`; workflow bakes `VITE_ENTRA_*` + `VITE_FUNCTIONS_URL` (func-dottie) + `VITE_STREAM_FUNCTIONS_URL` (func-dottie-stream) — all public identifiers | n/a | build-time env for auth + live gateway base URLs |
 
@@ -116,10 +123,10 @@ export default function App() {
 ```ts
 /* ─── SWAP BLOCK ─────────────────────────────────────────────────────────
    Single point of truth for branding + model + prompts (1A handover §5).
-   Surgical Theo branding: ASSISTANT_NAME → "Theo" (visible assistant name).
-   MODEL stays "claude-sonnet-4-6" (the Foundry deployment id — engine, not brand).
-   The frontend names only a logical model and calls the gateway; the sandbox
-   Anthropic base URL is gone (replaced by the gateway abstraction in services/).
+   Dottie branding: ASSISTANT_NAME → "Dottie" (visible assistant name).
+   MODEL is "gpt-5" (Azure OpenAI deployment — Dottie's deliberately different model for governance
+   independence). The frontend names only a logical model and calls the gateway; the model credential
+   lives server-side (gateway abstraction in services/).
    ──────────────────────────────────────────────────────────────────────── */
 export const ASSISTANT_NAME = "Dottie";
 export const WORKSPACE_NAME = "Vault Group";
@@ -160,10 +167,9 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import federation from '@originjs/vite-plugin-federation';
 
-// Vite + React + TS + Module Federation (Pass B). Theo is exposed as the federated remote
-// `theoApp/TheoSurface` so the Vault Origin shell mounts it in-shell (no iframe; App Host §1A/§6A),
-// while this same build still runs standalone as the vault-theo-dev harness. Build output → `dist`
-// (the SWA workflow deploys `output_location: "dist"`), and the federation plugin also emits
+// Vite + React + TS + Module Federation. Dottie is exposed as the federated remote
+// `dottieApp/DottieSurface` so the Vault Origin shell mounts it in-shell, while this same build also runs
+// standalone on the Dottie dev SWA. Build output -> `dist`; the federation plugin emits
 // `assets/remoteEntry.js` for Origin to consume.
 export default defineConfig({
   plugins: [

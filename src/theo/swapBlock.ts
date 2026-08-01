@@ -1,9 +1,9 @@
 /* ─── SWAP BLOCK ─────────────────────────────────────────────────────────
    Single point of truth for branding + model + prompts (1A handover §5).
-   Surgical Theo branding: ASSISTANT_NAME → "Theo" (visible assistant name).
-   MODEL stays "claude-sonnet-4-6" (the Foundry deployment id — engine, not brand).
-   The frontend names only a logical model and calls the gateway; the sandbox
-   Anthropic base URL is gone (replaced by the gateway abstraction in services/).
+   Dottie branding: ASSISTANT_NAME → "Dottie" (visible assistant name).
+   MODEL is "gpt-5" (Azure OpenAI deployment — Dottie's deliberately different model for governance
+   independence). The frontend names only a logical model and calls the gateway; the model credential
+   lives server-side (gateway abstraction in services/).
    ──────────────────────────────────────────────────────────────────────── */
 export const ASSISTANT_NAME = "Dottie";
 export const WORKSPACE_NAME = "Vault Group";

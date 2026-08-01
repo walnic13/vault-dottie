@@ -1,5 +1,5 @@
-// 1B LIVE gateway. Calls the deployed server-side Theo model gateway
-// (POST `${VITE_FUNCTIONS_URL}/api/theo_message`; HF-T1 Foundry-Claude broker). The gateway holds
+// LIVE gateway for Dottie. Calls Dottie's deployed backend (POST `${VITE_FUNCTIONS_URL}/api/dottie_message`
+// buffered + `${VITE_STREAM_FUNCTIONS_URL}/api/dottie_message_stream` streaming; gpt-5 via Azure OpenAI). Holds
 // the model credential server-side — the browser never sees a model key. The call is CROSS-ORIGIN
 // to the Functions app (mirroring Origin's reporting clients: absolute base URL + Bearer, NOT a
 // same-origin `/api/*` proxy — Origin's SWA has none), so the user's Entra access token is attached
@@ -8,7 +8,7 @@
 // deployed handler. NO browser storage (1A handover §2.5).
 //
 // Until a live backend is configured (no `VITE_FUNCTIONS_URL` and no `configureGateway` token/base),
-// this delegates to the in-repo 1A mock so the standalone vault-theo dev harness keeps working.
+// this delegates to the in-repo mock so the standalone dev harness keeps working.
 import type {
   Artifact, ArtifactSummary, AttachmentUpload, ConversationAttachment, ConversationDetail, ConversationSummary, FileDownload, InlineImage, InlineImageItem, InlineVideo, GatewayRequest, GatewayResponse,
   KDraft, Knowledge, NpDraft, Person, Project, ProjectMember, PublishedConversation,
@@ -42,8 +42,8 @@ function normalizeBase(v: unknown): string {
 
 let tokenProvider: TokenProvider | null = null;
 let apiBase: string = normalizeBase((import.meta.env as Record<string, unknown>).VITE_FUNCTIONS_URL);
-// B9: the STREAMING endpoint (theo_message_stream) lives on a SEPARATE sidecar Function App
-// (vaultgpt-func-stream), distinct from the monolith `apiBase`. It has its own base URL — set at
+// The STREAMING endpoint (dottie_message_stream) lives on a SEPARATE v4 sidecar Function App
+// (vaultgpt-func-dottie-stream), distinct from `apiBase` (vaultgpt-func-dottie). It has its own base URL — set at
 // build via VITE_STREAM_FUNCTIONS_URL or injected at mount via configureGateway({ streamBaseUrl }).
 // Used ONLY by sendMessageStream; all other calls (attachments, recents, reload, projects,
 // non-streaming chat) stay on `apiBase`. When unset, streaming degrades to the non-streaming monolith path.
@@ -169,7 +169,7 @@ export async function sendMessage(req: GatewayRequest, opts?: { signal?: AbortSi
     headers,
     signal: opts?.signal,   // stop-generating: also cancels the non-streaming one-shot fallback path
     body: JSON.stringify({
-      max_tokens: req.max_tokens,
+      max_completion_tokens: req.max_tokens,
       system: req.system,
       messages: req.messages,
       ...(req.conversation_id ? { conversation_id: req.conversation_id } : {}),
@@ -185,18 +185,18 @@ export async function sendMessage(req: GatewayRequest, opts?: { signal?: AbortSi
   try {
     json = await res.json();
   } catch {
-    throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`);
+    throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`);
   }
 
   // Non-2xx → surface the handler's `{ error: { message } }` (the existing chat error state shows it).
   if (!res.ok) {
-    throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+    throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   }
 
   // Success envelope `{ data: { content: [{type:"text", text}], conversation_id, … }, meta }`.
   const content = json?.data?.content;
   if (!Array.isArray(content)) {
-    throw new Error("Theo gateway response missing data.content[].");
+    throw new Error("Dottie gateway response missing data.content[].");
   }
   const conversation_id = typeof json?.data?.conversation_id === "string" ? json.data.conversation_id : undefined;
   return { content, conversation_id };
@@ -293,10 +293,10 @@ export async function listConversations(limit?: number): Promise<ConversationSum
   try {
     json = await res.json();
   } catch {
-    throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`);
+    throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`);
   }
   if (!res.ok) {
-    throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+    throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   }
   return Array.isArray(json?.data?.conversations) ? json.data.conversations : [];
 }
@@ -307,22 +307,9 @@ export async function listProjectConversations(projectId: string): Promise<Conve
   if (!apiBase && !tokenProvider) {
     return mockListProjectConversations(projectId);
   }
-  const headers = await authHeaders();
-  const res = await fetch(`${apiBase}/api/dottie_list_conversations?projectId=${encodeURIComponent(projectId)}`, {
-    method: "GET",
-    credentials: "same-origin",
-    headers,
-  });
-  let json: { data?: { conversations?: ConversationSummary[] }; error?: { message?: string } } | null = null;
-  try {
-    json = await res.json();
-  } catch {
-    throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`);
-  }
-  if (!res.ok) {
-    throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
-  }
-  return Array.isArray(json?.data?.conversations) ? json.data.conversations : [];
+  // Dottie has NO Projects backend (Projects are hidden in the UI; the dottie_list_conversations contract
+  // has no projectId filter). Never send a projectId param — it would silently return the general list.
+  return [];
 }
 
 // B3b — fetch one conversation + its ordered messages (with persisted citations; backs reload). Unconfigured → mock.
@@ -341,13 +328,13 @@ export async function getConversation(id: string): Promise<ConversationDetail> {
   try {
     json = await res.json();
   } catch {
-    throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`);
+    throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`);
   }
   if (!res.ok) {
-    throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+    throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   }
   if (!json?.data?.conversation || !Array.isArray(json.data.messages)) {
-    throw new Error("Theo gateway response missing data.conversation/messages.");
+    throw new Error("Dottie gateway response missing data.conversation/messages.");
   }
   return json.data;
 }
@@ -364,11 +351,11 @@ export async function renameConversation(id: string, title: string): Promise<{ i
     body: JSON.stringify({ id, title }),
   });
   let json: { data?: { conversation?: { id?: string; title?: string } }; error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   const c = json?.data?.conversation;
   if (!c || typeof c.id !== "string" || typeof c.title !== "string") {
-    throw new Error("Theo gateway response missing data.conversation.");
+    throw new Error("Dottie gateway response missing data.conversation.");
   }
   return { id: c.id, title: c.title };
 }
@@ -387,7 +374,7 @@ export async function deleteConversation(id: string): Promise<void> {
   if (!res.ok) {
     let json: { error?: { message?: string } } | null = null;
     try { json = await res.json(); } catch { /* non-JSON error body */ }
-    throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+    throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   }
 }
 
@@ -412,10 +399,10 @@ export async function listConversationAttachments(conversationId: string): Promi
   try {
     json = await res.json();
   } catch {
-    throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`);
+    throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`);
   }
   if (!res.ok) {
-    throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+    throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   }
   return Array.isArray(json?.data?.attachments) ? json.data.attachments : [];
 }
@@ -489,8 +476,8 @@ export async function listProjects(): Promise<Project[]> {
   const headers = await authHeaders();
   const res = await fetch(`${projectsBase}/api/theo_list_projects`, { method: "GET", credentials: "same-origin", headers });
   let json: { data?: { projects?: RawProject[] }; error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   const arr = json?.data?.projects;
   return Array.isArray(arr) ? arr.map(toProject) : [];
 }
@@ -507,10 +494,10 @@ export async function setProjectVisibility(id: string, visibility: string): Prom
     body: JSON.stringify({ id, visibility }),
   });
   let json: { data?: { project?: { id?: string; visibility?: string } }; error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   const p = json?.data?.project;
-  if (!p || typeof p.visibility !== "string") throw new Error("Theo gateway response missing data.project.visibility.");
+  if (!p || typeof p.visibility !== "string") throw new Error("Dottie gateway response missing data.project.visibility.");
   return { id: p.id ?? id, visibility: p.visibility };
 }
 
@@ -526,8 +513,8 @@ export async function shareProject(projectId: string, memberOid: string): Promis
     body: JSON.stringify({ project_id: projectId, member_oid: memberOid }),
   });
   let json: { error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
 }
 
 // B5c: revoke a member (theo_unshare_project; owner-only; idempotent). Unconfigured → mock.
@@ -541,8 +528,8 @@ export async function unshareProject(projectId: string, memberOid: string): Prom
     body: JSON.stringify({ project_id: projectId, member_oid: memberOid }),
   });
   let json: { error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
 }
 
 interface RawMember { project_id?: string; member_oid?: string; invited_by?: string; created_at?: string }
@@ -560,8 +547,8 @@ export async function listProjectMembers(projectId: string): Promise<ProjectMemb
     headers,
   });
   let json: { data?: { members?: RawMember[] }; error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   const arr = json?.data?.members;
   return Array.isArray(arr) ? arr.filter((m) => typeof m.member_oid === "string" && m.member_oid).map(toMember) : [];
 }
@@ -578,8 +565,8 @@ export async function publishConversation(conversationId: string): Promise<void>
     body: JSON.stringify({ conversation_id: conversationId }),
   });
   let json: { error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
 }
 
 // SPW Phase 2: revert a published conversation to private (theo_unpublish_conversation; owner-only;
@@ -594,8 +581,8 @@ export async function unpublishConversation(conversationId: string): Promise<voi
     body: JSON.stringify({ conversation_id: conversationId }),
   });
   let json: { error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
 }
 
 interface RawPublishedConversation {
@@ -627,8 +614,8 @@ export async function listPublishedProjectConversations(projectId: string): Prom
     headers,
   });
   let json: { data?: { conversations?: RawPublishedConversation[] }; error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   const arr = json?.data?.conversations;
   return Array.isArray(arr) ? arr.filter((c) => typeof c.id === "string" && c.id).map(toPublishedConversation) : [];
 }
@@ -657,8 +644,8 @@ export async function listPeople(): Promise<Person[]> {
   const headers = await authHeaders();
   const res = await fetch(`${apiBase}/api/theo_list_people`, { method: "GET", credentials: "same-origin", headers });
   let json: { data?: { people?: RawPerson[] }; error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   const arr = json?.data?.people;
   return Array.isArray(arr) ? arr.filter((p) => typeof p.id === "string" && p.id).map(toPerson) : [];
 }
@@ -673,10 +660,10 @@ export async function createProject(d: NpDraft): Promise<Project> {
     body: JSON.stringify({ name: d.name.trim(), description: d.desc.trim(), instructions: d.instructions.trim() }),
   });
   let json: { data?: { project?: RawProject }; error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   const p = json?.data?.project;
-  if (!p) throw new Error("Theo gateway response missing data.project.");
+  if (!p) throw new Error("Dottie gateway response missing data.project.");
   return toProject(p);
 }
 
@@ -692,10 +679,10 @@ export async function getOrCreateReviewProject(appKey: string, sourceRef: string
     body: JSON.stringify({ app_key: appKey, source_ref: sourceRef, name: name.trim() }),
   });
   let json: { data?: { project?: RawProject }; error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   const p = json?.data?.project;
-  if (!p) throw new Error("Theo gateway response missing data.project.");
+  if (!p) throw new Error("Dottie gateway response missing data.project.");
   return toProject(p);
 }
 
@@ -709,10 +696,10 @@ export async function updateProjectInstructions(id: string, instructions: string
     body: JSON.stringify({ id, instructions }),
   });
   let json: { data?: { project?: RawProject }; error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   const p = json?.data?.project;
-  if (!p) throw new Error("Theo gateway response missing data.project.");
+  if (!p) throw new Error("Dottie gateway response missing data.project.");
   return toProject(p);
 }
 
@@ -728,10 +715,10 @@ export async function updateProjectDescription(id: string, description: string):
     body: JSON.stringify({ id, description }),
   });
   let json: { data?: { project?: RawProject }; error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   const p = json?.data?.project;
-  if (!p) throw new Error("Theo gateway response missing data.project.");
+  if (!p) throw new Error("Dottie gateway response missing data.project.");
   return toProject(p);
 }
 
@@ -747,10 +734,10 @@ export async function renameProject(id: string, name: string): Promise<Project> 
     body: JSON.stringify({ id, name }),
   });
   let json: { data?: { project?: RawProject }; error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   const p = json?.data?.project;
-  if (!p) throw new Error("Theo gateway response missing data.project.");
+  if (!p) throw new Error("Dottie gateway response missing data.project.");
   return toProject(p);
 }
 
@@ -766,7 +753,7 @@ export async function deleteProject(id: string): Promise<void> {
   if (!res.ok) {
     let json: { error?: { message?: string } } | null = null;
     try { json = await res.json(); } catch { /* non-JSON error body */ }
-    throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+    throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   }
 }
 
@@ -779,8 +766,8 @@ export async function listProjectKnowledge(projectId: string): Promise<Knowledge
     headers,
   });
   let json: { data?: { knowledge?: RawKnowledge[] }; error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   const arr = json?.data?.knowledge;
   return Array.isArray(arr) ? arr.map(toKnowledge) : [];
 }
@@ -795,10 +782,10 @@ export async function addProjectKnowledge(projectId: string, k: KDraft): Promise
     body: JSON.stringify({ project_id: projectId, title: k.title.trim(), content: k.content.trim() }),
   });
   let json: { data?: { knowledge?: RawKnowledge }; error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   const item = json?.data?.knowledge;
-  if (!item) throw new Error("Theo gateway response missing data.knowledge.");
+  if (!item) throw new Error("Dottie gateway response missing data.knowledge.");
   return toKnowledge(item);
 }
 
@@ -816,10 +803,10 @@ export async function addProjectKnowledgeFile(projectId: string, attachmentId: s
     body: JSON.stringify(body),
   });
   let json: { data?: { knowledge?: RawKnowledge }; error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   const item = json?.data?.knowledge;
-  if (!item) throw new Error("Theo gateway response missing data.knowledge.");
+  if (!item) throw new Error("Dottie gateway response missing data.knowledge.");
   return toKnowledge(item);
 }
 
@@ -835,7 +822,7 @@ export async function removeProjectKnowledge(knowledgeId: string): Promise<void>
   if (!res.ok) {
     let json: { error?: { message?: string } } | null = null;
     try { json = await res.json(); } catch { /* non-JSON error body */ }
-    throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+    throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   }
 }
 
@@ -854,7 +841,7 @@ export async function setConversationProject(conversationId: string, projectId: 
   if (!res.ok) {
     let json: { error?: { message?: string } } | null = null;
     try { json = await res.json(); } catch { /* non-JSON error body */ }
-    throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+    throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   }
 }
 
@@ -870,7 +857,7 @@ export async function setConversationStarred(conversationId: string, starred: bo
   if (!res.ok) {
     let json: { error?: { message?: string } } | null = null;
     try { json = await res.json(); } catch { /* non-JSON error body */ }
-    throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+    throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   }
 }
 
@@ -929,10 +916,10 @@ export async function persistArtifact(input: { title: string; type: string; cont
     }),
   });
   let json: { data?: { artifact?: { id?: string; current_version?: number } }; error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   const a = json?.data?.artifact;
-  if (!a || typeof a.id !== "string") throw new Error("Theo gateway response missing data.artifact.");
+  if (!a || typeof a.id !== "string") throw new Error("Dottie gateway response missing data.artifact.");
   return { id: a.id, currentVersion: typeof a.current_version === "number" ? a.current_version : 1 };
 }
 
@@ -941,8 +928,8 @@ export async function listServerArtifacts(): Promise<ArtifactSummary[]> {
   const headers = await authHeaders();
   const res = await fetch(`${apiBase}/api/theo_list_artifacts`, { method: "GET", credentials: "same-origin", headers });
   let json: { data?: { artifacts?: RawArtifact[] }; error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   const arr = json?.data?.artifacts;
   return Array.isArray(arr) ? arr.map(toArtifactSummary) : [];
 }
@@ -952,10 +939,10 @@ export async function getServerArtifact(id: string): Promise<Artifact> {
   const headers = await authHeaders();
   const res = await fetch(`${apiBase}/api/theo_get_artifact?artifactId=${encodeURIComponent(id)}`, { method: "GET", credentials: "same-origin", headers });
   let json: { data?: { artifact?: RawArtifact }; error?: { message?: string } } | null = null;
-  try { json = await res.json(); } catch { throw new Error(`Theo gateway returned a non-JSON response (HTTP ${res.status}).`); }
-  if (!res.ok) throw new Error(json?.error?.message || `Theo gateway error (HTTP ${res.status}).`);
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   const a = json?.data?.artifact;
-  if (!a || typeof a.id !== "string") throw new Error("Theo gateway response missing data.artifact.");
+  if (!a || typeof a.id !== "string") throw new Error("Dottie gateway response missing data.artifact.");
   return toArtifact(a);
 }
 
@@ -1018,7 +1005,7 @@ export async function sendMessageStream(req: GatewayRequest, handlers: StreamHan
     headers,
     signal: opts?.signal,   // stop-generating: aborting rejects reader.read() with AbortError → propagates to send()'s catch
     body: JSON.stringify({
-      max_tokens: req.max_tokens,
+      max_completion_tokens: req.max_tokens,
       system: req.system,
       messages: req.messages,
       ...(req.conversation_id ? { conversation_id: req.conversation_id } : {}),
@@ -1031,7 +1018,7 @@ export async function sendMessageStream(req: GatewayRequest, handlers: StreamHan
 
   // Pre-stream error (auth/validation/ownership/gateway) → JSON error body; surface its message.
   if (!resp.ok || !resp.body) {
-    let msg = `Theo gateway error (HTTP ${resp.status}).`;
+    let msg = `Dottie gateway error (HTTP ${resp.status}).`;
     try {
       const j = (await resp.json()) as { error?: { message?: string } };
       msg = j?.error?.message || msg;
