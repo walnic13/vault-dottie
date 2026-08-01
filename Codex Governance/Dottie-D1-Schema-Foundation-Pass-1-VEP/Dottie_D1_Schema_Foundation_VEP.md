@@ -1,6 +1,6 @@
 # Dottie Phase D1 — Conversation + Dottie-L1 Memory Schema Foundation — Pass-1 VEP
 
-First schema VEP of Dottie's fuller build ([[VAULT_MEMORY_ARCHITECTURE.md]] §A **Amendment 9** — Dottie a full independent agent with its OWN layered memory, heavily Theo-derived). Delivers the `dottie_*` **conversation surface + Dottie-L1 (the consensual 1:1 relationship) memory** — three tables (`dottie_conversations`, `dottie_messages`, `dottie_user_memory`) + RLS + `_exists_unscoped` helpers, mirroring the DEPLOYED Theo b2 (`theo_conversations`/`theo_messages`) + b7a (`theo_user_memory`) idioms **byte-faithfully**, additively namespaced `dottie_*` in the shared `vaultgpt` Postgres. **Migration-only — Walter-run (`pgadmin_vault`); NO handler.** Dottie-L1 is **SEPARATE from Theo's L1** (Amendment 9 — the two personal memories never cross). Dottie-L2 (level) / L3 (firm/governance) are later tables; Dottie's reads of Theo's shared L1.5/L2/L3 go through the access-policy engine, never duplicated here.
+First schema VEP of Dottie's fuller build ([[VAULT_MEMORY_ARCHITECTURE.md]] §A **Amendment 9** — Dottie a full independent agent with its OWN layered memory, heavily Theo-derived). Delivers the `dottie_*` **conversation surface + Dottie-L1 (the consensual 1:1 relationship) memory** — three tables (`dottie_conversations`, `dottie_messages`, `dottie_user_memory`) + RLS + `_exists_unscoped` helpers, mirroring the DEPLOYED Theo b2 (`theo_conversations`/`theo_messages`) **plus the deployed last-opened + star addenda** + b7a (`theo_user_memory`) idioms **byte-faithfully**, additively namespaced `dottie_*` in the shared `vaultgpt` Postgres. **Migration-only — Walter-run (`pgadmin_vault`); NO handler.** Dottie-L1 is **SEPARATE from Theo's L1** (Amendment 9 — the two personal memories never cross). Dottie-L2 (level) / L3 (firm/governance) are later tables; Dottie's reads of Theo's shared L1.5/L2/L3 go through the access-policy engine, never duplicated here.
 
 ## Grounding Conformance Receipt
 Role: Claude Code
@@ -19,6 +19,8 @@ Sub-phase Track: N/A
 | 5 | Execution Orchestration — `governance/THEO_EXECUTION_ORCHESTRATION_STANDARD.md` (§1C Walter-runs-migrations; §1D ordered pass) | `Grep("migrations/merges remain Walter-only")` this turn | `565559b699c1309f8e750b0dbbac859c13d807c8` |
 | 6 | DEPLOYED MIRROR SOURCE — `vault-theo` `Codex Governance/Theo-1B-B2-Persistence-Substrate-Pass-1-VEP/b2_migration.sql` (theo_conversations/theo_messages DDL, 4-policy RLS, `theo_conversation_exists_unscoped`) | survey (paths + verbatim DDL) this turn | vault-theo `2f2b6ddf8bf87525bc1a43e34bb7f82351a54b7c` |
 | 7 | DEPLOYED MIRROR SOURCE — `vault-theo` `Codex Governance/Theo-1B-B7a-Memory-Substrate-Schema-Pass-1-VEP/b7a_migration.sql` (theo_user_memory DDL, RLS, `theo_user_memory_exists_unscoped`) | survey (paths + verbatim DDL) this turn | vault-theo `bbb66f45d5b598bf104499f32b3812af41c64e26` |
+| 8 | DEPLOYED MIRROR SOURCE (addendum) — `vault-theo` `Codex Governance/Theo-1B-Conversation-Last-Opened-Backend-Pass-1-VEP/migration_theo_conversations_last_opened_at.sql` (theo_conversations `last_opened_at` + restore-on-reopen index `idx_theo_conversations_created_by_last_opened_desc`) | survey (path + DDL) this turn | vault-theo `19114f8ae1f9051c31485d21baa5327f76941ca8` |
+| 9 | DEPLOYED MIRROR SOURCE (addendum) — `vault-theo` `Codex Governance/Theo-Backend-Conversation-Star-Pass-1-VEP/migration_theo_conversations_starred.sql` (theo_conversations `starred boolean NOT NULL DEFAULT false`) | survey (path + DDL) this turn | vault-theo `352600fa1fb4200f3f4d1316f5a4330c5174825e` |
 
 ## Rule Anchor Table
 
@@ -38,7 +40,7 @@ Sub-phase Track: N/A
 ## §1 — Feature + design
 
 **Feature.** Three additive tables (+ RLS + helpers) in the shared `vaultgpt` Postgres, the `dottie_*` foundation:
-- **`dottie_conversations`** — Dottie chat threads. Mirrors `theo_conversations` **minus** project/publish/app-context columns (Dottie is not project-linked): `id`, `created_by`, `title`, `model`, `created_at`, `updated_at`, `last_opened_at`, `starred`.
+- **`dottie_conversations`** — Dottie chat threads. Mirrors `theo_conversations` **minus** project/publish/app-context columns (Dottie is not project-linked): `id`, `created_by`, `title`, `model`, `created_at`, `updated_at`. It also carries **`last_opened_at`** (+ the restore-on-reopen index) and **`starred`** — the two deployed Theo `theo_conversations` addenda (GCR rows 8/9: the last-opened restore-on-reopen migration `19114f8a` and the conversation-star migration `352600fa`), carried into D1 so Dottie's conversation list gets the same restore-on-reopen ordering + starring.
 - **`dottie_messages`** — immutable turns. Mirrors `theo_messages`: `id`, `created_by`, `conversation_id` (FK→`dottie_conversations` ON DELETE CASCADE), `seq`, `role` CHECK `('user','assistant')`, `content`, `model`, `created_at`, UNIQUE `(conversation_id, seq)`.
 - **`dottie_user_memory`** — **Dottie-L1**: the consensual 1:1 relationship memory (Amendment 9's `"consensual 1:1 relationship"`). Mirrors `theo_user_memory` **user-scoped only** (no `scope`/`project_id` — Dottie-L2/L3 are their own later tables): `id`, `created_by`, `kind`, `content` (non-empty CHECK), `source_conversation_id` (FK→`dottie_conversations` ON DELETE SET NULL), `salience`, timestamps.
 
@@ -55,7 +57,7 @@ Each carries the deployed **4-policy ownership RLS** (`created_by = auth.uid()`)
 ## §3 — Schema Reality Lock (deployed grounding)
 
 Byte-faithful to the DEPLOYED Theo shapes (Governor §3/§4) — nothing invented:
-- **`dottie_conversations`/`dottie_messages`** mirror `theo_conversations`/`theo_messages` (b2, blob `2f2b6ddf`): the exact column set (Dottie drops the project/publish/app-context/citations/media columns it doesn't use yet), the base `seq`/`UNIQUE(conversation_id,seq)`/immutable-messages shape, the 4-policy `_own` RLS naming, and the `_exists_unscoped` SECURITY DEFINER helper (`LANGUAGE sql SET search_path = public`, REVOKE PUBLIC/GRANT authenticated).
+- **`dottie_conversations`/`dottie_messages`** mirror `theo_conversations`/`theo_messages` (b2, blob `2f2b6ddf`) **plus the deployed `theo_conversations` addenda**: `last_opened_at` + the restore-on-reopen index (blob `19114f8a`, GCR row 8) and `starred` (blob `352600fa`, GCR row 9). Byte-faithful to: the base column set (Dottie drops the project/publish/app-context/citations/media columns it doesn't use yet), the `last_opened_at`/`starred` addendum shapes, the base `seq`/`UNIQUE(conversation_id,seq)`/immutable-messages shape, the 4-policy `_own` RLS naming, and the `_exists_unscoped` SECURITY DEFINER helper (`LANGUAGE sql SET search_path = public`, REVOKE PUBLIC/GRANT authenticated).
 - **`dottie_user_memory`** mirrors `theo_user_memory` (b7a, blob `bbb66f45`): `kind`/`content` (non-empty CHECK)/`source_conversation_id`/`salience`/timestamps + 4-policy RLS + exists helper. Dottie omits `scope`/`project_id` (+ its `scope_project_ck`) because Dottie-L1 is user-scoped only; the plate lens (§7.5) is Theo's life-integration feature, not Dottie's.
 - **Idioms:** additive `CREATE ... IF NOT EXISTS` / `CREATE OR REPLACE`; policies guarded by `DO $$ … IF NOT EXISTS (SELECT 1 FROM pg_policies …)`; **no top-level `BEGIN`/`COMMIT`** (§5.2); RLS is defence-in-depth (the D2 handlers also filter `created_by = $oid`, mirroring Theo).
 
@@ -248,6 +250,17 @@ SELECT c.conname, pg_get_constraintdef(c.oid) AS def
  WHERE n.nspname='public' AND t.relname IN ('dottie_messages','dottie_user_memory')
    AND c.contype IN ('c','u','f')
  ORDER BY t.relname, c.contype, c.conname;
+
+-- 6) The carried Theo addenda columns (GCR rows 8/9): dottie_conversations.last_opened_at (nullable) + starred
+--    (boolean NOT NULL default false), and the restore-on-reopen partial-order index.
+SELECT column_name, data_type, is_nullable, column_default
+  FROM information_schema.columns
+ WHERE table_schema='public' AND table_name='dottie_conversations' AND column_name IN ('last_opened_at','starred')
+ ORDER BY column_name;   -- expect: last_opened_at (timestamptz, YES, null); starred (boolean, NO, false)
+SELECT indexname
+  FROM pg_indexes
+ WHERE schemaname='public' AND tablename='dottie_conversations'
+   AND indexname='idx_dottie_conversations_created_by_last_opened_desc';   -- expect 1 row
 ```
 
 ## §7 — Gap Register

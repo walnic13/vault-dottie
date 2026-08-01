@@ -32,3 +32,14 @@ SELECT c.conname, pg_get_constraintdef(c.oid) AS def
  WHERE n.nspname='public' AND t.relname IN ('dottie_messages','dottie_user_memory')
    AND c.contype IN ('c','u','f')
  ORDER BY t.relname, c.contype, c.conname;
+
+-- 6) The carried Theo addenda columns (GCR rows 8/9): dottie_conversations.last_opened_at (nullable) + starred
+--    (boolean NOT NULL default false), and the restore-on-reopen partial-order index.
+SELECT column_name, data_type, is_nullable, column_default
+  FROM information_schema.columns
+ WHERE table_schema='public' AND table_name='dottie_conversations' AND column_name IN ('last_opened_at','starred')
+ ORDER BY column_name;   -- expect: last_opened_at (timestamptz, YES, null); starred (boolean, NO, false)
+SELECT indexname
+  FROM pg_indexes
+ WHERE schemaname='public' AND tablename='dottie_conversations'
+   AND indexname='idx_dottie_conversations_created_by_last_opened_desc';   -- expect 1 row
