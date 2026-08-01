@@ -339,7 +339,7 @@ export async function getConversation(id: string): Promise<ConversationDetail> {
   return json.data;
 }
 
-// B4f: rename a conversation (theo_rename_conversation {id, title}; deployed B4f). Owner-scoped;
+// Rename a conversation (dottie_rename_conversation {id, title}; Dottie ConvMgmt package). Owner-scoped;
 // returns the server-confirmed { id, title }. Unconfigured dev harness → mock (echoes trimmed title).
 export async function renameConversation(id: string, title: string): Promise<{ id: string; title: string }> {
   if (!apiBase && !tokenProvider) return mockRenameConversation(id, title);
@@ -360,7 +360,7 @@ export async function renameConversation(id: string, title: string): Promise<{ i
   return { id: c.id, title: c.title };
 }
 
-// B4f: delete a conversation permanently (theo_delete_conversation {id}; deployed B4f). Owner-scoped;
+// Delete a conversation permanently (dottie_delete_conversation {id}; Dottie ConvMgmt package). Owner-scoped;
 // dottie_messages cascade (D1 FK); Dottie has no attachments. Unconfigured dev harness → mock no-op.
 export async function deleteConversation(id: string): Promise<void> {
   if (!apiBase && !tokenProvider) return mockDeleteConversation(id);
@@ -845,6 +845,8 @@ export async function setConversationProject(conversationId: string, projectId: 
   }
 }
 
+// Star/pin a conversation (dottie_set_conversation_starred {conversation_id, starred}; Dottie ConvMgmt
+// package; the `starred` column already exists in D1). Owner-scoped. Unconfigured dev harness → mock no-op.
 export async function setConversationStarred(conversationId: string, starred: boolean): Promise<void> {
   if (!apiBase && !tokenProvider) return mockSetConversationStarred(conversationId, starred);
   const headers = await authHeaders();
