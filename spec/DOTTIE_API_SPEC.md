@@ -52,6 +52,6 @@ Query `?conversationId=uuid`. Owner-gates the conversation, then its rows `{ id,
 ## Notes
 - `dottie_ask` (POST `/api/dottie_ask`, func-dottie) — the original stateless gpt-5 round-trip (Stage-0 frame). Superseded for chat by `dottie_message`.
 - Dottie-L1 memory WRITE/CRUD + distillation is Phase D3 (the read-injection is live but degrades to empty until D3 populates `dottie_user_memory`).
-- No project-sharing (SPW), attachments, history-RAG, web-tools, or extended thinking — see `DOTTIE_THEO_PARITY_LEDGER.md`.
+- No project-sharing (SPW), history-RAG, or extended thinking — see `DOTTIE_THEO_PARITY_LEDGER.md`. (Attachments are LIVE — see § Attachments above; web-search grounding is live via the streaming path.)
 
 _Recorded 2026-08-01 after D2 + D2-Stream deploy + golden curls (Role-C, satisfying the G-APISPEC gap in both packages). Conversation-management trio added 2026-08-01 after the ConvMgmt package deploy + golden curls (Role-C). `dottie_list_people` added 2026-08-01 after the ListPeople package deploy + golden curls (Role-C)._

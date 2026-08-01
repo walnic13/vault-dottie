@@ -81,7 +81,7 @@ function isLive(): boolean {
   return Boolean(apiBase || tokenProvider);
 }
 export function attachmentsAvailable(): boolean {
-  // Dottie gate: the paperclip/paste/drag-drop honor this. Off until dottie attachments backend lands.
+  // Dottie gate: the paperclip/paste/drag-drop honor this. Attachments are LIVE (Attachments packages, 2026-08-01).
   return DOTTIE_CAPABILITIES.attachments && isLive();
 }
 
@@ -390,7 +390,7 @@ export async function listConversationAttachments(conversationId: string): Promi
   if (!apiBase && !tokenProvider) {
     return [];
   }
-  // No dottie attachments backend yet. This READ fires on every chat reopen (selectRecent), independent
+  // Attachments LIVE (dottie_list_conversation_attachments). This READ fires on every chat reopen (selectRecent), independent
   // of the paperclip control, so it must be gated too — else it 404s on normal chat open. Empty = parity
   // with a thread that has no persisted attachments.
   if (!DOTTIE_CAPABILITIES.attachments) return [];
@@ -651,7 +651,7 @@ function toPerson(r: RawPerson): Person {
 // Graph OBO server-side; the FE sends only the bearer. Unconfigured harness → mock (empty roster).
 export async function listPeople(): Promise<Person[]> {
   if (!apiBase && !tokenProvider) return mockListPeople();
-  if (!DOTTIE_CAPABILITIES.people) return []; // No dottie_list_people yet — degrade to empty roster (no 404).
+  if (!DOTTIE_CAPABILITIES.people) return []; // Gate retained for parity; dottie_list_people is LIVE and people=true, so this is not hit.
   const headers = await authHeaders();
   const res = await fetch(`${apiBase}/api/dottie_list_people`, { method: "GET", credentials: "same-origin", headers });
   let json: { data?: { people?: RawPerson[] }; error?: { message?: string } } | null = null;

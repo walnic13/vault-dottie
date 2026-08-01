@@ -38,10 +38,11 @@ The FE calls the `dottie_*` routes below; the handlers are deployed to func-dott
 | --- | --- | --- |
 | `theo_create_project`, `theo_update_project`, `theo_delete_project`, `theo_list_projects`, `theo_list_project_conversations`, `theo_add_project_knowledge(+_file)`, `theo_list_project_knowledge`, `theo_remove_project_knowledge`, `theo_list_project_members`, `theo_share_project`, `theo_unshare_project`, `theo_set_project_visibility`, `theo_get_or_create_review_project` | The **Projects** tab + all project features error | **DECIDED (Walter 2026-08-01): HIDE Projects for now** — not visible in the UI (gate the Projects nav + project controls); may add the capability later. No backend build now. |
 
-## F. Artifacts — ❌ MISSING (3)
-| FE call | What breaks | Disposition |
+## F. Artifacts — 🟡 schema LIVE; FE repointed; handlers deploy pending (Artifacts packages)
+The `dottie_artifacts` + `dottie_artifact_versions` tables are DEPLOYED (Artifacts-Schema, §6 of the schema doc). The FE gateway is repointed to the `dottie_*` names below (Artifacts-Handlers rev-2). The 3 handlers are authored + awaiting Codex → deploy; the capability stays gated (`DOTTIE_CAPABILITIES.artifactsPersistence = false`) until they land, so nothing errors. The in-reply `[[ARTIFACT]]` render already works (text-parsed, local) — only saving/gallery needs the backend.
+| FE call (now) | Backend | Status |
 | --- | --- | --- |
-| `theo_list_artifacts`, `theo_get_artifact`, `theo_upsert_artifact` | Artifact **persistence** errors (the [[ARTIFACT]] rendering in a reply still works — it's text-parsed; only saving/gallery needs backend) | BUILD `dottie_*` artifacts (mirror Theo) |
+| `dottie_upsert_artifact` / `dottie_list_artifacts` / `dottie_get_artifact` | `dottie_artifacts` + `dottie_artifact_versions` + `dottie-content` blob; Artifacts packages | 🟡 schema LIVE + FE repointed; handlers deploy pending. On deploy → flip `artifactsPersistence` true. |
 
 ## G. Voice I/O — ❌ MISSING (2)
 | FE call | What breaks | Disposition |

@@ -1,5 +1,12 @@
 # Dottie Artifacts Handlers — Pass-1 VEP (dottie_upsert/list/get_artifact)
 
+## Repair note (rev-3 — addresses Codex REJECT T13: stale status prose after the repoint)
+The rev-2 repoint was correct, but I didn't sweep the STATUS comments/docs that the repoint + earlier flag-flips made stale (the recurring whole-sweep lesson). Fixed every one Codex cited, plus a broad re-sweep:
+- `gateway.live.ts` — `attachmentsAvailable` comment "Off until dottie attachments backend lands" → attachments LIVE; `listConversationAttachments` guard "No dottie attachments backend yet" → LIVE; `listPeople` guard "No dottie_list_people yet" → gate-retained-for-parity, dottie_list_people LIVE. (The `voiceAvailable` + `persistArtifact` "not built yet" comments are LEFT — voice and the artifacts *backend* genuinely aren't deployed yet; those are accurate.)
+- `spec/DOTTIE_THEO_RECONCILIATION.md` §F — artifacts row updated from the `theo_*` names to the repointed `dottie_*` names (🟡 schema LIVE + FE repointed; handlers deploy pending).
+- `spec/DOTTIE_API_SPEC.md` Notes — dropped "attachments" from the "No …" list (Attachments are LIVE, recorded in § Attachments above).
+Broad re-sweep of `spec/` for any other "attachments/people missing/errors/not-built" residue: clean. Backend handler code unchanged (Codex-cleared); tsc + build clean.
+
 ## Repair note (rev-2 — addresses Codex REJECT T13 / T22: FE not repointed)
 Codex cleared the handler code but correctly rejected the FE-integration claim: the live `gateway.live.ts` still called `theo_upsert_artifact` / `theo_list_artifacts` / `theo_get_artifact`, so flipping `DOTTIE_CAPABILITIES.artifactsPersistence` would activate the Artifacts path against non-existent `theo_*` routes on the func-dottie base. Fixed by **including the FE gateway repoint in this package** (§FE): the 3 artifact calls now target `dottie_*` (+ the `getServerArtifact` comment). The "exact FE-called surface" claim is now true, and §8's flip is valid because this package repoints the FE.
 
