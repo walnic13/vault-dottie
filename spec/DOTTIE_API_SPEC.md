@@ -34,9 +34,13 @@ Body `{ id:uuid }`. Owner-scoped `DELETE FROM dottie_conversations` (its `dottie
 ### POST `/api/dottie_set_conversation_starred` (func-dottie)
 Body `{ conversation_id:uuid, starred:boolean }` (strict — unknown keys → `400`). Owner-scoped `UPDATE dottie_conversations SET starred` only — deliberately does **not** touch `updated_at`, so starring never re-orders Recents. → `200 { data:{ conversation_id, starred } }`. `400`, `401`, `403`/`404` (owner-gate), `500`.
 
+## People roster (func-dottie) — **LIVE** (ListPeople package)
+### GET `/api/dottie_list_people` (func-dottie)
+No body. Read-only delegated Microsoft Graph **OBO**: exchanges the caller's bearer (aud `api://4e1a1e31…`) for a Graph token via the shared API app's client credentials, then reads the "Vault Staff" group members + live presence + 48×48 photos. → `200 { data:{ people:[{ id (Entra OID), displayName, email, jobTitle, availability, activity, photo (data: URI|null), isSelf }], self } }` (self first, then alphabetical). `401` (no identity / no bearer), `403` (Graph/OBO forbidden), `500` (missing OBO config / unexpected). Presence + photos best-effort (null on failure; never fail the roster). Deployed 2026-08-01 (Kudu VFS, GET-back byte-identical); golden curls green: authenticated `200` (roster of 9, self `isSelf:true` first, photo+presence populated); unauthenticated `401`; CORS preflight `200` for the dev-SWA origin. **FE un-gate** (`DOTTIE_CAPABILITIES.people`) lands with the gate/hide package.
+
 ## Notes
 - `dottie_ask` (POST `/api/dottie_ask`, func-dottie) — the original stateless gpt-5 round-trip (Stage-0 frame). Superseded for chat by `dottie_message`.
 - Dottie-L1 memory WRITE/CRUD + distillation is Phase D3 (the read-injection is live but degrades to empty until D3 populates `dottie_user_memory`).
 - No project-sharing (SPW), attachments, history-RAG, web-tools, or extended thinking — see `DOTTIE_THEO_PARITY_LEDGER.md`.
 
-_Recorded 2026-08-01 after D2 + D2-Stream deploy + golden curls (Role-C, satisfying the G-APISPEC gap in both packages). Conversation-management trio added 2026-08-01 after the ConvMgmt package deploy + golden curls (Role-C)._
+_Recorded 2026-08-01 after D2 + D2-Stream deploy + golden curls (Role-C, satisfying the G-APISPEC gap in both packages). Conversation-management trio added 2026-08-01 after the ConvMgmt package deploy + golden curls (Role-C). `dottie_list_people` added 2026-08-01 after the ListPeople package deploy + golden curls (Role-C)._

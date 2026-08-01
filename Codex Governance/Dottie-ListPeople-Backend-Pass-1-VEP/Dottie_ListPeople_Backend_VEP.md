@@ -2,6 +2,14 @@
 
 Second package of the FE↔backend reconciliation build-out (`spec/DOTTIE_THEO_RECONCILIATION.md` §C): the Vault Staff roster + live presence for Dottie's People panel / invite picker. The transplanted FE calls `theo_list_people`; Dottie lacked it, so the roster degraded to empty (greeting lost the first name, invite picker blank). This handler is a **byte-faithful mirror of the deployed `theo_list_people` primary reference**, whose single allowed delta is the route name, the Dottie-namespaced roster-group env var, the header comment, and the two `context.log` tags. **No DB, no Blob, no migration** — it is a read-only delegated **Microsoft Graph OBO** call (exchange the caller's bearer → Graph token → Vault Staff group members + presence + photos). Kudu-VFS deploy to `vaultgpt-func-dottie` + golden curls. On land, the FE `DOTTIE_CAPABILITIES.people` flag flips `true` in the paired gate/hide follow-up.
 
+## Role-C completion — DEPLOYED + golden curls green (2026-08-01)
+Codex Pass-2 **APPROVED** (HEAD `240fd3d`). Deployed `dottie_list_people` to `vaultgpt-func-dottie` via Kudu VFS (AAD Bearer): dir created, `index.js` (11903b) + `function.json` (297b) PUT, **GET-back byte-identical**, app restarted. Golden curls:
+- **C1/C2** authenticated `GET` → `200` — roster of **9**; caller (self) `isSelf:true` sorted first; `photo` (data: URI), `availability` ("Available"), `jobTitle` populated; person keys `{id,displayName,email,jobTitle,availability,activity,photo,isSelf}` — no token/secret leakage. **This 200 is the end-to-end OBO proof** (the exchange + the 3 consented Graph scopes work on func-dottie).
+- **C3** unauthenticated `GET` → `401` (EasyAuth fail-closed).
+- **CORS** preflight (dev-SWA origin `https://brave-dune-0a97c7d03.7.azurestaticapps.net`) → `200` with matching `Access-Control-Allow-Origin` (platform CORS answers browser preflight; a bare `OPTIONS` without preflight headers gets EasyAuth `401`, which is expected and does not affect the FE).
+
+Role-C docs updated same turn: `spec/DOTTIE_API_SPEC.md § People roster` (LIVE + curl matrix) and `spec/DOTTIE_THEO_RECONCILIATION.md §C/Summary` (→ backend LIVE). **FE un-gate deferred**: `DOTTIE_CAPABILITIES.people` → `true` lands bundled with the gate/hide package (which owns `swapBlock.ts` and is in Codex review) so the shared file isn't churned mid-review. Satisfies G-DEPLOY + G-APISPEC; G-UNGATE pending gate/hide.
+
 ## Grounding Conformance Receipt
 Role: Claude Code
 Turn Type: Verified Evidence Pack (backend handler; no migration)

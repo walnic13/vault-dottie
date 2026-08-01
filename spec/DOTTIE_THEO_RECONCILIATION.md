@@ -23,10 +23,10 @@ The FE calls the `dottie_*` routes below; the handlers are deployed to func-dott
 | `theo_publish_conversation` / `theo_unpublish_conversation` | — | ⛔ N/A — HIDE (no SPW in Dottie) |
 | `theo_set_conversation_project` | — | ⛔ N/A — HIDE (Projects hidden) |
 
-## C. People / roster — ❌ MISSING
-| FE call | What breaks | Disposition |
+## C. People / roster — ✅ backend LIVE (ListPeople package, deployed 2026-08-01)
+| FE call (now) | Backend | Status |
 | --- | --- | --- |
-| `theo_list_people` | Greeting name + invite picker (best-effort; degrades) | REUSE Theo's (shared org roster) or BUILD `dottie_list_people` |
+| `dottie_list_people` (GET) | ListPeople package (Graph OBO; func-dottie) | ✅ backend LIVE (golden curls green: `200` roster of 9, self first; `401` unauth). FE un-gate (`DOTTIE_CAPABILITIES.people`) lands with gate/hide. |
 
 ## D. Attachments — ❌ MISSING (5)
 | FE call | What breaks | Disposition |
@@ -57,8 +57,8 @@ The FE calls the `dottie_*` routes below; the handlers are deployed to func-dott
 | `sigma_review_agent_stream` | ⛔ N/A | Sigma-specific |
 
 ## Summary
-- **Live:** 4 core-chat endpoints + web-search grounding + conversation-management (rename/delete/star — ConvMgmt package).
-- **Missing & errors today:** people, attachments (5), artifacts-persist (3), voice (2), image/video tools.
+- **Live:** 4 core-chat endpoints + web-search grounding + conversation-management (rename/delete/star — ConvMgmt package) + people roster (`dottie_list_people` — ListPeople package; FE un-gate lands with gate/hide).
+- **Missing & errors today:** attachments (5), artifacts-persist (3), voice (2), image/video tools.
 - **DECIDED:** Projects (14) + publish/SPW → HIDE in the UI (revisit later). Everything else → BUILD every missing `dottie_*` backend now, replicating from Theo (Walter 2026-08-01).
 
 **Honest status: Dottie does NOT yet fully match Theo at the backend — core chat + grounding + conversation-management are live; people, attachments, artifacts, voice, and image/video are still to build.** Closing this is a sequenced set of governed backend packages (each `dottie_*` mirroring the Theo original), tracked here. The FE controls for still-missing features should be **gated/hidden** until their backend lands, so nothing errors.
