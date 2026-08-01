@@ -390,6 +390,10 @@ export async function listConversationAttachments(conversationId: string): Promi
   if (!apiBase && !tokenProvider) {
     return [];
   }
+  // No dottie attachments backend yet. This READ fires on every chat reopen (selectRecent), independent
+  // of the paperclip control, so it must be gated too — else it 404s on normal chat open. Empty = parity
+  // with a thread that has no persisted attachments.
+  if (!DOTTIE_CAPABILITIES.attachments) return [];
   const headers = await authHeaders();
   const res = await fetch(
     `${apiBase}/api/theo_list_conversation_attachments?conversationId=${encodeURIComponent(conversationId)}`,
