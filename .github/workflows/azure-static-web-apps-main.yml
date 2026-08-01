@@ -1,0 +1,58 @@
+name: Azure Static Web Apps CI/CD (main / prod)
+
+# Deploys the Dottie FE to the PROD SWA (black-stone-05bf4ca0) on push to `main` (dev→main promotion).
+# Mirror of the development workflow with the prod deploy token. vault-origin PROD mounts Dottie from
+# this SWA. Secret: AZURE_STATIC_WEB_APPS_API_TOKEN_MAIN (prod SWA token).
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - main
+
+jobs:
+  build_and_deploy_job:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    runs-on: ubuntu-latest
+    name: Build and Deploy Job
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          lfs: false
+
+      - name: Create .env for Vite build (from GitHub Secrets)
+        shell: bash
+        run: |
+          cat > .env <<EOF
+          VITE_ENTRA_CLIENT_ID=${{ secrets.VITE_ENTRA_CLIENT_ID }}
+          VITE_ENTRA_TENANT_ID=${{ secrets.VITE_ENTRA_TENANT_ID }}
+          VITE_ENTRA_AUTHORITY=${{ secrets.VITE_ENTRA_AUTHORITY }}
+          VITE_ENTRA_API_SCOPE=${{ secrets.VITE_ENTRA_API_SCOPE }}
+          VITE_DOTTIE_FUNCTIONS_URL=https://vaultgpt-func-dottie.azurewebsites.net
+          EOF
+
+      - name: Deploy to Azure Static Web Apps (prod)
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_MAIN }}
+          action: "upload"
+          app_location: "/"
+          api_location: ""
+          output_location: "dist"
+          production_branch: "main"
+
+  close_pull_request_job:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    name: Close Pull Request Job
+    steps:
+      - name: Close Pull Request
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_MAIN }}
+          action: "close"
+          production_branch: "main"
