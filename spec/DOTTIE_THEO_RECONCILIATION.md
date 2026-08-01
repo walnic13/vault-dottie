@@ -19,8 +19,8 @@
 | `theo_delete_conversation` | **Delete chat errors** (Walter hit this) | BUILD `dottie_delete_conversation` |
 | `theo_rename_conversation` | Rename errors | BUILD `dottie_rename_conversation` |
 | `theo_set_conversation_starred` | Star/pin errors | BUILD `dottie_set_conversation_starred` (col already in D1) |
-| `theo_publish_conversation` / `theo_unpublish_conversation` | SPW publish — errors | DECIDE (Dottie has no SPW → likely N/A; hide the control) |
-| `theo_set_conversation_project` | Assign-to-project — errors | DECIDE (tied to Projects, §E) |
+| `theo_publish_conversation` / `theo_unpublish_conversation` | SPW publish — errors | N/A — HIDE (no SPW in Dottie) |
+| `theo_set_conversation_project` | Assign-to-project — errors | N/A — HIDE (Projects hidden) |
 
 ## C. People / roster — ❌ MISSING
 | FE call | What breaks | Disposition |
@@ -35,7 +35,7 @@
 ## E. Projects — ❌ MISSING (14) — **DECISION NEEDED**
 | FE calls | What breaks | Disposition |
 | --- | --- | --- |
-| `theo_create_project`, `theo_update_project`, `theo_delete_project`, `theo_list_projects`, `theo_list_project_conversations`, `theo_add_project_knowledge(+_file)`, `theo_list_project_knowledge`, `theo_remove_project_knowledge`, `theo_list_project_members`, `theo_share_project`, `theo_unshare_project`, `theo_set_project_visibility`, `theo_get_or_create_review_project` | The **Projects** tab + all project features error | **DECIDE:** does Dottie have Projects? Earlier design said Dottie = personal + governance, no project-sharing (SPW N/A). If NO → hide the Projects tab; if YES → a large backend build (mirror Theo B4/B5) |
+| `theo_create_project`, `theo_update_project`, `theo_delete_project`, `theo_list_projects`, `theo_list_project_conversations`, `theo_add_project_knowledge(+_file)`, `theo_list_project_knowledge`, `theo_remove_project_knowledge`, `theo_list_project_members`, `theo_share_project`, `theo_unshare_project`, `theo_set_project_visibility`, `theo_get_or_create_review_project` | The **Projects** tab + all project features error | **DECIDED (Walter 2026-08-01): HIDE Projects for now** — not visible in the UI (gate the Projects nav + project controls); may add the capability later. No backend build now. |
 
 ## F. Artifacts — ❌ MISSING (3)
 | FE call | What breaks | Disposition |
@@ -58,7 +58,7 @@
 ## Summary
 - **Live:** 4 core-chat endpoints + web-search grounding.
 - **Missing & errors today:** conversation-management (delete/rename/star), people, attachments (5), artifacts-persist (3), voice (2), image/video tools.
-- **Decision needed:** Projects (14 endpoints) and publish/SPW — does Dottie have them, or hide the controls?
+- **DECIDED:** Projects (14) + publish/SPW → HIDE in the UI (revisit later). Everything else → BUILD every missing `dottie_*` backend now, replicating from Theo (Walter 2026-08-01).
 
 **Honest status: Dottie does NOT yet match Theo at the backend — only core chat + grounding work.** Closing this is a sequenced set of governed backend packages (each `dottie_*` mirroring the Theo original), tracked here. The FE controls for missing features should be **gated/hidden** until their backend lands, so nothing errors.
 
