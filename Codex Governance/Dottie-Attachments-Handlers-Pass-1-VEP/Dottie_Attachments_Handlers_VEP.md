@@ -1,11 +1,18 @@
 # Dottie Attachments Handlers — Pass-1 VEP (dottie_create/finalize/delete/list_attachment)
 
+## Repair note (rev-2 — addresses Codex REJECT T13 / T26: stale schema status/anchor)
+Codex cleared the handler code ("No additional handler-code blocker found") but rejected on false status claims about the paired schema package. Both fixed — no handler-code change:
+- **Stale status:** the VEP said the schema package was "Codex-approved / Codex-APPROVED + Walter-run." That was untrue — the schema package was REJECTED (helper missing `REVOKE ALL FROM PUBLIC`) and is now at rev-2 **awaiting Codex re-review**. §3, §7 (G-SCHEMA), §8 (deploy step 1), and the Codex note now state accurate PRE-LAND / HARD-GATE status: these handlers deploy **only after** the schema package is Codex-approved + Walter-run + catalog-verified.
+- **Stale anchor:** GCR row 6 re-anchored from the rejected rev-1 migration blob `c1250b708…` to the repaired rev-2 blob `ed41406c…` (which carries the helper `REVOKE PUBLIC` fix); grounding parent re-anchored to `81312d0` (the commit containing schema rev-2).
+
+The handler blobs, mirror diffs, and inlined code are unchanged from rev-1 (Codex-cleared).
+
 Handlers half of the attachments build-out (`spec/DOTTIE_THEO_RECONCILIATION.md` §D), paired with the schema package (`Dottie-Attachments-Schema-Pass-1-VEP`, which lands `dottie_attachments`). Four handlers on `vaultgpt-func-dottie`, each a **byte-faithful mirror of its deployed Theo B8 primary reference**, whose ONLY delta is the adapted identifiers (route name; the `dottie_attachments` / exists-helper / `dottie_conversations` SQL names; the `DOTTIE_BLOB_ACCOUNT` / `DOTTIE_BLOB_CONTAINER` / `DOTTIE_PDF_NATIVE_MAX_BYTES` env vars + their `vaultgptdottiestore` / `dottie-content` defaults; the `context.log` tags). No logic, SQL shape, SAS-signing, or extraction change. The upload flow: **create** mints a user-delegation SAS (hand-rolled with `crypto`+`https` via the Function MI — no `@azure/storage-blob`), the FE PUTs the bytes to Blob, **finalize** HEADs the blob for the authoritative type/size, extracts text for extract-class (or large-PDF-promoted) files, and INSERTs the metadata row; **delete** removes the row + best-effort blob; **list** returns a conversation's rows for reload parity. **Handler-only** (the table lands via the paired schema package; the blob container + MI role + npm deps are deploy prerequisites, §4).
 
 ## Grounding Conformance Receipt
 Role: Claude Code
 Turn Type: Verified Evidence Pack (backend handlers; no migration in THIS package)
-Grounding parent (source baseline): `bd5d0e1804dd02bbd1c169cd813801059fd7c349` (vault-dottie, `development`) — anchors below are tip-independent blob SHAs
+Grounding parent (source baseline): `81312d0cc05c68e68bfd842b52f9a2bd30916aa6` (vault-dottie, `development`) — anchors below are tip-independent blob SHAs
 Grounding Mode: Full Baseline Grounding
 Pass: Pass 1
 Sub-phase Track: N/A
@@ -17,7 +24,7 @@ Sub-phase Track: N/A
 | 3 | Grounding Conformance — `governance/THEO_GROUNDING_CONFORMANCE_STANDARD.md` (§3 GCR; §5 Rule Anchor) | `Grep("MUST open with a Grounding Conformance Receipt")` this turn | `7c0d902bdff3b6c0af475b483e31ed796214e57b` |
 | 4 | Golden Handler — `governance/THEO_GOLDEN_HANDLER_STANDARD.md` (§2 primary reference = handler + function.json; §4 EXACT mirror / allowed delta; §5.1 Structural Mirror Table; §5.3 Golden Curl; §5.5 deploy) | `Grep("EXACT mirror")` this turn | `f8f0e5ea36447502e35fb87b373c94e376f05cbb` |
 | 5 | Execution Orchestration — `governance/THEO_EXECUTION_ORCHESTRATION_STANDARD.md` (§1D ordered pass; §1E deploy-after-Codex-APPROVED) | `Grep("ordered, non-skippable")` this turn | `565559b699c1309f8e750b0dbbac859c13d807c8` |
-| 6 | PAIRED SCHEMA (this package's FK/table source) — `Codex Governance/Dottie-Attachments-Schema-Pass-1-VEP/dottie_attachments_migration.sql` (the `dottie_attachments` these handlers read/write) | `Read`(full) this turn | `c1250b708bbbb9332f94d08419efd969f771f3bb` |
+| 6 | PAIRED SCHEMA (this package's FK/table source) — `Codex Governance/Dottie-Attachments-Schema-Pass-1-VEP/dottie_attachments_migration.sql` (the `dottie_attachments` these handlers read/write; **rev-2** — helper `REVOKE ALL FROM PUBLIC` + `GRANT TO authenticated`) | `Read`(full) this turn | `ed41406c78962c11997c9eb05aee13257d086503` |
 | 7 | DEPLOYED D1 SCHEMA — `spec/DOTTIE_AZURE_POSTGRES_SCHEMA.md` (the FK parent `dottie_conversations` + `dottie_conversation_exists_unscoped` used by finalize/list) | `Read` this turn | `bb096db53a8d76dc3589b3744f6492ddad8f1f7f` |
 | 8 | **PRIMARY REFERENCE (DEPLOYED)** — `theo_create_attachment_upload` handler + function.json (SAS mint; B8L type list) | `Read`(full) this turn; copy in-package | index.js `4a68a830b68af1b5a9cc6f8a19332a6ad247d737`; function.json `c2031bdb3789a51d119c7a5c8b5055bc1c2d5a3b` |
 | 9 | **PRIMARY REFERENCE (DEPLOYED)** — `theo_finalize_attachment` handler + function.json (HEAD/GET/extract/INSERT; B8L + B8f) | `Read`(full) this turn; copy in-package | index.js `9bfe26011c8852ab5571cea7e096f784d681ef2c`; function.json `9fdd3c54d25b7a8c3bcf285459acd0ddea8316e7` |
@@ -52,7 +59,7 @@ All: `OPTIONS`→`204`; `401` no identity; `500` unexpected.
 The file body lives in Azure Blob (`dottie-content` on `vaultgptdottiestore`); Postgres holds only the pointer + metadata (`dottie_attachments`). **SAS is hand-rolled** with `crypto` + raw `https` (mirroring the deployed axis/artifacts-upload technique): the Function's system-assigned MI (`IDENTITY_ENDPOINT`/`IDENTITY_HEADER`) gets a `https://storage.azure.com/` token → user-delegation key (`?restype=service&comp=userdelegationkey`, `x-ms-version: 2022-11-02`) → SAS signed over the canonical 24-field string-to-sign (`sv=2022-11-02`, `sr=b`, `sp=cw`, `rsct` pinned). No `@azure/storage-blob`/`@azure/identity`. Owner OID embedded in the blob path (`attachments/<oid>/<id>`) lets finalize/delete prove ownership without a DB lookup. Extraction (finalize, lazy `require`): text/csv native UTF-8; xlsx/xls/xlsm/xlsb via `xlsx`; docx via `mammoth`; pptx via `officeparser`; large-PDF via `pdf-parse/lib/pdf-parse.js`. Fail-closed on every path; extraction + presence + blob cleanup are best-effort (never fail the row). No `theo_*`/`reporting_*` object touched; no cross-app read. Same envelope/pool/`set_config`/EasyAuth/owner-gate as the D2 + ConvMgmt handlers.
 
 ## §3 — Schema Reality Lock (Governor §4)
-These handlers read/write `dottie_attachments` (all 12 columns) + the deployed D1 `dottie_conversations` + `dottie_conversation_exists_unscoped` (finalize/list owner-gate) + `dottie_attachment_exists_unscoped` (delete 403/404). `dottie_conversations` + its exists-helper are DEPLOYED D1 (schema doc, GCR row 7, catalog-verified). `dottie_attachments` + `dottie_attachment_exists_unscoped` land via the **paired schema package** (GCR row 6; Codex-approved + Walter-run) — **these handlers do not deploy until that migration is live and verified** (deploy plan §8, ordered). Nothing invented; no DDL in this package. (Disclosed sequencing, G-SCHEMA.)
+These handlers read/write `dottie_attachments` (all 12 columns) + the deployed D1 `dottie_conversations` + `dottie_conversation_exists_unscoped` (finalize/list owner-gate) + `dottie_attachment_exists_unscoped` (delete 403/404). `dottie_conversations` + its exists-helper are DEPLOYED D1 (schema doc, GCR row 7, catalog-verified). `dottie_attachments` + `dottie_attachment_exists_unscoped` land via the **paired schema package** (`Dottie-Attachments-Schema-Pass-1-VEP`, GCR row 6, rev-2) — a separate Pass-1 VEP **currently under Codex review** (not yet approved). **These handlers do not deploy until that migration is Codex-approved, Walter-run, and catalog-verified** (deploy plan §8 — a hard gate). Nothing invented; no DDL in this package. (Disclosed sequencing, G-SCHEMA.)
 
 ## §4 — Infra Reality Lock (Governor §3 Never-Guess — az-VERIFIED current state; established at deploy)
 No blob/MI infra is assumed. Verified live with `az` this turn — and stated honestly, including what is NOT yet present (each is a deploy prerequisite, not a runtime claim):
@@ -2800,12 +2807,12 @@ Full upload round-trip against `dottie-content` (a small real PDF + a .txt):
 
 ## §7 — Gap Register
 **PROCEED** (grounded; the paired schema + infra prerequisites are disclosed and deploy-ordered).
-- **G-SCHEMA: PRE-LAND (paired package, ordered).** `dottie_attachments` + `dottie_attachment_exists_unscoped` land via `Dottie-Attachments-Schema-Pass-1-VEP` (Codex-approved + Walter-run) BEFORE these handlers deploy; re-verified at deploy. Disclosed (§3).
+- **G-SCHEMA: PRE-LAND (paired package, ordered — HARD GATE).** `dottie_attachments` + `dottie_attachment_exists_unscoped` land via `Dottie-Attachments-Schema-Pass-1-VEP` (rev-2, **under Codex review — not yet approved**), which must be Codex-approved + Walter-run + catalog-verified BEFORE these handlers deploy; re-verified at deploy. Disclosed (§3).
 - **G-INFRA: PRE-LAND (deploy step).** Create `dottie-content`; grant the MI Storage Blob Data Contributor; `npm install` the 4 extraction deps; set the blob app settings; Blob CORS. az-verified current state in §4. Disclosed.
 - **G-APISPEC / G-UNGATE: PRE-LAND (Role-C post-deploy).** Add the 4 endpoints to `spec/DOTTIE_API_SPEC.md`, flip reconciliation §D → LIVE, and flip `DOTTIE_CAPABILITIES.attachments` → `true` (un-gates the paperclip + reopen read) once the curls pass. Disclosed.
 
 ## §8 — Deploy plan (ordered; §1D)
-1. **Schema first:** the paired schema package is Codex-APPROVED and Walter has run `dottie_attachments_migration.sql`; Claude verifies (read-only catalog) — this must be green before step 3. 2. **Infra:** Claude creates the `dottie-content` container on `vaultgptdottiestore`, grants the func-dottie MI Storage Blob Data Contributor, `npm install xlsx mammoth officeparser pdf-parse@1.1.1` (Kudu), sets `DOTTIE_BLOB_ACCOUNT`/`DOTTIE_BLOB_CONTAINER`, adds Blob CORS for the dev-SWA origin. 3. Codex Pass-2 → APPROVED/REJECTED. 4. Claude Kudu-VFS deploys the 4 handlers to `vaultgpt-func-dottie` (PUT `<fn>/{index.js,function.json}`, GET-back diff, restart, syncfunctiontriggers). 5. Claude runs §6 curls. 6. Role-C: API spec + reconciliation §D → LIVE; flip `DOTTIE_CAPABILITIES.attachments` true (paired FE).
+1. **Schema first (HARD GATE):** the paired schema package (rev-2) must be Codex-APPROVED and Walter must have run `dottie_attachments_migration.sql`; Claude then verifies (read-only catalog, incl. the helper `REVOKE PUBLIC`/`GRANT authenticated`). As of this VEP the schema package is at rev-2, **awaiting Codex re-review** — handler deploy MUST NOT proceed until it is approved + run + green. 2. **Infra:** Claude creates the `dottie-content` container on `vaultgptdottiestore`, grants the func-dottie MI Storage Blob Data Contributor, `npm install xlsx mammoth officeparser pdf-parse@1.1.1` (Kudu), sets `DOTTIE_BLOB_ACCOUNT`/`DOTTIE_BLOB_CONTAINER`, adds Blob CORS for the dev-SWA origin. 3. Codex Pass-2 → APPROVED/REJECTED. 4. Claude Kudu-VFS deploys the 4 handlers to `vaultgpt-func-dottie` (PUT `<fn>/{index.js,function.json}`, GET-back diff, restart, syncfunctiontriggers). 5. Claude runs §6 curls. 6. Role-C: API spec + reconciliation §D → LIVE; flip `DOTTIE_CAPABILITIES.attachments` true (paired FE).
 
 ## Codex activation note (Walter forwards)
 
@@ -2814,7 +2821,7 @@ Codex is activated for Pass-2 review of Dottie Attachments Handlers (dottie_crea
 list_attachment), vault-dottie, "Codex Governance/Dottie-Attachments-Handlers-Pass-1-VEP/
 Dottie_Attachments_Handlers_VEP.md". Open with a governance-bound GCR + Rule Anchor Table. HANDLER-ONLY
 (no migration in this package — the dottie_attachments table lands via the paired Dottie-Attachments-Schema
-package, Codex-approved + Walter-run, BEFORE these handlers deploy; blob container + MI role + npm deps are
+package (rev-2, under Codex review — must be approved + Walter-run BEFORE these handlers deploy); blob container + MI role + npm deps are
 deploy prerequisites, az-verified current state in §4). Handlers half of the FE<->backend reconciliation §D.
 Review: (1) each handler is a byte-faithful EXACT mirror of its deployed Theo B8 primary reference (§5) —
 the delta is TOKEN-ONLY (route + dottie_attachments/dottie_conversations/exists-helper SQL names +
