@@ -62,14 +62,14 @@
 
 | Theo capability | Theo surface | Dottie status | Dottie phase | Adaptation vs Theo |
 | --- | --- | --- | --- | --- |
-| Chat console (send/stream/history) | Theo FE | 🟡 PLANNED | **D4** | Dottie FE = **heavily Theo-derived, DISTINCT identity**; consumes `dottie_message_stream` SSE |
-| "Watch it work" live-thinking UI + token counter | adaptive thinking panel | 🟡 PLANNED | D4 | render gpt-5 processing; Dottie-styled |
-| Streaming status words ("thinking"/processing terms) | B9-FE status words | 🟡 PLANNED | D4 | with the SSE console |
-| Markdown rendering (react-markdown + remark-gfm, XSS-safe) | Theo FE | 🟡 PLANNED | D4 | copied |
+| Chat console (send/stream/history) | Theo FE | ✅ DONE (dev SWA) | **D4** | Dottie console on brave-dune; streaming + history + composer; DISTINCT ink/serif/gold identity |
+| "Watch it work" live-thinking UI | adaptive thinking panel | 🟡 PARTIAL | D4 | logo animates + "thinking…" while streaming; richer thinking panel later |
+| Streaming status words | B9-FE status words | 🟡 PARTIAL | D4 | "thinking…" present; playful status words later |
+| Markdown rendering | Theo FE (react-markdown) | 🟡 PARTIAL | D4 | markdown-lite (bold/code/lists/paras) shipped; full react-markdown a fine-tune |
 | Voice I/O — dictation (Whisper STT) + read-aloud | `func-chat` Whisper | ⚪ DEFERRED | D-Voice | copy after core FE |
-| Logo / branding animation | Spiral of Theodorus (constructing) | 🟡 PLANNED | D4 | **Dottie logo = the spiral DECONSTRUCTING wedge-by-wedge to the centre dot** (Dottie = the Dottie number); static = full shell-spiral with a dot at the origin |
-| Mobile Theo-dominant layout | Theo FE mobile | ⚪ DEFERRED | D4b | after desktop console |
-| Federated remote mounted in VO shell | Theo remote in vault-origin | 🟡 PLANNED | **D4** | Dottie FE = federated remote in VO (like DMS/Sigma/Theo) |
+| Logo / branding animation | Spiral of Theodorus (constructing) | ✅ DONE | D4 | **DottieSpiral** — full shell + centre dot; DECONSTRUCTS outer→dot then rebuilds; wedge geometry byte-verbatim |
+| Mobile layout | Theo FE mobile | 🟡 PARTIAL | D4b | responsive (sidebar collapses <720px); mobile-dominant polish later |
+| Federated remote mounted in VO shell | Theo remote in vault-origin | 🟡 NEXT | **D4-mount** | client is federation-ready (`window.__DOTTIE_CONFIG__`); VO-side mount (module-federation remote + app rail) is the follow-on cross-repo step |
 | Login gate (employees only) | `vault-origin` employeeId gate | ✅ (inherited via VO host) | D4 | VO host gates; Dottie mounts inside |
 
 ## 7. Notifications & platform
