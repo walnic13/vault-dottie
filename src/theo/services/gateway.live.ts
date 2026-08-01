@@ -163,7 +163,7 @@ export async function sendMessage(req: GatewayRequest, opts?: { signal?: AbortSi
   // attachment_ids?}. The handler injects the configured model (THEO_FOUNDRY_DEPLOYMENT); the client's
   // `model` is unused. conversation_id (B3a) appends to an existing thread; attachment_ids (B8d) inject
   // the owner-scoped attachments into the upstream user turn.
-  const res = await fetch(`${apiBase}/api/theo_message`, {
+  const res = await fetch(`${apiBase}/api/dottie_message`, {
     method: "POST",
     credentials: "same-origin",
     headers,
@@ -283,7 +283,7 @@ export async function listConversations(limit?: number): Promise<ConversationSum
   }
   const headers = await authHeaders();
   const query = limit != null ? `?limit=${encodeURIComponent(String(limit))}` : "";
-  const res = await fetch(`${apiBase}/api/theo_list_conversations${query}`, {
+  const res = await fetch(`${apiBase}/api/dottie_list_conversations${query}`, {
     method: "GET",
     credentials: "same-origin",
     headers,
@@ -308,7 +308,7 @@ export async function listProjectConversations(projectId: string): Promise<Conve
     return mockListProjectConversations(projectId);
   }
   const headers = await authHeaders();
-  const res = await fetch(`${apiBase}/api/theo_list_conversations?projectId=${encodeURIComponent(projectId)}`, {
+  const res = await fetch(`${apiBase}/api/dottie_list_conversations?projectId=${encodeURIComponent(projectId)}`, {
     method: "GET",
     credentials: "same-origin",
     headers,
@@ -331,7 +331,7 @@ export async function getConversation(id: string): Promise<ConversationDetail> {
     return mockGet(id);
   }
   const headers = await authHeaders();
-  const res = await fetch(`${apiBase}/api/theo_get_conversation?conversationId=${encodeURIComponent(id)}`, {
+  const res = await fetch(`${apiBase}/api/dottie_get_conversation?conversationId=${encodeURIComponent(id)}`, {
     method: "GET",
     credentials: "same-origin",
     headers,
@@ -1012,7 +1012,7 @@ export async function sendMessageStream(req: GatewayRequest, handlers: StreamHan
   }
 
   const headers = await authHeaders();
-  const resp = await fetch(`${streamBase}/api/theo_message_stream`, {
+  const resp = await fetch(`${streamBase}/api/dottie_message_stream`, {
     method: "POST",
     credentials: "same-origin",
     headers,
@@ -1134,6 +1134,18 @@ export async function sendMessageStream(req: GatewayRequest, handlers: StreamHan
         if (delta.type === "text_delta" && typeof delta.text === "string") handlers.onText(delta.text);
         else if (delta.type === "thinking_delta" && typeof delta.thinking === "string") handlers.onThinking?.(delta.thinking);
         else if (delta.type === "citations_delta" && delta.citation && typeof delta.citation === "object") handlers.onCitation?.(delta.citation as StreamCitation);
+        continue;
+      }
+      // Dottie's backend (dottie_message_stream) relays Azure OpenAI gpt-5 chunks (OpenAI shape),
+      // NOT Anthropic content-block events: each data frame is { choices:[{ delta:{ content } }], … };
+      // the first frame is a prompt_filter frame with empty choices, and the stream ends with [DONE]
+      // (which fails JSON.parse above → skipped). Surface delta.content as streamed text.
+      if (Array.isArray(j.choices) && j.choices.length > 0) {
+        const choice = j.choices[0] as Record<string, unknown>;
+        const delta = (choice && typeof choice.delta === "object" ? choice.delta : null) as Record<string, unknown> | null;
+        const piece = delta && typeof delta.content === "string" ? (delta.content as string) : "";
+        if (piece) handlers.onText(piece);
+        continue;
       }
     }
   }
