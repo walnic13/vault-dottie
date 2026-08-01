@@ -2,6 +2,15 @@
 
 First package of the FE↔backend reconciliation build-out (`spec/DOTTIE_THEO_RECONCILIATION.md` §B): the three conversation-management handlers the transplanted FE already calls but Dottie's backend lacked — so **delete / rename / star error today**. Each is a **byte-faithful mirror of its deployed Theo primary reference** (`theo_delete_conversation` / `theo_rename_conversation` / `theo_set_conversation_starred`), with the single allowed delta being the table + exists-helper name (`theo_conversations`→`dottie_conversations`, `theo_conversation_exists_unscoped`→`dottie_conversation_exists_unscoped`). **No migration** (the `dottie_conversations` columns `title`/`starred`/`updated_at` + the exists helper landed in D1). Kudu-VFS deploy to `vaultgpt-func-dottie` + golden curls.
 
+## Role-C completion — DEPLOYED + golden curls green (2026-08-01)
+Codex Pass-2 **APPROVED** (rev-3, HEAD `e95f3f4`). Deployed to `vaultgpt-func-dottie` via Kudu VFS (AAD Bearer; SCM basic-auth disabled): three handler dirs created, `index.js` + `function.json` PUT for each, **GET-back byte-identical** (delete 4853b/244b, rename 5222b/244b, starred 5557b/249b), app restarted. Golden curls (EasyAuth, aud `api://4e1a1e31…`):
+- **rename** — happy `200` (`data.conversation.{id,title}`); empty/whitespace title `400`.
+- **star** — happy `200` (`data.{conversation_id,starred:true}`); unknown body field `400`; absent uuid `404` (owner-gate).
+- **delete** — happy `200` (`data.{deleted:true,id}`); get-after-delete `404` (message cascade confirmed); bad-uuid `400`.
+- **all three** — unauthenticated `401` (EasyAuth fail-closed).
+
+Role-C docs updated same turn: `spec/DOTTIE_API_SPEC.md § Conversation management` (banner → LIVE + curl matrix) and `spec/DOTTIE_THEO_RECONCILIATION.md §B/Summary` (🟡 → ✅ LIVE); the sibling FE Foundation VEP F-P3/G-3 flipped deploy-pending → LIVE to keep the shared `gateway.live.ts` narrative consistent. Satisfies this package's G-DEPLOY + G-APISPEC gaps.
+
 ## Repair note (rev-2 — addresses Codex REJECT T13 / T4)
 - **T13 (FE still calls `theo_*`):** the FE gateway (`gateway.live.ts`) is now repointed for these three —
   `deleteConversation`/`renameConversation`/`setConversationStarred` call `/api/dottie_delete_conversation` /

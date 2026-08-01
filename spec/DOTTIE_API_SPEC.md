@@ -1,6 +1,6 @@
 # Dottie API Spec
 
-Dottie backend endpoints. The `## Endpoints` section is **live**; the `## Conversation management` section is **authored, deploy-pending** (see its status banner). All are EasyAuth-gated (shared Vault GPT API app, audience `api://4e1a1e31-5c20-4480-99e4-098901707d9e`); handlers enforce `401` via `x-ms-client-principal` and scope every query to the caller's `oid` (`created_by`). Envelope: success `{ data, meta:{timestamp,version} }`; error `{ error:{ code, message, status, timestamp } }`.
+Dottie backend endpoints — all **live**. All are EasyAuth-gated (shared Vault GPT API app, audience `api://4e1a1e31-5c20-4480-99e4-098901707d9e`); handlers enforce `401` via `x-ms-client-principal` and scope every query to the caller's `oid` (`created_by`). Envelope: success `{ data, meta:{timestamp,version} }`; error `{ error:{ code, message, status, timestamp } }`.
 
 ## Hosts
 - **`vaultgpt-func-dottie`** (`https://vaultgpt-func-dottie.azurewebsites.net`) — classic v3, Kudu-VFS. The buffered conversation trio + `dottie_ask`.
@@ -22,8 +22,8 @@ Query `?conversationId=uuid`. → `200 { data:{ conversation, messages:[{id,seq,
 ### POST `/api/dottie_message_stream` (func-dottie-stream) — streaming send (SSE)
 Same body as `dottie_message`. → `200 text/event-stream`: the upstream gpt-5 SSE relayed verbatim (OpenAI chunk shape `data: {choices:[{delta:{content}}]}` … `data: [DONE]`), then a final `event: vault_meta\ndata: {conversation_id, model}`. On stream end the full turn is persisted to `dottie_*` (identical to the buffered path). Pre-stream failures are clean JSON errors (`400`/`401`/`403`/`404`/`429`/`502`/`500`); mid-stream upstream error → `event: vault_error`; post-stream persistence failure → `vault_meta {persisted:false}` (answer already delivered).
 
-## Conversation management (func-dottie) — **authored; deploy pending** (ConvMgmt package)
-> Status: the FE (`gateway.live.ts`) already calls these three `dottie_*` routes; the handlers + `function.json` are authored and inlined in `Codex Governance/Dottie-ConvMgmt-Backend-Pass-1-VEP/` but are **not yet deployed** to `vaultgpt-func-dottie` (pending Codex Pass-2 approval → deploy → golden curls). Until deploy they return `404` at the host. Contracts (owner-scoped; standard envelope):
+## Conversation management (func-dottie) — **LIVE** (ConvMgmt package)
+> Deployed to `vaultgpt-func-dottie` 2026-08-01 (Kudu VFS, GET-back byte-identical, app restarted) after Codex Pass-2 APPROVED. Golden curls green: rename `200`/empty-title `400`; star `200`/unknown-field `400`/absent-uuid `404`; delete `200`/get-after-delete `404` (cascade)/bad-id `400`; all three `401` unauthenticated. Contracts (owner-scoped; standard envelope):
 
 ### POST `/api/dottie_rename_conversation` (func-dottie)
 Body `{ id:uuid, title:string (1..200, trimmed, non-empty) }`. Owner-scoped `UPDATE dottie_conversations SET title, updated_at=now()`. → `200 { data:{ conversation:{ id, title, … } } }`. `400` (bad/empty/oversized title or bad `id`), `401`, `403`/`404` (owner-gate via `dottie_conversation_exists_unscoped`), `500`.
@@ -39,4 +39,4 @@ Body `{ conversation_id:uuid, starred:boolean }` (strict — unknown keys → `4
 - Dottie-L1 memory WRITE/CRUD + distillation is Phase D3 (the read-injection is live but degrades to empty until D3 populates `dottie_user_memory`).
 - No project-sharing (SPW), attachments, history-RAG, web-tools, or extended thinking — see `DOTTIE_THEO_PARITY_LEDGER.md`.
 
-_Recorded 2026-08-01 after D2 + D2-Stream deploy + golden curls (Role-C, satisfying the G-APISPEC gap in both packages)._
+_Recorded 2026-08-01 after D2 + D2-Stream deploy + golden curls (Role-C, satisfying the G-APISPEC gap in both packages). Conversation-management trio added 2026-08-01 after the ConvMgmt package deploy + golden curls (Role-C)._

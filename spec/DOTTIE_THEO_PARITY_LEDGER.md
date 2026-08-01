@@ -19,9 +19,9 @@
 | Get one conversation + messages | `theo_get_conversation` | ✅ DONE | **D2** | `dottie_get_conversation`; drops SPW `conversation_access`/publish/media |
 | **Streaming** send (real-time SSE, not buffered) | `theo_message_stream` (v4 sidecar `vaultgpt-func-stream`) | ✅ DONE (deployed+verified) | **D2-Stream** | `dottie_message_stream` on new v4 sidecar `vaultgpt-func-dottie-stream`; gpt-5 `chat/completions` `stream:true`; OpenAI-shape SSE; 45-chunk stream + persistence-parity verified |
 | Last-opened restore ordering | `theo_get/list` `last_opened_at` | ✅ DONE | **D2** | present in D1 schema + list/get |
-| Star / pin a conversation | `theo_star_conversation` + `starred` col | 🟡 PLANNED | D2b | `starred` column already in D1; needs the toggle handler |
-| Rename a conversation | `theo_rename_conversation` | 🟡 PLANNED | D2b | title update handler |
-| Delete a conversation | `theo_delete_conversation` | 🟡 PLANNED | D2b | owner-scoped delete + cascade |
+| Star / pin a conversation | `theo_set_conversation_starred` + `starred` col | ✅ DONE (deployed+verified) | **ConvMgmt** | `dottie_set_conversation_starred`; deployed 2026-08-01, golden curls green |
+| Rename a conversation | `theo_rename_conversation` | ✅ DONE (deployed+verified) | **ConvMgmt** | `dottie_rename_conversation`; deployed 2026-08-01, golden curls green |
+| Delete a conversation | `theo_delete_conversation` | ✅ DONE (deployed+verified) | **ConvMgmt** | `dottie_delete_conversation`; owner-scoped + message cascade; deployed 2026-08-01, golden curls green |
 | Empty-turn guard | stream/message guard | ✅ (built into D2/D2-Stream) | D2 | non-empty last-user-message check present |
 
 ## 2. Memory
