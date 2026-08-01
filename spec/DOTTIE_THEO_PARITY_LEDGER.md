@@ -95,4 +95,4 @@
 
 **D0** infra ✅ · **D1** schema ✅ · **D2** conversation trio 🔵 · **D2-Stream** streaming 🔵 · **D3** Dottie-L1 CRUD + distillation 🟡 · **D4** FE console (distinct identity + deconstructing-spiral logo + SSE + federated mount) 🟡 · **D5** Dottie-L2/L3 + engine-gated shared-memory reads + Observational Ruleset 🟡 · then the deferred limbs (attachments, tools, voice, push, history-RAG) as prioritised.
 
-_Last updated: 2026-08-01 (D2 rev-2 re-submitted after a T13/T12 classification REJECT — helpers normalized byte-identical, model call reclassified allowed-delta; D2-Stream tightened to the same discipline. Both handler-only, no migration, awaiting Codex Pass-2)._
+_Last updated: 2026-08-01. D2 rev-2 re-submitted after a T13/T12 classification REJECT (helpers normalized byte-identical, model call reclassified allowed-delta). D2-Stream rev-2 after its own T13/T22 REJECT (Codex reviewed the pre-fix commit; the model-call claim was already fixed, and a PRE-LAND dependency gate G-0 was added so the streamer deploys only after D2 rev-2 is APPROVED+deployed). Both handler-only, no migration, awaiting Codex Pass-2._

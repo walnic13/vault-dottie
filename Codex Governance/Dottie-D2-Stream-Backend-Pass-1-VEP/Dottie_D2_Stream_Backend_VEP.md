@@ -20,7 +20,7 @@ Sub-phase Track: N/A
 | 6 | SCHEMA TRUTH — `spec/DOTTIE_AZURE_POSTGRES_SCHEMA.md` (the deployed D1 `dottie_conversations`/`dottie_messages`/`dottie_user_memory` this handler reads+writes) | `Read`(§3/§4) this turn | `bb096db53a8d76dc3589b3744f6492ddad8f1f7f` |
 | 7 | **CANONICAL PRIMARY REFERENCE (1/2) — the streaming MECHANISM** — deployed Theo B9 `theo_message_stream` (v4 `app.setup({enableHttpStream:true})` + `PassThrough` SSE relay + persist-on-end + `vault_meta`; the foundational clean streamer, before SPW/tool-loop accretion Dottie omits) | `Read`(§H-STREAM, full) this turn; byte-identical copy in-package | vault-theo `2939303ffa2d1164ed2987aa0052ae34f3ed07f3` |
 | 8 | **CANONICAL PRIMARY REFERENCE (2/2) — the gpt-5 model call** — deployed `dottie_ask.index.js` (client-credentials `getAadToken` → Azure OpenAI gpt-5 `chat/completions`; endpoint/scope/body reused as an allowed-delta with `stream:true` added — error-envelope from the `theo_message_stream` reference, so byte-identical to neither) | `Read`(dottie_ask.index.js, full — this session) this turn; byte-identical copy in-package | vault-dottie `531568ca1ef7768ad2ce11fd8692f90911a265ad` |
-| 9 | STRUCTURAL COMPANION — buffered `dottie_message.index.js` (D2, this repo) — the Dottie-L1 injection + `dottie_*` lazy-create/seq/persist that `persistTurn` mirrors EXACT | `Read`(dottie_message.index.js, full) this turn | vault-dottie `9bed10b5ce301246a9bc4aec1e0208af61c8049b` |
+| 9 | STRUCTURAL COMPANION (NOT a cleared dependency — D2 rev-2 is in re-review; see G-0) — buffered `dottie_message.index.js` (D2, this repo) — the Dottie-L1 injection + `dottie_*` lazy-create/seq/persist that `persistTurn` mirrors structurally. This package's persistence is grounded on the DEPLOYED D1 schema (row 6), NOT on this handler; the companion is a structural-parity reference only. | `Read`(dottie_message.index.js, full) this turn | vault-dottie `a8ab0f6990c9be3779649f93568b92a075a33072` (D2 rev-2 @ `a123bad`, pending Codex) |
 
 ## Rule Anchor Table
 
@@ -1836,7 +1836,7 @@ Authenticated `az` bearer (audience `api://4e1a1e31-5c20-4480-99e4-098901707d9e`
 | # | Call | Expect |
 | - | ---- | ------ |
 | C1 | `POST /api/dottie_message_stream` `{ "messages":[{"role":"user","content":"In two sentences, who are you?"}] }` (curl `-N`) | **200** `Content-Type: text/event-stream`; incremental `data: {choices:[{delta:{content:"…"}}]}` chunks arriving over time (NOT one buffered blob), then `data: [DONE]`, then `event: vault_meta\ndata:{conversation_id:<uuid>,model:"gpt-5-…"}` |
-| C2 | re-verify persistence via v3 `dottie_get_conversation?conversationId=<C1 id>` (on func-dottie) | **200** `{ messages:[ {seq:0,role:"user"}, {seq:1,role:"assistant", content:<full streamed text>} ] }` — streamed turn stored identically to a buffered one |
+| C2 | re-verify persistence via v3 `dottie_get_conversation?conversationId=<C1 id>` (on func-dottie; **requires D2 deployed — see G-0**) | **200** `{ messages:[ {seq:0,role:"user"}, {seq:1,role:"assistant", content:<full streamed text>} ] }` — streamed turn stored identically to a buffered one |
 | C3 | `POST /api/dottie_message_stream` `{ "messages":[{"role":"user","content":"and again"}], "conversation_id":"<C1 id>" }` | **200** stream; appended (seq 2/3); same conversation_id in `vault_meta` |
 | C4 | `POST /api/dottie_message_stream` `{ }` (no messages) | **400** JSON BAD_REQUEST (clean pre-stream error, not SSE) |
 | C5 | `POST /api/dottie_message_stream` `{ "messages":[…], "conversation_id":"<random uuid>" }` | **404** JSON NOT_FOUND (pre-stream ownership check) |
@@ -1846,7 +1846,8 @@ C1 is the milestone — real-time incremental delivery proving the SSE relay flu
 
 ## §7 — Gap Register
 
-**PROCEED.** No missing CURRENT authority; no ESCALATE.
+**PROCEED (with one PRE-LAND dependency gate, G-0).** No missing CURRENT authority; no ESCALATE.
+- **G-0 (D2 dependency — PRE-LAND, blocking deploy):** This package must NOT be deployed until the **D2 conversation trio (rev-2, `a123bad`) is Codex-APPROVED and deployed** to `vaultgpt-func-dottie`. Two reasons: (a) the streamed-turn persistence writes the same `dottie_*` shape the D2 package establishes — deploying the streamer while D2 is unsettled risks a contract divergence; (b) golden curl **C2 reads the persisted turn back via the D2 `dottie_get_conversation`**, which does not exist on func-dottie until D2 deploys. This package is runtime-independent of the D2 handlers otherwise (persistence is grounded on the DEPLOYED D1 schema, GCR row 6). **Natural build order already satisfies this** — D2 deploys first, then this. If for any reason D2's accepted revision differs materially from `a123bad`, re-anchor GCR row 9 to it before this deploys. Disclosed; blocking.
 - **G-1 (sidecar infra — Claude, at deploy): PRE-LAND** — stand up `vaultgpt-func-dottie-stream` (Windows, **Node 24**, Functions v4, share EP1 plan `ASP-VaultTax-931c`, own storage), system-assigned MI, EasyAuth v2 mirrored from `vaultgpt-func-dottie` (shared app `4e1a1e31`, issuer `sts.windows.net/6a0a4c17…`), app settings mirrored (`AZURE_OPENAI_ENDPOINT`/`DEPLOYMENT`/`API_VERSION`, `AAD_TENANT_ID`/`CLIENT_ID`/`CLIENT_SECRET` KV-ref, `MICROSOFT_PROVIDER_AUTHENTICATION_SECRET` KV-ref, `POSTGRES_CONNECTION_STRING`), CORS = the Dottie SWA origin(s) no trailing slash. The Vault GPT API SP already holds Cognitive Services OpenAI User on `Vaultgpt` (client-credentials) → no new model grant. Done after APPROVED, before curls. Disclosed.
 - **G-2 (deploy — Claude, at deploy): PRE-LAND** — v4 **zip-deploy** the sidecar (`host.json` + `package.json` + `src/functions/dottie_message_stream.js` + installed `node_modules`) to `vaultgpt-func-dottie-stream`. NOTE the deploy mechanism differs from func-dottie's per-fn Kudu-VFS: v4 apps deploy the whole package (zip / run-from-package), not per-function folders. Claude runs §6 after.
 - **G-3 (FE consumes SSE): PROCEED (D4)** — the FE SSE consumption + repointing live chat at the streaming endpoint is the Dottie FE phase (D4); until then Dottie chat uses buffered `dottie_message`. Additive — the new endpoint breaks nothing.
@@ -1855,18 +1856,28 @@ C1 is the milestone — real-time incremental delivery proving the SSE relay flu
 
 ## §8 — Deploy plan (ordered; §1D)
 
-1. **Codex Pass-2** → APPROVED/REJECTED.
+0. **Dependency gate (G-0):** the D2 conversation trio (rev-2) is Codex-APPROVED and deployed to `vaultgpt-func-dottie` (so `dottie_get_conversation` exists for C2 and the `dottie_*` persistence contract is settled). Natural order — D2 lands first.
+1. **Codex Pass-2** (this package) → APPROVED/REJECTED.
 2. **Claude** stands up `vaultgpt-func-dottie-stream` (G-1), v4 zip-deploys the sidecar (G-2), then runs the §6 golden curls. **No migration.** `vaultgpt-func-dottie` untouched.
 3. **Role-C** records the streaming endpoint in the vault-dottie docs.
 
 ## Codex activation note (Walter forwards)
 
 ```
-Codex is activated for Pass-2 review of Dottie Phase D2-Stream (dottie_message_stream), vault-dottie,
-"Codex Governance/Dottie-D2-Stream-Backend-Pass-1-VEP/Dottie_D2_Stream_Backend_VEP.md". Open with a
-governance-bound GCR + Rule Anchor Table (standards mirrored into vault-dottie). ONE v4 streaming handler on a
-NEW Windows v4 sidecar (vaultgpt-func-dottie-stream, shares EP1) — Claude stands up the sidecar + v4 zip-deploys
-+ golden curls after APPROVED; func-dottie (dottie_ask + D2 trio, v3) is UNTOUCHED; no migration. Review:
+Codex is activated for Pass-2 RE-REVIEW of Dottie Phase D2-Stream (dottie_message_stream), vault-dottie
+(review at current HEAD, NOT 8c9ee1d), "Codex Governance/Dottie-D2-Stream-Backend-Pass-1-VEP/
+Dottie_D2_Stream_Backend_VEP.md". Prior REJECT was against the pre-fix commit 8c9ee1d. Repairs since:
+- Finding 1 (byte-faithful-to-dottie_ask): ALREADY FIXED at a03db01 — the gpt-5 stream call is reclassified an
+  ALLOWED DELTA (endpoint/scope/body from dottie_ask, error-envelope from the theo_message_stream reference —
+  byte-identical to neither) at intro/GCR row 8/§2/§3/§5.1/§CHANGESET + handler comments.
+- Finding 2 (D2 dependency on a rejected baseline): added PRE-LAND blocking gate G-0 — this package must not
+  deploy until the D2 trio (rev-2, a123bad) is APPROVED + deployed (dottie_get_conversation must exist for curl
+  C2; dottie_* persistence contract settled). GCR row 9 re-anchored to the D2 rev-2 blob a8ab0f6 and downgraded
+  to a structural-parity reference (persistence is grounded on the DEPLOYED D1 schema, not on the D2 handler).
+  §8 deploy plan now lists the D2 dependency as step 0; C2 flagged "requires D2 deployed".
+Open with a governance-bound GCR + Rule Anchor Table. ONE v4 streaming handler on a NEW Windows v4 sidecar
+(vaultgpt-func-dottie-stream, shares EP1) — Claude stands up the sidecar + v4 zip-deploys + golden curls after
+APPROVED AND after G-0 is satisfied; func-dottie (dottie_ask + D2 trio, v3) is UNTOUCHED; no migration. Review:
 (1) faithful mirror — is the v4 streaming mechanism (app.setup enableHttpStream, app.http, PassThrough relay,
 persist-on-end, vault_meta/vault_error, pre-stream ownership check, envelope helpers) byte-identical to the
 deployed theo_message_stream primary reference (§5.1/§CHANGESET; the 8 shared helpers were diff-verified equal),
@@ -1879,5 +1890,8 @@ current SPW/tool-loop deployment Dottie intentionally omits) — same call made 
 no attachments/RAG/web/thinking/project-sharing. (5) fail-closed — clean JSON pre-stream errors (401/400/403/404/
 429/502/500), mid-stream vault_error, non-fatal post-stream persistence (vault_meta persisted:false), non-fatal
 memory fetch, KV-ref secret. (6) persistence parity — a streamed turn stored identically to a buffered
-dottie_message turn (lazy-create/seq/user+assistant/updated_at+last_opened_at). Emit APPROVED or REJECTED only.
+dottie_message turn (lazy-create/seq/user+assistant/updated_at+last_opened_at). (7) the G-0 dependency gate —
+is it correctly stated: PRE-LAND, blocks DEPLOY (not authoring) until D2 rev-2 is APPROVED+deployed, with the
+companion reference (GCR row 9) downgraded to structural-parity and persistence grounded on the deployed D1
+schema? Emit APPROVED or REJECTED only.
 ```
