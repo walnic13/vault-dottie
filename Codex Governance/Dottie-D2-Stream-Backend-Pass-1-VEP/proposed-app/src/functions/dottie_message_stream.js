@@ -22,6 +22,10 @@ app.setup({ enableHttpStream: true });
 const AZURE_OPENAI_ENDPOINT = (process.env.AZURE_OPENAI_ENDPOINT || "").replace(/\/+$/, "");
 const AZURE_OPENAI_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-5";
 const AZURE_OPENAI_API_VERSION = process.env.AZURE_OPENAI_API_VERSION || "2025-01-01-preview";
+// Internet grounding: gpt-5's built-in server-side web_search runs via the Azure OpenAI RESPONSES API
+// (NOT chat/completions), enabled only for api-version >= 2025-03-01-preview. This is the gpt-5-native
+// equivalent of Theo's Claude/Foundry web_search (arch §4.2) — search + citations, no SerpAPI tool-loop.
+const RESPONSES_API_VERSION = process.env.AZURE_OPENAI_RESPONSES_API_VERSION || "2025-03-01-preview";
 const OPENAI_SCOPE = "https://cognitiveservices.azure.com/.default";
 const DEFAULT_MAX_COMPLETION_TOKENS = 8000;
 const TITLE_MAX_LEN = 80;
@@ -447,18 +451,20 @@ app.http("dottie_message_stream", {
       return jsonErr(e.status || 500, e.code || "INTERNAL_SERVER_ERROR", e.message || "Model gateway token failed.");
     }
 
+    // gpt-5 Responses API request with the built-in web_search tool (server-side internet grounding).
+    // `instructions` = the Dottie ruleset + memory; `input` = the chat turns; reasoning kept low for chat.
     const upstreamPayload = JSON.stringify({
-      messages: [{ role: "system", content: effectiveSystem }, ...chatMessages],
-      max_completion_tokens: maxCompletionTokens,
-      reasoning_effort: "low",
+      model: AZURE_OPENAI_DEPLOYMENT,
+      instructions: effectiveSystem,
+      input: chatMessages,
+      tools: [{ type: "web_search" }],
+      reasoning: { effort: "low" },
+      max_output_tokens: Math.max(maxCompletionTokens, 16000),
       stream: true,
-      stream_options: { include_usage: true },
     });
 
     const upstreamRes = await new Promise((resolve) => {
-      const u = new URL(
-        `${AZURE_OPENAI_ENDPOINT}/openai/deployments/${encodeURIComponent(AZURE_OPENAI_DEPLOYMENT)}/chat/completions?api-version=${AZURE_OPENAI_API_VERSION}`
-      );
+      const u = new URL(`${AZURE_OPENAI_ENDPOINT}/openai/responses?api-version=${RESPONSES_API_VERSION}`);
       const lib = u.protocol === "http:" ? http : https;
       const r = lib.request(
         {
@@ -501,24 +507,61 @@ app.http("dottie_message_stream", {
       return jsonErr(502, "BAD_GATEWAY", "Model gateway call failed.");
     }
 
-    // ---- 2xx → stream. Relay upstream SSE verbatim to the client AND accumulate for persistence. ----
+    // ---- 2xx → stream. TRANSLATE the Responses-API event stream into the shape the FE already parses:
+    // text deltas → OpenAI chat chunks ({choices:[{delta:{content}}]}); web-search activity → tool/
+    // tool_result events (drives the "searching…" indicator); accumulate the answer text for persistence.
+    // (Citations arrive as inline markdown links in the text, which the FE's markdown renderer shows.) ----
     const stream = new PassThrough();
-    let rawAll = "";
+    let text = "";
+    let respModel = AZURE_OPENAI_DEPLOYMENT;
+    let searchOpen = 0;
+    let buf = "";
+    const handleEvent = (block) => {
+      const dataLine = block.split("\n").find((l) => l.startsWith("data:"));
+      if (!dataLine) return;
+      const json = parseJsonSafe(dataLine.slice(5).trim());
+      if (!json || typeof json.type !== "string") return;
+      switch (json.type) {
+        case "response.output_text.delta":
+          if (typeof json.delta === "string" && json.delta) {
+            text += json.delta;
+            stream.write(`data: ${JSON.stringify({ choices: [{ delta: { content: json.delta } }] })}\n\n`);
+          }
+          break;
+        case "response.web_search_call.in_progress":
+        case "response.web_search_call.searching":
+          if (searchOpen === 0) stream.write(`event: tool\ndata: ${JSON.stringify({ name: "web_search", input: {} })}\n\n`);
+          searchOpen += 1;
+          break;
+        case "response.web_search_call.completed":
+          searchOpen = Math.max(0, searchOpen - 1);
+          stream.write(`event: tool_result\ndata: ${JSON.stringify({ name: "web_search", ok: true })}\n\n`);
+          break;
+        case "response.completed":
+        case "response.created":
+          if (json.response && typeof json.response.model === "string") respModel = json.response.model;
+          break;
+        default:
+          break;
+      }
+    };
     upstreamRes.setEncoding("utf8");
     upstreamRes.on("data", (chunk) => {
-      rawAll += chunk;
-      stream.write(chunk);
+      buf += chunk;
+      let idx;
+      while ((idx = buf.indexOf("\n\n")) !== -1) {
+        const block = buf.slice(0, idx);
+        buf = buf.slice(idx + 2);
+        if (block.trim() !== "") handleEvent(block);
+      }
     });
     upstreamRes.on("end", async () => {
+      if (buf.trim() !== "") handleEvent(buf);
       let conversationId = null;
       try {
-        const acc = parseSseForPersistence(rawAll);
-        conversationId = await persistTurn({ oid, requestedConversationId, userText, acc });
-        // Emit a final app-level event so the FE learns the (possibly new) conversation id.
-        stream.write(`event: vault_meta\ndata: ${JSON.stringify({ conversation_id: conversationId, model: acc.model || AZURE_OPENAI_DEPLOYMENT })}\n\n`);
+        conversationId = await persistTurn({ oid, requestedConversationId, userText, acc: { text, model: respModel } });
+        stream.write(`event: vault_meta\ndata: ${JSON.stringify({ conversation_id: conversationId, model: respModel })}\n\n`);
       } catch (perr) {
-        // The answer was already streamed to the user; a persistence failure must not crash the response —
-        // log it and tell the FE the turn was not saved (it just won't appear in history).
         context.error("dottie_message_stream: persistence failed (answer already streamed)", perr);
         stream.write(`event: vault_meta\ndata: ${JSON.stringify({ conversation_id: null, persisted: false })}\n\n`);
       } finally {
