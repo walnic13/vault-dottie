@@ -1,8 +1,9 @@
 -- dottie_d1_migration.sql
 -- Dottie Phase D1 — the conversation surface + Dottie-L1 (the consensual 1:1 relationship) memory substrate.
 -- Additively namespaced `dottie_*` in the shared `vaultgpt` Postgres (schema `public`), mirroring the DEPLOYED
--- Theo idioms byte-faithfully: theo_conversations / theo_messages (b2_migration.sql, blob 2f2b6ddf) +
--- theo_user_memory (b7a_migration.sql, blob bbb66f45). Four ownership RLS policies per table
+-- Theo idioms byte-faithfully: theo_conversations / theo_messages (b2_migration.sql, blob 2f2b6ddf) PLUS the
+-- deployed theo_conversations addenda — last_opened_at + its restore-on-reopen index (migration blob 19114f8a)
+-- and starred (migration blob 352600fa) — plus theo_user_memory (b7a_migration.sql, blob bbb66f45). Four ownership RLS policies per table
 -- (created_by = auth.uid(), the Entra OID); `_exists_unscoped` SECURITY DEFINER helpers for 403/404
 -- discrimination. Per-user isolation is ALSO enforced by explicit `created_by = $oid` predicates in the D2
 -- handlers (the shared Functions role bypasses RLS — RLS is defence-in-depth), exactly as Theo.
@@ -28,8 +29,10 @@ CREATE TABLE IF NOT EXISTS public.dottie_conversations (
 );
 CREATE INDEX IF NOT EXISTS idx_dottie_conversations_created_by
   ON public.dottie_conversations (created_by);
+-- byte-faithful to the deployed Theo restore-on-reopen index (created_by, last_opened_at desc) — the list
+-- query supplies NULLS LAST at ORDER BY time, exactly as Theo (the index itself carries no NULLS LAST).
 CREATE INDEX IF NOT EXISTS idx_dottie_conversations_created_by_last_opened_desc
-  ON public.dottie_conversations (created_by, last_opened_at DESC NULLS LAST);
+  ON public.dottie_conversations (created_by, last_opened_at desc);
 
 ALTER TABLE public.dottie_conversations ENABLE ROW LEVEL SECURITY;
 DO $$
