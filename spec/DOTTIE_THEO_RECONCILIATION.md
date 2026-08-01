@@ -1,6 +1,6 @@
 # Dottie ↔ Theo — Complete FE↔Backend Reconciliation (endpoint-level truth)
 
-**Why this exists.** The Dottie FE is a byte-verbatim transplant of Theo's FE, so **every** Theo feature/button is present and calls its endpoint. But Dottie's backend only serves the core chat. So features whose backend doesn't exist **error the moment they're used** (e.g. delete conversation). This is the authoritative, endpoint-by-endpoint audit so gaps are KNOWN, not stumbled into. It supersedes the looser `DOTTIE_THEO_PARITY_LEDGER.md` gap lists.
+**Why this exists.** The Dottie FE is a byte-verbatim transplant of Theo's FE, so **every** Theo feature/button is present and calls its endpoint. Dottie's backend serves core chat (live) + conversation-management (authored, deploy-pending); the rest is still missing. So features whose backend doesn't exist **error the moment they're used**. This is the authoritative, endpoint-by-endpoint audit so gaps are KNOWN, not stumbled into. It supersedes the looser `DOTTIE_THEO_PARITY_LEDGER.md` gap lists.
 
 **Legend — Backend status:** ✅ LIVE (dottie_* deployed) · ❌ MISSING (FE calls it, no Dottie backend → ERRORS) · ⛔ N/A (not for Dottie).
 **Disposition:** BUILD (own `dottie_*`) · REUSE (call an existing shared Theo endpoint) · DECIDE (needs Walter's scope call) · N/A.
@@ -13,14 +13,15 @@
 | `dottie_list_conversations` (GET) | func-dottie | ✅ LIVE |
 | `dottie_get_conversation` (GET) | func-dottie | ✅ LIVE |
 
-## B. Conversation management — ❌ MISSING (these error today)
-| FE call (Theo name) | What breaks | Disposition |
+## B. Conversation management — 🟡 FE REPOINTED; backend AUTHORED, deploy pending (ConvMgmt package)
+The FE now calls the `dottie_*` routes below; the handlers + `function.json` are authored/inlined in `Codex Governance/Dottie-ConvMgmt-Backend-Pass-1-VEP/` and awaiting Codex Pass-2 → deploy to func-dottie → golden curls. Until deploy they `404` at the host (no worse than before — the old `theo_*` calls never resolved against func-dottie either). Contracts are recorded in `DOTTIE_API_SPEC.md § Conversation management`.
+| FE call (now) | Backend | Status |
 | --- | --- | --- |
-| `theo_delete_conversation` | **Delete chat errors** (Walter hit this) | BUILD `dottie_delete_conversation` |
-| `theo_rename_conversation` | Rename errors | BUILD `dottie_rename_conversation` |
-| `theo_set_conversation_starred` | Star/pin errors | BUILD `dottie_set_conversation_starred` (col already in D1) |
-| `theo_publish_conversation` / `theo_unpublish_conversation` | SPW publish — errors | N/A — HIDE (no SPW in Dottie) |
-| `theo_set_conversation_project` | Assign-to-project — errors | N/A — HIDE (Projects hidden) |
+| `dottie_rename_conversation` (POST) | ConvMgmt package | 🟡 FE live; backend authored, deploy pending |
+| `dottie_delete_conversation` (POST) | ConvMgmt package | 🟡 FE live; backend authored, deploy pending |
+| `dottie_set_conversation_starred` (POST) | ConvMgmt package | 🟡 FE live; backend authored, deploy pending |
+| `theo_publish_conversation` / `theo_unpublish_conversation` | — | ⛔ N/A — HIDE (no SPW in Dottie) |
+| `theo_set_conversation_project` | — | ⛔ N/A — HIDE (Projects hidden) |
 
 ## C. People / roster — ❌ MISSING
 | FE call | What breaks | Disposition |
@@ -57,9 +58,10 @@
 
 ## Summary
 - **Live:** 4 core-chat endpoints + web-search grounding.
-- **Missing & errors today:** conversation-management (delete/rename/star), people, attachments (5), artifacts-persist (3), voice (2), image/video tools.
+- **FE-repointed, backend authored/deploy-pending:** conversation-management (rename/delete/star) — ConvMgmt package.
+- **Missing & errors today:** people, attachments (5), artifacts-persist (3), voice (2), image/video tools.
 - **DECIDED:** Projects (14) + publish/SPW → HIDE in the UI (revisit later). Everything else → BUILD every missing `dottie_*` backend now, replicating from Theo (Walter 2026-08-01).
 
-**Honest status: Dottie does NOT yet match Theo at the backend — only core chat + grounding work.** Closing this is a sequenced set of governed backend packages (each `dottie_*` mirroring the Theo original), tracked here. The FE controls for missing features should be **gated/hidden** until their backend lands, so nothing errors.
+**Honest status: Dottie does NOT yet fully match Theo at the backend — core chat + grounding are live and conversation-management is authored (deploy pending); the rest is still to build.** Closing this is a sequenced set of governed backend packages (each `dottie_*` mirroring the Theo original), tracked here. The FE controls for still-missing features should be **gated/hidden** until their backend lands, so nothing errors.
 
-_Reconciled 2026-08-01 by direct FE-gateway grep vs deployed func-dottie functions._
+_Reconciled 2026-08-01 by direct FE-gateway grep vs deployed func-dottie functions; conv-management status updated 2026-08-01 after the ConvMgmt package repointed the FE (backend deploy pending)._
