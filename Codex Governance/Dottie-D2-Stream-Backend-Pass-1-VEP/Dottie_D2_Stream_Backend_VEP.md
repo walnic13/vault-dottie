@@ -1,6 +1,6 @@
 # Dottie Phase D2-Stream — `dottie_message_stream` (v4 SSE sidecar) — Pass-1 VEP
 
-Backend companion to D2 ([[VAULT_MEMORY_ARCHITECTURE.md]] §A Amendment 9). Delivers Dottie's **streaming** chat path so gpt-5's tokens render in real time instead of the client waiting on a buffered reply — the exact latency-killer Walter flagged for Theo. This is the **faithful Dottie port of the deployed Theo B9 streaming sidecar** (`theo_message_stream`): the **v4 programming model** with HTTP streaming, an **SSE relay** of the upstream model to the browser verbatim, and **persistence of the full turn on stream completion** (identical DB write to buffered `dottie_message` → history/reload identical). It replicates Theo's topology exactly: a **new Windows v4 Function App `vaultgpt-func-dottie-stream`** sharing the existing EP1 plan (≈$0), hosting **only** `dottie_message_stream`; **`vaultgpt-func-dottie` and its `dottie_ask` + D2 trio are NOT touched** — they stay v3 as the non-streaming endpoints, exactly as Theo kept its monolith. Two allowed deltas vs the Theo mechanism (Golden §4 EXACT-mirror route), both byte-faithful to the deployed `dottie_ask`: (1) the model call is **Azure OpenAI gpt-5** `chat/completions` with `stream:true` (client-credentials `getAadToken`), NOT Foundry-Anthropic (observer independence); (2) the relayed SSE + the parse-for-persistence follow the **OpenAI chunk shape** (`choices[].delta.content` … `[DONE]`). Dottie-L1 memory injected; no attachments/RAG/web-tools/thinking/project-sharing. **No migration** (reuses the deployed D1 tables).
+Backend companion to D2 ([[VAULT_MEMORY_ARCHITECTURE.md]] §A Amendment 9). Delivers Dottie's **streaming** chat path so gpt-5's tokens render in real time instead of the client waiting on a buffered reply — the exact latency-killer Walter flagged for Theo. This is the **faithful Dottie port of the deployed Theo B9 streaming sidecar** (`theo_message_stream`): the **v4 programming model** with HTTP streaming, an **SSE relay** of the upstream model to the browser verbatim, and **persistence of the full turn on stream completion** (identical DB write to buffered `dottie_message` → history/reload identical). It replicates Theo's topology exactly: a **new Windows v4 Function App `vaultgpt-func-dottie-stream`** sharing the existing EP1 plan (≈$0), hosting **only** `dottie_message_stream`; **`vaultgpt-func-dottie` and its `dottie_ask` + D2 trio are NOT touched** — they stay v3 as the non-streaming endpoints, exactly as Theo kept its monolith. Two allowed deltas vs the Theo mechanism (Golden §4): (1) the model call is **Azure OpenAI gpt-5** `chat/completions` with `stream:true` (client-credentials `getAadToken`) — endpoint/scope/body from the deployed `dottie_ask`, error-envelope from the `theo_message_stream` reference (byte-identical to neither) — NOT Foundry-Anthropic (observer independence); (2) the relayed SSE + the parse-for-persistence follow the **OpenAI chunk shape** (`choices[].delta.content` … `[DONE]`). Dottie-L1 memory injected; no attachments/RAG/web-tools/thinking/project-sharing. **No migration** (reuses the deployed D1 tables).
 
 ## Grounding Conformance Receipt
 Role: Claude Code
@@ -19,7 +19,7 @@ Sub-phase Track: N/A
 | 5 | Execution Orchestration — `governance/THEO_EXECUTION_ORCHESTRATION_STANDARD.md` (§1D ordered pass; §1E deploy-after-Codex-APPROVED — sidecar authority per the Walter authorization below) | `Grep("ordered, non-skippable")` this turn | `565559b699c1309f8e750b0dbbac859c13d807c8` |
 | 6 | SCHEMA TRUTH — `spec/DOTTIE_AZURE_POSTGRES_SCHEMA.md` (the deployed D1 `dottie_conversations`/`dottie_messages`/`dottie_user_memory` this handler reads+writes) | `Read`(§3/§4) this turn | `bb096db53a8d76dc3589b3744f6492ddad8f1f7f` |
 | 7 | **CANONICAL PRIMARY REFERENCE (1/2) — the streaming MECHANISM** — deployed Theo B9 `theo_message_stream` (v4 `app.setup({enableHttpStream:true})` + `PassThrough` SSE relay + persist-on-end + `vault_meta`; the foundational clean streamer, before SPW/tool-loop accretion Dottie omits) | `Read`(§H-STREAM, full) this turn; byte-identical copy in-package | vault-theo `2939303ffa2d1164ed2987aa0052ae34f3ed07f3` |
-| 8 | **CANONICAL PRIMARY REFERENCE (2/2) — the gpt-5 model call** — deployed `dottie_ask.index.js` (client-credentials `getAadToken` → Azure OpenAI gpt-5 `chat/completions`; the model-call block + `getAadToken` reused byte-faithfully, here with `stream:true`) | `Read`(dottie_ask.index.js, full — this session) this turn; byte-identical copy in-package | vault-dottie `531568ca1ef7768ad2ce11fd8692f90911a265ad` |
+| 8 | **CANONICAL PRIMARY REFERENCE (2/2) — the gpt-5 model call** — deployed `dottie_ask.index.js` (client-credentials `getAadToken` → Azure OpenAI gpt-5 `chat/completions`; endpoint/scope/body reused as an allowed-delta with `stream:true` added — error-envelope from the `theo_message_stream` reference, so byte-identical to neither) | `Read`(dottie_ask.index.js, full — this session) this turn; byte-identical copy in-package | vault-dottie `531568ca1ef7768ad2ce11fd8692f90911a265ad` |
 | 9 | STRUCTURAL COMPANION — buffered `dottie_message.index.js` (D2, this repo) — the Dottie-L1 injection + `dottie_*` lazy-create/seq/persist that `persistTurn` mirrors EXACT | `Read`(dottie_message.index.js, full) this turn | vault-dottie `9bed10b5ce301246a9bc4aec1e0208af61c8049b` |
 
 ## Rule Anchor Table
@@ -53,16 +53,16 @@ One new handler on a new v4 sidecar: **`dottie_message_stream`** (`POST`, `text/
 
 **Why a sidecar (exact Theo mirror).** HTTP streaming requires the **v4 programming model** (`app.setup({enableHttpStream:true})` + a `PassThrough`/`Readable` response body), which is **app-wide**. `vaultgpt-func-dottie` runs classic v3 (`dottie_ask` + the D2 trio, Kudu-VFS). Rather than convert those to v4 (blast-radius on in-review D2), Dottie replicates Theo's exact answer: a **new Windows v4 Function App `vaultgpt-func-dottie-stream`** sharing the existing EP1 plan `ASP-VaultTax-931c` (≈$0), hosting **only** `dottie_message_stream`. `vaultgpt-func-dottie` and every v3 handler on it are **untouched** — exactly as Theo's monolith stayed v3 when `theo_message_stream` moved to `vaultgpt-func-stream`. Dottie keeps both paths: buffered `dottie_message` (v3, func-dottie) still exists; the FE points live chat at the streaming endpoint (D4).
 
-**Independence + faithful mirror.** The v4 streaming mechanism (app.setup, `app.http`, `request.headers.get`/`request.text`, the `PassThrough` relay that writes each upstream chunk to the client AND accumulates `rawAll`, parse-on-end, `persistTurn`, `vault_meta`, `context.error` logging) is byte-faithful to the deployed `theo_message_stream`. The **model call is gpt-5** (client-credentials → Azure OpenAI `chat/completions` `stream:true` + `stream_options.include_usage`), byte-faithful to deployed `dottie_ask` — deliberately NOT Foundry-Claude (observer independence). The relayed SSE + `parseSseForPersistence` follow the **OpenAI chunk shape** (`choices[0].delta.content`, terminal `data: [DONE]`), not Anthropic events.
+**Independence + faithful mirror.** The v4 streaming mechanism (app.setup, `app.http`, `request.headers.get`/`request.text`, the `PassThrough` relay that writes each upstream chunk to the client AND accumulates `rawAll`, parse-on-end, `persistTurn`, `vault_meta`, `context.error` logging) is byte-faithful to the deployed `theo_message_stream`. The **model call is gpt-5** (client-credentials → Azure OpenAI `chat/completions` `stream:true` + `stream_options.include_usage`) — an allowed delta adapting the deployed `dottie_ask` endpoint with the `theo_message_stream` error-envelope — deliberately NOT Foundry-Claude (observer independence). The relayed SSE + `parseSseForPersistence` follow the **OpenAI chunk shape** (`choices[0].delta.content`, terminal `data: [DONE]`), not Anthropic events.
 
 **Boundary.** No `reporting_*`; no `theo_*` (Dottie-L1 separate from Theo's L1); no Blob/MI/attachments; no embed/search/history-RAG; no web tools; no extended thinking; no project-sharing (owner-gate `created_by=$oid` + `dottie_conversation_exists_unscoped`). Reads+writes only the deployed D1 `dottie_*` tables; external calls = the AAD token + the in-tenant gpt-5 endpoint. **No change to `vaultgpt-func-dottie`.** **Fail-closed:** no identity → 401; unconfigured endpoint → 500; upstream non-2xx → 502 (429 passthrough); persistence-after-stream failure non-fatal (`vault_meta {persisted:false}`); memory fetch non-fatal; the AAD secret is a KV reference.
 
 ## §3 — Schema Reality Lock (deployed grounding)
 
 Nothing invented (Governor §3/§4):
-- **Tables** = the DEPLOYED D1 `dottie_conversations`/`dottie_messages` + `dottie_conversation_exists_unscoped` + `dottie_user_memory` (schema doc §3/§4, GCR row 6) — catalog-verified. `persistTurn` (lazy-create → count-based seq → user+assistant INSERT → `updated_at`+`last_opened_at`) + the Dottie-L1 SELECT + the owner-gate/exists-discrimination are byte-faithful to the buffered `dottie_message` (GCR row 9). No `scope` column; no `app_key`/`app_context`/`citations`/`message_seq`/attachments.
+- **Tables** = the DEPLOYED D1 `dottie_conversations`/`dottie_messages` + `dottie_conversation_exists_unscoped` + `dottie_user_memory` (schema doc §3/§4, GCR row 6) — catalog-verified. `persistTurn` (lazy-create → count-based seq → user+assistant INSERT → `updated_at`+`last_opened_at`) + the Dottie-L1 SELECT + the owner-gate/exists-discrimination are **structurally identical** to the buffered `dottie_message` (GCR row 9; same `dottie_*` SQL). No `scope` column; no `app_key`/`app_context`/`citations`/`message_seq`/attachments.
 - **v4 streaming mechanism** = the DEPLOYED Theo `theo_message_stream` (GCR row 7); **feasibility already proven for Theo** on this exact target (Windows v4 on EP1 flushing SSE; the upstream relays `text/event-stream`).
-- **Model call** = byte-faithful to the deployed `dottie_ask` (GCR row 8) with `stream:true` added; gpt-5 streaming SSE is standard Azure OpenAI `chat/completions` behaviour.
+- **Model call** = ALLOWED DELTA: the `getAadToken` mechanics + `chat/completions` endpoint/scope/body mirror the deployed `dottie_ask` (GCR row 8) with `stream:true`+`stream_options` added; the error-envelope mirrors the `theo_message_stream` reference — byte-identical to neither. gpt-5 streaming SSE is standard Azure OpenAI `chat/completions` behaviour.
 - **Deployed app fact:** `vaultgpt-func-dottie` already carries pg + the OpenAI env + `getAadToken` config (`AAD_*` KV-ref) + EasyAuth; the new sidecar mirrors those settings (§9). Zero new schema.
 
 ## §4 — No migration
@@ -82,7 +82,7 @@ Handler + sidecar app files only. The `dottie_*` tables landed in D1 (Walter-run
 | pre-stream ownership check (owner filter + `_exists_unscoped` → JSON 403/404 before upstream) | **EXACT (adapted table)** | `dottie_*` tables |
 | the `PassThrough` relay (write each upstream chunk to client + accumulate `rawAll`) + persist-on-`end` + `vault_meta` + `vault_error` | **EXACT** | byte-identical control flow |
 | Dottie-L1 memory injection (SELECT salience-ordered → memory block) | **EXACT (adapted table)** | `dottie_user_memory` (no `scope` clause); Dottie-worded block — mirrors buffered `dottie_message` |
-| `getAadToken(scope)` + the model call (Azure OpenAI gpt-5 `chat/completions`, `stream:true`, `stream_options.include_usage`, `max_completion_tokens`) | **ALLOWED DELTA (EXACT-mirrored on deployed `dottie_ask`)** | Golden §4 route — replaces Foundry-Anthropic `…/anthropic/v1/messages` (observer independence) |
+| `getAadToken(scope)` + the model call (Azure OpenAI gpt-5 `chat/completions`, `stream:true`, `stream_options.include_usage`, `max_completion_tokens`) | **ALLOWED DELTA** | endpoint/scope/body from the deployed `dottie_ask` (GCR row 8); error-envelope (`buildKnownError`/502/429) from the `theo_message_stream` reference — byte-identical to neither; replaces Foundry-Anthropic `…/anthropic/v1/messages` (observer independence) |
 | `parseSseForPersistence` — OpenAI chunk shape (`choices[0].delta.content`, `model`, `finish_reason`, `usage`; skip `[DONE]`) | **ALLOWED DELTA** | replaces the Anthropic-event parse (`content_block_delta`/`message_delta`) |
 | `persistTurn` on `dottie_*` (lazy-create/seq/user+assistant/`updated_at`+`last_opened_at`) | **EXACT (adapted table)** | drops `app_key`/`app_context`/`citations`/`message_seq`/attachment linkage; mirrors buffered `dottie_message` |
 | web-grounding tools, history-RAG (embed/search), attachments (blob/MI/`buildAttachmentBlocks`), extended thinking | **NOT MIRRORED** | out of Dottie D2 scope; regions omitted |
@@ -90,7 +90,7 @@ Handler + sidecar app files only. The `dottie_*` tables landed in D1 (Walter-run
 No DEVIATION regions.
 
 ### §CHANGESET — what differs from the `theo_message_stream` reference (diff-reviewed)
-1. **Model call → Azure OpenAI gpt-5** `chat/completions` with `stream:true` + `stream_options:{include_usage:true}` via `getAadToken` (scope `cognitiveservices`), byte-faithful to deployed `dottie_ask` — replaces the Foundry-Anthropic `stream:true` call + `getFoundryToken`.
+1. **Model call → Azure OpenAI gpt-5** `chat/completions` with `stream:true` + `stream_options:{include_usage:true}` via `getAadToken` (scope `cognitiveservices`) — endpoint/scope/body from deployed `dottie_ask`, error-envelope from the `theo_message_stream` reference (allowed delta, byte-identical to neither) — replaces the Foundry-Anthropic `stream:true` call + `getFoundryToken`.
 2. **SSE parse → OpenAI shape** (`parseSseForPersistence`: `choices[0].delta.content` / `finish_reason` / top-level `model` / `usage`; terminal `[DONE]`) — replaces the Anthropic-event parse.
 3. **Dottie-L1 injection** (`dottie_user_memory`, no `scope`) + `DOTTIE_SYSTEM_PROMPT` prepended — replaces Theo's `theo_user_memory scope='user'` + no persona.
 4. **`persistTurn` on `dottie_*`** — drops `app_key`/`app_context`/`citations`/B8i `message_seq`/attachment linkage; stamps `last_opened_at` (Dottie restore-on-reopen).
@@ -110,10 +110,11 @@ const { PassThrough } = require("node:stream");
 // Dottie port of the deployed Theo B9 streaming sidecar (theo_message_stream): v4 programming model with
 // HTTP streaming, an SSE relay of the upstream model to the browser verbatim, and persistence of the full
 // turn on stream completion (identical DB write to the buffered dottie_message → history/reload identical).
-// Two allowed deltas vs the Theo mechanism (Golden §4 EXACT-mirror route), both matching the deployed
-// dottie_ask / buffered dottie_message: (1) the model call is Azure OpenAI gpt-5 chat/completions with
-// stream:true via client-credentials getAadToken — NOT Foundry-Anthropic (observer independence); (2) the
-// SSE it relays + the parse-for-persistence follow the OpenAI chunk shape (choices[].delta.content … [DONE]).
+// Two allowed deltas vs the Theo mechanism (Golden §4): (1) the model call is Azure OpenAI gpt-5 chat/completions
+// with stream:true via client-credentials getAadToken — endpoint/scope/body from the deployed dottie_ask,
+// error-envelope from the theo_message_stream reference (byte-identical to neither) — NOT Foundry-Anthropic
+// (observer independence); (2) the SSE it relays + the parse-for-persistence follow the OpenAI chunk shape
+// (choices[].delta.content … [DONE]) rather than Anthropic events.
 // Dottie-L1 relationship memory is injected (dottie_user_memory). No attachments, no history-RAG, no web
 // tools, no extended thinking, no project-sharing. Runs on the v4 sidecar vaultgpt-func-dottie-stream.
 
@@ -241,8 +242,9 @@ function requestUrl(urlStr, options = {}, body = null) {
   });
 }
 
-// Client-credentials token for a given Azure resource scope (same AAD app as the gateway) — byte-identical to
-// the deployed dottie_ask / dottie_message getAadToken.
+// Client-credentials token for a given Azure resource scope (same AAD app as the gateway). The client-credentials
+// mechanics (scope/body/token URL) mirror the deployed dottie_ask; the error-envelope (buildKnownError / 500)
+// mirrors the theo_message_stream reference — an allowed delta, not byte-identical to either.
 async function getAadToken(scope) {
   const tenantId = process.env.AAD_TENANT_ID;
   const clientId = process.env.AAD_CLIENT_ID;
@@ -1866,10 +1868,11 @@ governance-bound GCR + Rule Anchor Table (standards mirrored into vault-dottie).
 NEW Windows v4 sidecar (vaultgpt-func-dottie-stream, shares EP1) — Claude stands up the sidecar + v4 zip-deploys
 + golden curls after APPROVED; func-dottie (dottie_ask + D2 trio, v3) is UNTOUCHED; no migration. Review:
 (1) faithful mirror — is the v4 streaming mechanism (app.setup enableHttpStream, app.http, PassThrough relay,
-persist-on-end, vault_meta/vault_error, pre-stream ownership check, envelope helpers) byte-faithful to the
-deployed theo_message_stream primary reference (§5.1/§CHANGESET), with the gpt-5 chat/completions stream:true
-call an EXACT-mirror ALLOWED-DELTA on deployed dottie_ask and the OpenAI-shape SSE parse a documented
-ALLOWED-DELTA? (2) the choice of the B9 foundational theo_message_stream as the clean primary reference (vs the
+persist-on-end, vault_meta/vault_error, pre-stream ownership check, envelope helpers) byte-identical to the
+deployed theo_message_stream primary reference (§5.1/§CHANGESET; the 8 shared helpers were diff-verified equal),
+with the gpt-5 chat/completions stream:true call an ALLOWED DELTA (endpoint/scope/body from dottie_ask,
+error-envelope from the theo_message_stream reference — byte-identical to neither) and the OpenAI-shape SSE parse
+a documented ALLOWED DELTA? (2) the choice of the B9 foundational theo_message_stream as the clean primary reference (vs the
 current SPW/tool-loop deployment Dottie intentionally omits) — same call made for dottie_message vs theo_message.
 (3) topology — separate v4 sidecar exactly like Theo's func-stream, func-dottie v3 untouched, both paths kept.
 (4) boundary — dottie_* only (Dottie-L1 separate from Theo's L1), gpt-5 not Claude, owner-gate created_by=$oid,

@@ -8,10 +8,11 @@ const { PassThrough } = require("node:stream");
 // Dottie port of the deployed Theo B9 streaming sidecar (theo_message_stream): v4 programming model with
 // HTTP streaming, an SSE relay of the upstream model to the browser verbatim, and persistence of the full
 // turn on stream completion (identical DB write to the buffered dottie_message → history/reload identical).
-// Two allowed deltas vs the Theo mechanism (Golden §4 EXACT-mirror route), both matching the deployed
-// dottie_ask / buffered dottie_message: (1) the model call is Azure OpenAI gpt-5 chat/completions with
-// stream:true via client-credentials getAadToken — NOT Foundry-Anthropic (observer independence); (2) the
-// SSE it relays + the parse-for-persistence follow the OpenAI chunk shape (choices[].delta.content … [DONE]).
+// Two allowed deltas vs the Theo mechanism (Golden §4): (1) the model call is Azure OpenAI gpt-5 chat/completions
+// with stream:true via client-credentials getAadToken — endpoint/scope/body from the deployed dottie_ask,
+// error-envelope from the theo_message_stream reference (byte-identical to neither) — NOT Foundry-Anthropic
+// (observer independence); (2) the SSE it relays + the parse-for-persistence follow the OpenAI chunk shape
+// (choices[].delta.content … [DONE]) rather than Anthropic events.
 // Dottie-L1 relationship memory is injected (dottie_user_memory). No attachments, no history-RAG, no web
 // tools, no extended thinking, no project-sharing. Runs on the v4 sidecar vaultgpt-func-dottie-stream.
 
@@ -139,8 +140,9 @@ function requestUrl(urlStr, options = {}, body = null) {
   });
 }
 
-// Client-credentials token for a given Azure resource scope (same AAD app as the gateway) — byte-identical to
-// the deployed dottie_ask / dottie_message getAadToken.
+// Client-credentials token for a given Azure resource scope (same AAD app as the gateway). The client-credentials
+// mechanics (scope/body/token URL) mirror the deployed dottie_ask; the error-envelope (buildKnownError / 500)
+// mirrors the theo_message_stream reference — an allowed delta, not byte-identical to either.
 async function getAadToken(scope) {
   const tenantId = process.env.AAD_TENANT_ID;
   const clientId = process.env.AAD_CLIENT_ID;
