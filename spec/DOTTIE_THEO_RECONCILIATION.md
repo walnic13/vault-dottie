@@ -62,6 +62,6 @@ The `dottie_artifacts` + `dottie_artifact_versions` tables are DEPLOYED (Artifac
 - **Missing & errors today:** artifacts-persist (3), voice (2), image/video tools.
 - **DECIDED:** Projects (14) + publish/SPW → HIDE in the UI (revisit later). Everything else → BUILD every missing `dottie_*` backend now, replicating from Theo (Walter 2026-08-01).
 
-**Honest status: Dottie does NOT yet fully match Theo at the backend — core chat + grounding + conversation-management are live; people, attachments, artifacts, voice, and image/video are still to build.** Closing this is a sequenced set of governed backend packages (each `dottie_*` mirroring the Theo original), tracked here. The FE controls for still-missing features should be **gated/hidden** until their backend lands, so nothing errors.
+**Honest status: core chat + grounding + conversation-management + people roster + attachments are LIVE; artifacts persistence is schema-live + FE-repointed with handlers deploy-pending; voice + image/video are still to build.** Closing the rest is a sequenced set of governed backend packages (each `dottie_*` mirroring the Theo original), tracked here. The FE controls for still-missing features stay **gated/hidden** until their backend lands, so nothing errors.
 
 _Reconciled 2026-08-01 by direct FE-gateway grep vs deployed func-dottie functions; conv-management moved to LIVE 2026-08-01 after the ConvMgmt package deploy + golden curls._

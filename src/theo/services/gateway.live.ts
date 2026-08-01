@@ -874,7 +874,7 @@ export async function setConversationStarred(conversationId: string, starred: bo
   }
 }
 
-// ── B4h artifacts persistence (theo_upsert/list/get_artifact; API Spec §2.3) ─────────────────
+// ── artifacts persistence (dottie_upsert/list/get_artifact; API Spec § Attachments/artifacts) ─────
 // Owner-scoped server-side; version content lives in Blob (the row holds the pointer). Unconfigured
 // dev harness → the in-memory mock (empty gallery). Deployed rows carry id/title/type/current_version
 // /timestamps (+ versions[{version_number,content,byte_size,content_type,created_at}] on get); these

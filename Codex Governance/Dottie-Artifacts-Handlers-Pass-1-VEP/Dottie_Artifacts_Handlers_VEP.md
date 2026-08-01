@@ -1,5 +1,12 @@
 # Dottie Artifacts Handlers — Pass-1 VEP (dottie_upsert/list/get_artifact)
 
+## Repair note (rev-4 — addresses Codex REJECT T13: residual status drift the rev-3 sweep missed)
+Two real residues rev-3 missed (both now fixed), plus one already-correct item:
+- `gateway.live.ts:877` — the artifacts section HEADER comment still read `theo_upsert/list/get_artifact` (an **abbreviated** form my rev-3 grep for full route names didn't catch) → now `dottie_upsert/list/get_artifact`. (The `B4c projects` header keeps `theo_*_project` — Projects are gated/unbuilt, so that's accurate.)
+- `spec/DOTTIE_THEO_RECONCILIATION.md:65` — the "Honest status" summary still listed **people, attachments** among "still to build" (my earlier sweep's `-v voice` filter hid this line because it also names voice) → corrected: people + attachments LIVE, artifacts schema-live/FE-repointed/handlers-pending, voice + image/video still to build.
+- `spec/DOTTIE_API_SPEC.md:55` — **already correct at the reviewed HEAD** (`afd95f4`): the line reads "No project-sharing (SPW), history-RAG, or extended thinking" with an "Attachments are LIVE" note; "attachments" is not in the "No …" list. (The rev-3 fix landed; please re-check the current blob.)
+Exhaustive re-sweep: gateway has **zero** `theo_*` refs to the 8 repointed routes (full or abbreviated); no spec lists a live feature as missing/to-build. tsc + build clean. Handler code unchanged.
+
 ## Repair note (rev-3 — addresses Codex REJECT T13: stale status prose after the repoint)
 The rev-2 repoint was correct, but I didn't sweep the STATUS comments/docs that the repoint + earlier flag-flips made stale (the recurring whole-sweep lesson). Fixed every one Codex cited, plus a broad re-sweep:
 - `gateway.live.ts` — `attachmentsAvailable` comment "Off until dottie attachments backend lands" → attachments LIVE; `listConversationAttachments` guard "No dottie attachments backend yet" → LIVE; `listPeople` guard "No dottie_list_people yet" → gate-retained-for-parity, dottie_list_people LIVE. (The `voiceAvailable` + `persistArtifact` "not built yet" comments are LEFT — voice and the artifacts *backend* genuinely aren't deployed yet; those are accurate.)
