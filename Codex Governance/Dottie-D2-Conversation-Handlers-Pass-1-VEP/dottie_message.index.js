@@ -214,6 +214,79 @@ async function getAadToken(scope) {
   return payload.access_token;
 }
 
+// ── Attachment injection (B8d/B8i, gpt-5 chat/completions) ─────────────────────────────────────
+// Structure mirrors the deployed theo_message (owner-scoped fetch, strict-404, native-vs-extract
+// dispatch, conversation-scoped message_seq keying + B8i linkage). Content is in gpt-5 CHAT/COMPLETIONS
+// part shape (this buffered path uses chat/completions, not the Responses API): image → {type:image_url,
+// image_url:{url}}; extract-class → {type:text}. Native PDFs have no chat/completions content part → a
+// note (the streaming path reads PDFs via input_file). Blob bytes via the Function MI. Full injection.
+const ATTACH_MAX_COUNT = parseInt(process.env.DOTTIE_ATTACH_MAX_COUNT, 10) > 0 ? parseInt(process.env.DOTTIE_ATTACH_MAX_COUNT, 10) : 10;
+const ATTACH_STORAGE_ACCOUNT = process.env.DOTTIE_BLOB_ACCOUNT || "vaultgptdottiestore";
+const ATTACH_STORAGE_CONTAINER = process.env.DOTTIE_BLOB_CONTAINER || "dottie-content";
+const NATIVE_MEDIA_TYPES = { "application/pdf": "document", "image/png": "image", "image/jpeg": "image", "image/webp": "image", "image/gif": "image" };
+
+function requestBinary(urlStr, options = {}) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(urlStr);
+    const lib = url.protocol === "http:" ? http : https;
+    const req = lib.request(
+      { method: options.method || "GET", hostname: url.hostname, port: url.port ? Number(url.port) : 443, path: url.pathname + url.search, headers: options.headers || {} },
+      (res) => { const chunks = []; res.on("data", (c) => chunks.push(c)); res.on("end", () => resolve({ statusCode: res.statusCode || 0, headers: res.headers || {}, body: Buffer.concat(chunks) })); }
+    );
+    req.on("error", reject);
+    req.end();
+  });
+}
+async function getManagedIdentityAccessToken(resource) {
+  const idEndpoint = process.env.IDENTITY_ENDPOINT;
+  const idHeader = process.env.IDENTITY_HEADER;
+  if (!idEndpoint || !idHeader) throw new Error("Managed identity endpoint not configured.");
+  const u = `${idEndpoint}?resource=${encodeURIComponent(resource)}&api-version=2019-08-01`;
+  const r = await requestUrl(u, { method: "GET", headers: { "X-IDENTITY-HEADER": idHeader } });
+  const payload = parseJsonSafe(r.body);
+  if (r.statusCode < 200 || r.statusCode >= 300 || !payload || !payload.access_token) throw new Error(`MI token failed (HTTP ${r.statusCode}).`);
+  return payload.access_token;
+}
+function encodeBlobPath(blobKey) { return blobKey.split("/").map(encodeURIComponent).join("/"); }
+function blobUrlFor(blobKey) { return `https://${ATTACH_STORAGE_ACCOUNT}.blob.core.windows.net/${ATTACH_STORAGE_CONTAINER}/${encodeBlobPath(blobKey)}`; }
+async function downloadBlobBinary(token, blobKey) {
+  const r = await requestBinary(blobUrlFor(blobKey), { method: "GET", headers: { Authorization: `Bearer ${token}`, "x-ms-version": "2022-11-02" } });
+  if (r.statusCode < 200 || r.statusCode >= 300) throw new Error(`GET blob (binary) failed (HTTP ${r.statusCode}).`);
+  return r.body;
+}
+async function downloadBlobText(token, blobKey) {
+  const r = await requestUrl(blobUrlFor(blobKey), { method: "GET", headers: { Authorization: `Bearer ${token}`, "x-ms-version": "2022-11-02" } });
+  if (r.statusCode < 200 || r.statusCode >= 300) throw new Error(`GET blob (text) failed (HTTP ${r.statusCode}).`);
+  return r.body;
+}
+async function buildAttachmentParts(context, rows) {
+  if (!rows.length) return [];
+  let storageToken;
+  try { storageToken = await getManagedIdentityAccessToken("https://storage.azure.com/"); }
+  catch (tokErr) { context.error("dottie_message: storage token for attachments failed (non-fatal)", tokErr); return rows.map((r) => ({ type: "text", text: `[Attached file "${r.filename}" could not be loaded.]` })); }
+  const parts = [];
+  for (const row of rows) {
+    const isExtractRow = row.ingestion_class === "extract";
+    const native = !isExtractRow && NATIVE_MEDIA_TYPES[row.content_type];
+    try {
+      if (native === "image") {
+        const buf = await downloadBlobBinary(storageToken, row.blob_path);
+        parts.push({ type: "image_url", image_url: { url: `data:${row.content_type};base64,${buf.toString("base64")}` } });
+        parts.push({ type: "text", text: `(above is the attached file "${row.filename}")` });
+      } else if (isExtractRow && row.extracted_text_path) {
+        const text = await downloadBlobText(storageToken, row.extracted_text_path);
+        parts.push({ type: "text", text: `Attached file "${row.filename}" (${row.content_type}):\n\n${text}` });
+      } else {
+        parts.push({ type: "text", text: `[Attached file "${row.filename}" (${row.content_type}) could not be read into this message on the non-streaming path.]` });
+      }
+    } catch (rowErr) {
+      context.error("dottie_message: attachment row failed (non-fatal)", rowErr);
+      parts.push({ type: "text", text: `[Attached file "${row.filename}" could not be loaded.]` });
+    }
+  }
+  return parts;
+}
+
 module.exports = async function (context, req) {
   if (req.method === "OPTIONS") {
     return send(context, 204, "");
@@ -254,6 +327,17 @@ module.exports = async function (context, req) {
     }
     chatMessages.push({ role: m.role, content: m.content });
   }
+
+  // attachment_ids (B8d): top-level field; dedup + strict uuid + ≤ ATTACH_MAX_COUNT; attach to last user turn.
+  let attachmentIds = [];
+  if (body.attachment_ids != null) {
+    if (!Array.isArray(body.attachment_ids)) return send(context, 400, errorBody("BAD_REQUEST", "Field 'attachment_ids' must be an array of UUIDs.", 400));
+    attachmentIds = [...new Set(body.attachment_ids)];
+    if (attachmentIds.length > ATTACH_MAX_COUNT) return send(context, 400, errorBody("BAD_REQUEST", `At most ${ATTACH_MAX_COUNT} attachments may be sent per message.`, 400));
+    if (!attachmentIds.every((id) => isUuid(id))) return send(context, 400, errorBody("BAD_REQUEST", "Every entry in 'attachment_ids' must be a valid UUID.", 400));
+  }
+  const lastUserIndex = (() => { for (let i = chatMessages.length - 1; i >= 0; i--) if (chatMessages[i].role === "user") return i; return -1; })();
+  if (attachmentIds.length > 0 && lastUserIndex < 0) return send(context, 400, errorBody("BAD_REQUEST", "Attachments require a user message.", 400));
 
   const maxCompletionTokens = Number.isInteger(body.max_completion_tokens) ? body.max_completion_tokens : DEFAULT_MAX_COMPLETION_TOKENS;
   const systemPrompt = typeof body.system === "string" && body.system.trim() !== "" ? body.system.trim() : null;
@@ -313,12 +397,57 @@ module.exports = async function (context, req) {
     .filter((s) => typeof s === "string" && s.trim() !== "")
     .join("\n\n");
 
+  // Conversation-scoped attachment injection (B8d/B8i), mirroring current Theo (chat/completions parts):
+  // prior turns' attachments keyed by message_seq + this turn's attachment_ids at lastUserIndex; each
+  // spliced onto its own user message.
+  let messagesForUpstream = chatMessages;
+  {
+    const rowsBySeq = new Map();
+    let attClient = null;
+    try {
+      attClient = await pool.connect();
+      await attClient.query(`SELECT set_config('app.current_user_id',$1,false), set_config('request.jwt.claim.sub',$1,false), set_config('request.jwt.claim.oid',$1,false)`, [oid]);
+      if (requestedConversationId) {
+        const prior = await attClient.query(
+          `SELECT id, filename, content_type, byte_size, blob_container, blob_path, ingestion_class, extracted_text_path, message_seq
+           FROM public.dottie_attachments WHERE conversation_id = $1 AND created_by = $2 AND message_seq IS NOT NULL ORDER BY message_seq, created_at`,
+          [requestedConversationId, oid]
+        );
+        for (const r of prior.rows) { if (!rowsBySeq.has(r.message_seq)) rowsBySeq.set(r.message_seq, []); rowsBySeq.get(r.message_seq).push(r); }
+      }
+      if (attachmentIds.length > 0) {
+        const res = await attClient.query(
+          `SELECT id, filename, content_type, byte_size, blob_container, blob_path, ingestion_class, extracted_text_path
+           FROM public.dottie_attachments WHERE id = ANY($1::uuid[]) AND created_by = $2`,
+          [attachmentIds, oid]
+        );
+        if (res.rows.length !== attachmentIds.length) return send(context, 404, errorBody("NOT_FOUND", "One or more attachments were not found.", 404));
+        const orderById = new Map(attachmentIds.map((id, i) => [id, i]));
+        const cur = res.rows.sort((a, b) => orderById.get(a.id) - orderById.get(b.id));
+        if (!rowsBySeq.has(lastUserIndex)) rowsBySeq.set(lastUserIndex, []);
+        rowsBySeq.get(lastUserIndex).push(...cur);
+      }
+    } catch (attErr) {
+      context.error("dottie_message: attachment fetch failed", attErr);
+      return send(context, 500, errorBody("INTERNAL_SERVER_ERROR", "Failed to load attachments.", 500));
+    } finally { if (attClient) attClient.release(); }
+    if (rowsBySeq.size > 0) {
+      messagesForUpstream = await Promise.all(chatMessages.map(async (m, i) => {
+        const rows = rowsBySeq.get(i);
+        if (!rows || rows.length === 0 || m.role !== "user" || typeof m.content !== "string") return m;
+        const attParts = await buildAttachmentParts(context, rows);
+        if (attParts.length === 0) return m;
+        return { ...m, content: [...attParts, { type: "text", text: m.content }] };
+      }));
+    }
+  }
+
   let client = null;
   try {
     const token = await getAadToken(OPENAI_SCOPE);
 
     const upstreamPayload = JSON.stringify({
-      messages: [{ role: "system", content: effectiveSystem }, ...chatMessages],
+      messages: [{ role: "system", content: effectiveSystem }, ...messagesForUpstream],
       max_completion_tokens: maxCompletionTokens,
       reasoning_effort: "low",
     });
@@ -399,6 +528,15 @@ module.exports = async function (context, req) {
       [conversationId, oid]
     );
     const baseSeq = seqResult.rows[0].n;
+
+    // B8i: link this turn's attachments to the conversation + user-turn seq (idempotent, only if not
+    // already homed), so a reloaded thread rehydrates each chip on its originating message.
+    if (attachmentIds && attachmentIds.length > 0) {
+      await client.query(
+        `UPDATE public.dottie_attachments SET conversation_id = $1, message_seq = $2 WHERE id = ANY($3::uuid[]) AND created_by = $4 AND conversation_id IS NULL`,
+        [conversationId, baseSeq, attachmentIds, oid]
+      );
+    }
 
     await client.query(
       `

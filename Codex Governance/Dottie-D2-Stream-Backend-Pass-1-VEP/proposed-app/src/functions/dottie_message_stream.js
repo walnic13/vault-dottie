@@ -186,6 +186,97 @@ async function getAadToken(scope) {
   return payload.access_token;
 }
 
+// ── Attachment injection (B8d/B8i, gpt-5-adapted) ──────────────────────────────────────────────
+// Structure mirrors the deployed theo_message_stream: owner-scoped fetch, strict-404, native-vs-extract
+// dispatch (extract-class wins over a native media type), conversation-scoped message_seq keying + the
+// B8i linkage. Content is ADAPTED for the gpt-5 Responses API — Claude {type:image|document|text} →
+// {type:input_image|input_file|input_text}; NO cache_control (gpt-5 has none). Blob bytes read via the
+// Function's system-assigned MI (Storage Blob Data Contributor on vaultgptdottiestore), same technique
+// as the dottie attachment handlers. Full injection (no budget truncation), matching current Theo.
+const ATTACH_MAX_COUNT = parseInt(process.env.DOTTIE_ATTACH_MAX_COUNT, 10) > 0 ? parseInt(process.env.DOTTIE_ATTACH_MAX_COUNT, 10) : 10;
+const ATTACH_STORAGE_ACCOUNT = process.env.DOTTIE_BLOB_ACCOUNT || "vaultgptdottiestore";
+const ATTACH_STORAGE_CONTAINER = process.env.DOTTIE_BLOB_CONTAINER || "dottie-content";
+const NATIVE_MEDIA_TYPES = {
+  "application/pdf": "document",
+  "image/png": "image",
+  "image/jpeg": "image",
+  "image/webp": "image",
+  "image/gif": "image",
+};
+
+// Binary GET — collect Buffer chunks; must NOT string-coerce (binary safety).
+function requestBinary(urlStr, options = {}) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(urlStr);
+    const lib = url.protocol === "http:" ? http : https;
+    const req = lib.request(
+      { method: options.method || "GET", hostname: url.hostname, port: url.port ? Number(url.port) : 443, path: url.pathname + url.search, headers: options.headers || {} },
+      (res) => { const chunks = []; res.on("data", (c) => chunks.push(c)); res.on("end", () => resolve({ statusCode: res.statusCode || 0, headers: res.headers || {}, body: Buffer.concat(chunks) })); }
+    );
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+// System-assigned MI token for Azure Storage (App Service MSI endpoint) — distinct from getAadToken
+// (the client-credentials app used for gpt-5); blob reads use the Function's own MI.
+async function getManagedIdentityAccessToken(resource) {
+  const idEndpoint = process.env.IDENTITY_ENDPOINT;
+  const idHeader = process.env.IDENTITY_HEADER;
+  if (!idEndpoint || !idHeader) throw new Error("Managed identity endpoint not configured.");
+  const u = `${idEndpoint}?resource=${encodeURIComponent(resource)}&api-version=2019-08-01`;
+  const r = await requestUrl(u, { method: "GET", headers: { "X-IDENTITY-HEADER": idHeader } });
+  const payload = parseJsonSafe(r.body);
+  if (r.statusCode < 200 || r.statusCode >= 300 || !payload || !payload.access_token) throw new Error(`MI token failed (HTTP ${r.statusCode}).`);
+  return payload.access_token;
+}
+
+function encodeBlobPath(blobKey) { return blobKey.split("/").map(encodeURIComponent).join("/"); }
+function blobUrlFor(blobKey) { return `https://${ATTACH_STORAGE_ACCOUNT}.blob.core.windows.net/${ATTACH_STORAGE_CONTAINER}/${encodeBlobPath(blobKey)}`; }
+async function downloadBlobBinary(token, blobKey) {
+  const r = await requestBinary(blobUrlFor(blobKey), { method: "GET", headers: { Authorization: `Bearer ${token}`, "x-ms-version": "2022-11-02" } });
+  if (r.statusCode < 200 || r.statusCode >= 300) throw new Error(`GET blob (binary) failed (HTTP ${r.statusCode}).`);
+  return r.body;
+}
+async function downloadBlobText(token, blobKey) {
+  const r = await requestUrl(blobUrlFor(blobKey), { method: "GET", headers: { Authorization: `Bearer ${token}`, "x-ms-version": "2022-11-02" } });
+  if (r.statusCode < 200 || r.statusCode >= 300) throw new Error(`GET blob (text) failed (HTTP ${r.statusCode}).`);
+  return r.body;
+}
+
+// gpt-5 Responses-API content PARTS for the owned attachment rows. image → input_image (data URI);
+// native PDF → input_file (base64 file_data); extract-class → input_text (stored extracted text).
+// Per-attachment failures degrade to a text note, never throw.
+async function buildAttachmentParts(context, rows) {
+  if (!rows.length) return [];
+  let storageToken;
+  try { storageToken = await getManagedIdentityAccessToken("https://storage.azure.com/"); }
+  catch (tokErr) { context.error("dottie_message_stream: storage token for attachments failed (non-fatal)", tokErr); return rows.map((r) => ({ type: "input_text", text: `[Attached file "${r.filename}" could not be loaded.]` })); }
+  const parts = [];
+  for (const row of rows) {
+    const isExtractRow = row.ingestion_class === "extract"; // extract-class NEVER falls back to native
+    const native = !isExtractRow && NATIVE_MEDIA_TYPES[row.content_type];
+    try {
+      if (native) {
+        const buf = await downloadBlobBinary(storageToken, row.blob_path);
+        const dataUri = `data:${row.content_type};base64,${buf.toString("base64")}`;
+        if (native === "image") parts.push({ type: "input_image", image_url: dataUri });
+        else parts.push({ type: "input_file", filename: row.filename, file_data: dataUri }); // native PDF
+        parts.push({ type: "input_text", text: `(above is the attached file "${row.filename}")` });
+      } else if (isExtractRow && row.extracted_text_path) {
+        const text = await downloadBlobText(storageToken, row.extracted_text_path);
+        parts.push({ type: "input_text", text: `Attached file "${row.filename}" (${row.content_type}):\n\n${text}` });
+      } else {
+        parts.push({ type: "input_text", text: `[Attached file "${row.filename}" (${row.content_type}) is stored but could not be read into this message.]` });
+      }
+    } catch (rowErr) {
+      context.error("dottie_message_stream: attachment row failed (non-fatal)", rowErr);
+      parts.push({ type: "input_text", text: `[Attached file "${row.filename}" could not be loaded.]` });
+    }
+  }
+  return parts;
+}
+
 // Parse the accumulated upstream SSE text to reconstruct the assistant turn for persistence. (The raw SSE is
 // relayed to the client verbatim; this parse is ONLY for the DB write.) OpenAI chunk shape: each `data:` line
 // carries {choices:[{delta:{content},finish_reason},...], model, usage?}; the stream ends with `data: [DONE]`.
@@ -216,7 +307,7 @@ function parseSseForPersistence(raw) {
 // dottie_message persistence EXACTLY (lazy-create → seq count → user+assistant INSERT → updated_at). Returns
 // the conversation id.
 async function persistTurn(opts) {
-  const { oid, requestedConversationId, userText, acc } = opts;
+  const { oid, requestedConversationId, userText, acc, attachmentIds } = opts;
   const assistantModel = acc.model || AZURE_OPENAI_DEPLOYMENT;
   let client = null;
   try {
@@ -266,6 +357,15 @@ async function persistTurn(opts) {
       [conversationId, oid]
     );
     const baseSeq = seqResult.rows[0].n;
+
+    // B8i: link this turn's attachments to the conversation + the user-turn seq (only if not already
+    // homed, idempotent), so a reloaded thread rehydrates each chip on its originating message.
+    if (attachmentIds && attachmentIds.length > 0) {
+      await client.query(
+        `UPDATE public.dottie_attachments SET conversation_id = $1, message_seq = $2 WHERE id = ANY($3::uuid[]) AND created_by = $4 AND conversation_id IS NULL`,
+        [conversationId, baseSeq, attachmentIds, oid]
+      );
+    }
 
     await client.query(
       `
@@ -347,6 +447,18 @@ app.http("dottie_message_stream", {
       }
       chatMessages.push({ role: m.role, content: m.content });
     }
+
+    // attachment_ids (B8d): top-level field, separate from messages[]. Validate; this turn's attachments
+    // attach to the last user turn. Dedup + strict uuid + ≤ ATTACH_MAX_COUNT.
+    let attachmentIds = [];
+    if (body.attachment_ids != null) {
+      if (!Array.isArray(body.attachment_ids)) return jsonErr(400, "BAD_REQUEST", "Field 'attachment_ids' must be an array of UUIDs.");
+      attachmentIds = [...new Set(body.attachment_ids)];
+      if (attachmentIds.length > ATTACH_MAX_COUNT) return jsonErr(400, "BAD_REQUEST", `At most ${ATTACH_MAX_COUNT} attachments may be sent per message.`);
+      if (!attachmentIds.every((id) => isUuid(id))) return jsonErr(400, "BAD_REQUEST", "Every entry in 'attachment_ids' must be a valid UUID.");
+    }
+    const lastUserIndex = (() => { for (let i = chatMessages.length - 1; i >= 0; i--) if (chatMessages[i].role === "user") return i; return -1; })();
+    if (attachmentIds.length > 0 && lastUserIndex < 0) return jsonErr(400, "BAD_REQUEST", "Attachments require a user message.");
 
     const maxCompletionTokens = Number.isInteger(body.max_completion_tokens) ? body.max_completion_tokens : DEFAULT_MAX_COMPLETION_TOKENS;
     const systemPrompt = typeof body.system === "string" && body.system.trim() !== "" ? body.system.trim() : null;
@@ -451,12 +563,58 @@ app.http("dottie_message_stream", {
       return jsonErr(e.status || 500, e.code || "INTERNAL_SERVER_ERROR", e.message || "Model gateway token failed.");
     }
 
+    // Conversation-scoped attachment injection (B8d/B8i), mirroring current Theo: prior turns' attachments
+    // keyed by their message_seq + this turn's attachment_ids keyed to lastUserIndex; each turn's parts are
+    // spliced onto ITS OWN user message so the historical context is stable across the conversation.
+    let messagesForUpstream = chatMessages;
+    {
+      const rowsBySeq = new Map();
+      let attClient = null;
+      try {
+        attClient = await pool.connect();
+        await attClient.query(`SELECT set_config('app.current_user_id',$1,false), set_config('request.jwt.claim.sub',$1,false), set_config('request.jwt.claim.oid',$1,false)`, [oid]);
+        if (requestedConversationId) {
+          const prior = await attClient.query(
+            `SELECT id, filename, content_type, byte_size, blob_container, blob_path, ingestion_class, extracted_text_path, message_seq
+             FROM public.dottie_attachments WHERE conversation_id = $1 AND created_by = $2 AND message_seq IS NOT NULL
+             ORDER BY message_seq, created_at`,
+            [requestedConversationId, oid]
+          );
+          for (const r of prior.rows) { if (!rowsBySeq.has(r.message_seq)) rowsBySeq.set(r.message_seq, []); rowsBySeq.get(r.message_seq).push(r); }
+        }
+        if (attachmentIds.length > 0) {
+          const res = await attClient.query(
+            `SELECT id, filename, content_type, byte_size, blob_container, blob_path, ingestion_class, extracted_text_path
+             FROM public.dottie_attachments WHERE id = ANY($1::uuid[]) AND created_by = $2`,
+            [attachmentIds, oid]
+          );
+          if (res.rows.length !== attachmentIds.length) return jsonErr(404, "NOT_FOUND", "One or more attachments were not found.");
+          const orderById = new Map(attachmentIds.map((id, i) => [id, i]));
+          const cur = res.rows.sort((a, b) => orderById.get(a.id) - orderById.get(b.id));
+          if (!rowsBySeq.has(lastUserIndex)) rowsBySeq.set(lastUserIndex, []);
+          rowsBySeq.get(lastUserIndex).push(...cur);
+        }
+      } catch (attErr) {
+        context.error("dottie_message_stream: attachment fetch failed", attErr);
+        return jsonErr(500, "INTERNAL_SERVER_ERROR", "Failed to load attachments.");
+      } finally { if (attClient) attClient.release(); }
+      if (rowsBySeq.size > 0) {
+        messagesForUpstream = await Promise.all(chatMessages.map(async (m, i) => {
+          const rows = rowsBySeq.get(i);
+          if (!rows || rows.length === 0 || m.role !== "user" || typeof m.content !== "string") return m;
+          const attParts = await buildAttachmentParts(context, rows);
+          if (attParts.length === 0) return m;
+          return { ...m, content: [...attParts, { type: "input_text", text: m.content }] };
+        }));
+      }
+    }
+
     // gpt-5 Responses API request with the built-in web_search tool (server-side internet grounding).
-    // `instructions` = the Dottie ruleset + memory; `input` = the chat turns; reasoning kept low for chat.
+    // `instructions` = the Dottie ruleset + memory; `input` = the chat turns (+ any attachment parts).
     const upstreamPayload = JSON.stringify({
       model: AZURE_OPENAI_DEPLOYMENT,
       instructions: effectiveSystem,
-      input: chatMessages,
+      input: messagesForUpstream,
       tools: [{ type: "web_search" }],
       reasoning: { effort: "low" },
       max_output_tokens: Math.max(maxCompletionTokens, 16000),
@@ -559,7 +717,7 @@ app.http("dottie_message_stream", {
       if (buf.trim() !== "") handleEvent(buf);
       let conversationId = null;
       try {
-        conversationId = await persistTurn({ oid, requestedConversationId, userText, acc: { text, model: respModel } });
+        conversationId = await persistTurn({ oid, requestedConversationId, userText, acc: { text, model: respModel }, attachmentIds });
         stream.write(`event: vault_meta\ndata: ${JSON.stringify({ conversation_id: conversationId, model: respModel })}\n\n`);
       } catch (perr) {
         context.error("dottie_message_stream: persistence failed (answer already streamed)", perr);
