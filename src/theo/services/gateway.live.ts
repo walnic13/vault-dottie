@@ -33,6 +33,9 @@ import {
   publishConversation as mockPublishConversation, unpublishConversation as mockUnpublishConversation,
   listPublishedProjectConversations as mockListPublishedProjectConversations,
 } from "./gateway.mock";
+// Dottie capability gates (single source of truth in swapBlock). Features whose dottie_* backend is
+// not live yet are short-circuited below so their transplanted FE controls neither render nor 404.
+import { DOTTIE_CAPABILITIES } from "../swapBlock";
 
 type TokenProvider = () => Promise<string | null>;
 
@@ -78,7 +81,8 @@ function isLive(): boolean {
   return Boolean(apiBase || tokenProvider);
 }
 export function attachmentsAvailable(): boolean {
-  return isLive();
+  // Dottie gate: the paperclip/paste/drag-drop honor this. Off until dottie attachments backend lands.
+  return DOTTIE_CAPABILITIES.attachments && isLive();
 }
 
 // Auth headers for a live cross-origin call (Bearer = the shell's user identity token, not a model key).
@@ -97,7 +101,8 @@ async function authHeaders(): Promise<Record<string, string>> {
 // requires a live backend (the composer gates the controls on `voiceAvailable()` = isLive()). Bytes
 // travel base64 in/out of the JSON envelope; nothing is persisted in the browser (media APIs only). ──
 export function voiceAvailable(): boolean {
-  return isLive();
+  // Dottie gate: the mic + read-aloud honor this. Off until dottie voice backend lands.
+  return DOTTIE_CAPABILITIES.voice && isLive();
 }
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -473,6 +478,7 @@ function toKnowledge(r: RawKnowledge): Knowledge {
 
 export async function listProjects(): Promise<Project[]> {
   if (!apiBase && !tokenProvider) return mockListProjects();
+  if (!DOTTIE_CAPABILITIES.projects) return []; // Projects hidden — no backend; never hit projectsBase.
   const headers = await authHeaders();
   const res = await fetch(`${projectsBase}/api/theo_list_projects`, { method: "GET", credentials: "same-origin", headers });
   let json: { data?: { projects?: RawProject[] }; error?: { message?: string } } | null = null;
@@ -641,6 +647,7 @@ function toPerson(r: RawPerson): Person {
 // Graph OBO server-side; the FE sends only the bearer. Unconfigured harness → mock (empty roster).
 export async function listPeople(): Promise<Person[]> {
   if (!apiBase && !tokenProvider) return mockListPeople();
+  if (!DOTTIE_CAPABILITIES.people) return []; // No dottie_list_people yet — degrade to empty roster (no 404).
   const headers = await authHeaders();
   const res = await fetch(`${apiBase}/api/theo_list_people`, { method: "GET", credentials: "same-origin", headers });
   let json: { data?: { people?: RawPerson[] }; error?: { message?: string } } | null = null;
@@ -905,6 +912,9 @@ function toArtifact(r: RawArtifact): Artifact {
 // Persist (create-or-add-version, keyed by title server-side). Best-effort caller; returns id + version.
 export async function persistArtifact(input: { title: string; type: string; content: string; conversationId?: string | null }): Promise<{ id: string; currentVersion: number }> {
   if (!apiBase && !tokenProvider) return mockPersistArtifact(input);
+  // No dottie artifacts-persistence backend yet — no-op (the in-reply [[ARTIFACT]] render is local; the
+  // caller is best-effort and ignores the return). Prevents a background 404 on every producing turn.
+  if (!DOTTIE_CAPABILITIES.artifactsPersistence) return { id: "", currentVersion: 1 };
   const headers = await authHeaders();
   const res = await fetch(`${apiBase}/api/theo_upsert_artifact`, {
     method: "POST",
@@ -927,6 +937,7 @@ export async function persistArtifact(input: { title: string; type: string; cont
 
 export async function listServerArtifacts(): Promise<ArtifactSummary[]> {
   if (!apiBase && !tokenProvider) return mockListServerArtifacts();
+  if (!DOTTIE_CAPABILITIES.artifactsPersistence) return []; // No backend — empty gallery, no 404 on mount.
   const headers = await authHeaders();
   const res = await fetch(`${apiBase}/api/theo_list_artifacts`, { method: "GET", credentials: "same-origin", headers });
   let json: { data?: { artifacts?: RawArtifact[] }; error?: { message?: string } } | null = null;

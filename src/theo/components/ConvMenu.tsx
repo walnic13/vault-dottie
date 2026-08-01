@@ -11,6 +11,7 @@ import type { CSSProperties } from "react";
 import { C, SANS } from "../theme";
 import { IcStar, IcCompose, IcTrash, IcProjects, IcShare } from "./icons";
 import type { ConversationSummary, Project } from "../types";
+import { DOTTIE_CAPABILITIES } from "../swapBlock";
 
 export function ConvMenuItems({ conversation, projects, onToggleStar, onAddToProject, onDelete, onStartRename, close, published, canPublish, onTogglePublish }: {
   conversation: ConversationSummary;
@@ -79,10 +80,14 @@ export function ConvMenuItems({ conversation, projects, onToggleStar, onAddToPro
         onClick={() => { close(); onStartRename(); }}>
         <IcCompose s={16} /> Rename
       </button>
-      <button style={item("proj")} onMouseEnter={() => setHover("proj")} onMouseLeave={() => setHover(null)}
-        onClick={() => setView("projects")}>
-        <IcProjects s={16} /> Add to project <span style={{ marginLeft: "auto", color: C.ink3, paddingLeft: 12 }}>›</span>
-      </button>
+      {/* Dottie: "Add to project" hidden while Projects is off (no Projects backend). Un-gates when
+          DOTTIE_CAPABILITIES.projects flips true. */}
+      {DOTTIE_CAPABILITIES.projects && (
+        <button style={item("proj")} onMouseEnter={() => setHover("proj")} onMouseLeave={() => setHover(null)}
+          onClick={() => setView("projects")}>
+          <IcProjects s={16} /> Add to project <span style={{ marginLeft: "auto", color: C.ink3, paddingLeft: 12 }}>›</span>
+        </button>
+      )}
       {/* SPW 2c-iii-fe (VA-T12 B): publish/unpublish this conversation to its project. Only the header
           menu passes onTogglePublish + canPublish (owner + project-linked), so this is hidden in the
           sidebar row menu and on a non-owner / non-project chat. */}

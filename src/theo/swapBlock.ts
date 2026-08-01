@@ -6,6 +6,22 @@
    lives server-side (gateway abstraction in services/).
    ──────────────────────────────────────────────────────────────────────── */
 export const ASSISTANT_NAME = "Dottie";
+
+// ── Dottie capability gates ──────────────────────────────────────────────
+// Which transplanted Theo features Dottie's backend actually serves yet. The FE is a byte-verbatim
+// Theo transplant, so every control is present; a feature stays `false` until its `dottie_*` backend
+// lands (flip to `true` in the SAME governed package that ships that backend). Projects stays `false`
+// indefinitely (Walter 2026-08-01: hidden for now). Single source of truth, consumed by data.ts (NAV
+// filter), gateway.live.ts (attachments/voice predicates + short-circuits for unbacked list calls),
+// and ConvMenu.tsx (Add-to-project item). Authoritative gap register: spec/DOTTIE_THEO_RECONCILIATION.md.
+export const DOTTIE_CAPABILITIES = {
+  projects: false,             // §B/§E — hidden indefinitely (no Projects/SPW backend)
+  people: false,               // §C — dottie_list_people not built yet
+  attachments: false,          // §D — dottie attachments (5 handlers + blob) not built yet
+  artifactsPersistence: false, // §F — dottie artifacts persistence (3 handlers) not built yet
+  voice: false,                // §G — dottie voice (transcribe/synthesize) not built yet
+} as const;
+
 export const WORKSPACE_NAME = "Vault Group";
 export const PRODUCT_NAME = "Origin";
 export const USER_NAME = "";
