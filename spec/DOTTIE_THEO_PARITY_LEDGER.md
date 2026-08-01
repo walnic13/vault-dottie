@@ -14,11 +14,11 @@
 
 | Theo capability | Theo surface | Dottie status | Dottie phase | Adaptation vs Theo |
 | --- | --- | --- | --- | --- |
-| Send turn → model → persist user+assistant, lazy-create conversation | `theo_message` | 🔵 IN-REVIEW | **D2** | `dottie_message`; gpt-5 (not Claude); Dottie-L1 injection; no app_key/app_context/citations/attachments |
-| List conversations (restore-on-reopen order) | `theo_list_conversations` | 🔵 IN-REVIEW | **D2** | `dottie_list_conversations`; drops project/publish columns |
-| Get one conversation + messages | `theo_get_conversation` | 🔵 IN-REVIEW | **D2** | `dottie_get_conversation`; drops SPW `conversation_access`/publish/media |
-| **Streaming** send (real-time SSE, not buffered) | `theo_message_stream` (v4 sidecar `vaultgpt-func-stream`) | 🔵 IN-REVIEW | **D2-Stream** | `dottie_message_stream` on new v4 sidecar `vaultgpt-func-dottie-stream`; gpt-5 `chat/completions` `stream:true`; OpenAI-shape SSE |
-| Last-opened restore ordering | `theo_get/list` `last_opened_at` | 🔵 IN-REVIEW | **D2** | present in D1 schema + list/get |
+| Send turn → model → persist user+assistant, lazy-create conversation | `theo_message` | ✅ DONE (deployed+verified) | **D2** | `dottie_message` on func-dottie; gpt-5 (not Claude); Dottie-L1 injection; no app_key/app_context/citations/attachments |
+| List conversations (restore-on-reopen order) | `theo_list_conversations` | ✅ DONE | **D2** | `dottie_list_conversations`; drops project/publish columns |
+| Get one conversation + messages | `theo_get_conversation` | ✅ DONE | **D2** | `dottie_get_conversation`; drops SPW `conversation_access`/publish/media |
+| **Streaming** send (real-time SSE, not buffered) | `theo_message_stream` (v4 sidecar `vaultgpt-func-stream`) | ✅ DONE (deployed+verified) | **D2-Stream** | `dottie_message_stream` on new v4 sidecar `vaultgpt-func-dottie-stream`; gpt-5 `chat/completions` `stream:true`; OpenAI-shape SSE; 45-chunk stream + persistence-parity verified |
+| Last-opened restore ordering | `theo_get/list` `last_opened_at` | ✅ DONE | **D2** | present in D1 schema + list/get |
 | Star / pin a conversation | `theo_star_conversation` + `starred` col | 🟡 PLANNED | D2b | `starred` column already in D1; needs the toggle handler |
 | Rename a conversation | `theo_rename_conversation` | 🟡 PLANNED | D2b | title update handler |
 | Delete a conversation | `theo_delete_conversation` | 🟡 PLANNED | D2b | owner-scoped delete + cascade |
@@ -95,4 +95,4 @@
 
 **D0** infra ✅ · **D1** schema ✅ · **D2** conversation trio 🔵 · **D2-Stream** streaming 🔵 · **D3** Dottie-L1 CRUD + distillation 🟡 · **D4** FE console (distinct identity + deconstructing-spiral logo + SSE + federated mount) 🟡 · **D5** Dottie-L2/L3 + engine-gated shared-memory reads + Observational Ruleset 🟡 · then the deferred limbs (attachments, tools, voice, push, history-RAG) as prioritised.
 
-_Last updated: 2026-08-01. D2 rev-2 re-submitted after a T13/T12 classification REJECT (helpers normalized byte-identical, model call reclassified allowed-delta). D2-Stream rev-2 after its own T13/T22 REJECT (Codex reviewed the pre-fix commit; the model-call claim was already fixed, and a PRE-LAND dependency gate G-0 was added so the streamer deploys only after D2 rev-2 is APPROVED+deployed). Both handler-only, no migration, awaiting Codex Pass-2._
+_Last updated: 2026-08-01. **D2 trio + D2-Stream are APPROVED, DEPLOYED, and golden-curl-verified against live gpt-5.** D2 on func-dottie (Kudu-VFS; needed POSTGRES_CONNECTION_STRING + pg module added at deploy); D2-Stream on the new v4 sidecar func-dottie-stream (MI + KV grant + EasyAuth v2 + app settings mirrored; zip-deployed). Endpoints recorded in `DOTTIE_API_SPEC.md` (Role-C, G-APISPEC closed). Backend parity for conversation core is COMPLETE. Next: D3 (Dottie-L1 write/distillation) and D4 (FE console + deconstructing-spiral logo + federated mount)._
