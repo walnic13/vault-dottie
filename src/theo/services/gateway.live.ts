@@ -344,7 +344,7 @@ export async function getConversation(id: string): Promise<ConversationDetail> {
 export async function renameConversation(id: string, title: string): Promise<{ id: string; title: string }> {
   if (!apiBase && !tokenProvider) return mockRenameConversation(id, title);
   const headers = await authHeaders();
-  const res = await fetch(`${apiBase}/api/theo_rename_conversation`, {
+  const res = await fetch(`${apiBase}/api/dottie_rename_conversation`, {
     method: "POST",
     credentials: "same-origin",
     headers,
@@ -365,7 +365,7 @@ export async function renameConversation(id: string, title: string): Promise<{ i
 export async function deleteConversation(id: string): Promise<void> {
   if (!apiBase && !tokenProvider) return mockDeleteConversation(id);
   const headers = await authHeaders();
-  const res = await fetch(`${apiBase}/api/theo_delete_conversation`, {
+  const res = await fetch(`${apiBase}/api/dottie_delete_conversation`, {
     method: "POST",
     credentials: "same-origin",
     headers,
@@ -848,7 +848,7 @@ export async function setConversationProject(conversationId: string, projectId: 
 export async function setConversationStarred(conversationId: string, starred: boolean): Promise<void> {
   if (!apiBase && !tokenProvider) return mockSetConversationStarred(conversationId, starred);
   const headers = await authHeaders();
-  const res = await fetch(`${apiBase}/api/theo_set_conversation_starred`, {
+  const res = await fetch(`${apiBase}/api/dottie_set_conversation_starred`, {
     method: "POST",
     credentials: "same-origin",
     headers,

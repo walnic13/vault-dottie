@@ -2,6 +2,15 @@
 
 First package of the FE↔backend reconciliation build-out (`spec/DOTTIE_THEO_RECONCILIATION.md` §B): the three conversation-management handlers the transplanted FE already calls but Dottie's backend lacked — so **delete / rename / star error today**. Each is a **byte-faithful mirror of its deployed Theo primary reference** (`theo_delete_conversation` / `theo_rename_conversation` / `theo_set_conversation_starred`), with the single allowed delta being the table + exists-helper name (`theo_conversations`→`dottie_conversations`, `theo_conversation_exists_unscoped`→`dottie_conversation_exists_unscoped`). **No migration** (the `dottie_conversations` columns `title`/`starred`/`updated_at` + the exists helper landed in D1). Kudu-VFS deploy to `vaultgpt-func-dottie` + golden curls.
 
+## Repair note (rev-2 — addresses Codex REJECT T13 / T4)
+- **T13 (FE still calls `theo_*`):** the FE gateway (`gateway.live.ts`) is now repointed for these three —
+  `deleteConversation`/`renameConversation`/`setConversationStarred` call `/api/dottie_delete_conversation` /
+  `dottie_rename_conversation` / `dottie_set_conversation_starred`. So this package + the paired FE repoint
+  CLOSE the live error path together (they land together — see §8). The FE repoint extends the Foundation
+  gateway-repoint (same pattern, same FE package family).
+- **T4 (function.json anchors):** GCR rows 7-9 now carry concrete blob SHAs for BOTH the primary-reference
+  `index.js` AND its deployed `function.json` (the Golden Handler canonical pair).
+
 ## Grounding Conformance Receipt
 Role: Claude Code
 Turn Type: Verified Evidence Pack (backend handlers; no migration)
@@ -18,9 +27,9 @@ Sub-phase Track: N/A
 | 4 | Golden Handler — `governance/THEO_GOLDEN_HANDLER_STANDARD.md` (§2 primary reference = handler + function.json; §4 EXACT mirror / allowed delta; §5.1 Structural Mirror Table; §5.3 Golden Curl; §5.5 deploy) | `Grep("EXACT mirror")` this turn | `f8f0e5ea36447502e35fb87b373c94e376f05cbb` |
 | 5 | Execution Orchestration — `governance/THEO_EXECUTION_ORCHESTRATION_STANDARD.md` (§1D ordered pass; §1E deploy-after-Codex-APPROVED) | `Grep("ordered, non-skippable")` this turn | `565559b699c1309f8e750b0dbbac859c13d807c8` |
 | 6 | SCHEMA TRUTH — `spec/DOTTIE_AZURE_POSTGRES_SCHEMA.md` (the deployed D1 `dottie_conversations` incl. `title`/`starred`/`updated_at` + `dottie_conversation_exists_unscoped`) | `Read`(§3/§4) this turn | `bb096db53a8d76dc3589b3744f6492ddad8f1f7f` |
-| 7 | **PRIMARY REFERENCE 1 (DEPLOYED)** — `theo_delete_conversation` handler + function.json (func-premium; the DELETE + owner-gate/exists-discrimination mirrored) | `Read`(theo_delete_conversation.index.js, full) this turn; copy in-package | index.js `f4f0c9d8b72c0abf570eba78a139787f74e8c149`; function.json (in-package) |
-| 8 | **PRIMARY REFERENCE 2 (DEPLOYED)** — `theo_rename_conversation` handler + function.json (UPDATE title + updated_at; owner-gate) | `Read`(theo_rename_conversation.index.js, full) this turn; copy in-package | index.js `f796183d4b5b359e069e16689e7d1efe1343b403`; function.json (in-package) |
-| 9 | **PRIMARY REFERENCE 3 (DEPLOYED)** — `theo_set_conversation_starred` handler + function.json (UPDATE starred; body `{conversation_id, starred}`) | `Read`(theo_set_conversation_starred.index.js, full) this turn; copy in-package | index.js `e7cc90058d40a40bbfd520d9ae469d6ce89b5024`; function.json (in-package) |
+| 7 | **PRIMARY REFERENCE 1 (DEPLOYED)** — `theo_delete_conversation` handler + function.json (func-premium; the DELETE + owner-gate/exists-discrimination mirrored) | `Read`(theo_delete_conversation.index.js, full) this turn; copy in-package | index.js `f4f0c9d8b72c0abf570eba78a139787f74e8c149`; function.json `ab35a53652e16c3e5b70a1c6225e51dbf6f75030` |
+| 8 | **PRIMARY REFERENCE 2 (DEPLOYED)** — `theo_rename_conversation` handler + function.json (UPDATE title + updated_at; owner-gate) | `Read`(theo_rename_conversation.index.js, full) this turn; copy in-package | index.js `f796183d4b5b359e069e16689e7d1efe1343b403`; function.json `75296005caee18324f8a5365dcdd8db1a4726ea0` |
+| 9 | **PRIMARY REFERENCE 3 (DEPLOYED)** — `theo_set_conversation_starred` handler + function.json (UPDATE starred; body `{conversation_id, starred}`) | `Read`(theo_set_conversation_starred.index.js, full) this turn; copy in-package | index.js `e7cc90058d40a40bbfd520d9ae469d6ce89b5024`; function.json `523eaac4557b89e654d2063bf9e3fe7149cb90b1` |
 
 ## Rule Anchor Table
 
@@ -1320,7 +1329,7 @@ Authenticated `az` bearer (audience `api://4e1a1e31-…`). Seed a conversation v
 - **G-APISPEC: PRE-LAND (Role-C post-deploy)** — add the 3 endpoints to `spec/DOTTIE_API_SPEC.md`. Disclosed.
 
 ## §8 — Deploy plan (ordered; §1D)
-1. Codex Pass-2 → APPROVED/REJECTED. 2. Claude Kudu-VFS deploys the 3 handlers to `vaultgpt-func-dottie` (PUT `<fn>/{index.js,function.json}`, GET-back diff, restart, syncfunctiontriggers), runs §6 curls. No migration. 3. Role-C API doc.
+1. Codex Pass-2 → APPROVED/REJECTED. 2. Claude Kudu-VFS deploys the 3 handlers to `vaultgpt-func-dottie` (PUT `<fn>/{index.js,function.json}`, GET-back diff, restart, syncfunctiontriggers). 2b. The PAIRED FE repoint (the 3 `gateway.live.ts` calls now target `dottie_*`) deploys to the dev SWA alongside — CLOSING the live delete/rename/star error path end-to-end. 3. Claude runs §6 curls. No migration. 4. Role-C API doc.
 
 ## Codex activation note (Walter forwards)
 
