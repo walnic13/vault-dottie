@@ -19,7 +19,14 @@ const corsHeaders = {
 };
 
 function send(context, status, body) {
-  context.res = { status, headers: { ...corsHeaders, "Content-Type": "application/json" }, body };
+  context.res = {
+    status,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+    },
+    body,
+  };
 }
 
 function nowIso() {
@@ -27,16 +34,30 @@ function nowIso() {
 }
 
 function errorBody(code, message, status) {
-  return { error: { code, message, status, timestamp: nowIso() } };
+  return {
+    error: {
+      code,
+      message,
+      status,
+      timestamp: nowIso(),
+    },
+  };
 }
 
 function successBody(data) {
-  return { data, meta: { timestamp: nowIso(), version: "1.0" } };
+  return {
+    data,
+    meta: {
+      timestamp: nowIso(),
+      version: "1.0",
+    },
+  };
 }
 
 function getPrincipal(req) {
   const raw = req.headers["x-ms-client-principal"];
   if (!raw || typeof raw !== "string") return null;
+
   try {
     return JSON.parse(Buffer.from(raw, "base64").toString("utf8"));
   } catch {
@@ -46,12 +67,14 @@ function getPrincipal(req) {
 
 function getClaimValue(principal, claimTypes) {
   if (!principal || !Array.isArray(principal.claims)) return null;
+
   for (const claimType of claimTypes) {
     const match = principal.claims.find((c) => c.typ === claimType);
     if (match && typeof match.val === "string" && match.val.trim() !== "") {
       return match.val.trim();
     }
   }
+
   return null;
 }
 

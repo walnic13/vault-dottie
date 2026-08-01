@@ -3,9 +3,10 @@ const { Pool } = require("pg");
 
 // dottie_message — Dottie's send→reply→persist handler (Phase D2). Mirrors the deployed Theo memory-injection
 // theo_message (pool/set_config/envelope/EasyAuth, lazy-create conversation, persist user+assistant, Dottie-L1
-// memory injection) with two adaptations: (1) dottie_* tables + Dottie-L1 (dottie_user_memory, no scope column);
-// (2) the model call is Azure OpenAI gpt-5 chat/completions via client-credentials getAadToken — byte-faithful to
-// the deployed dottie_ask — NOT Theo's Foundry-Claude (Dottie is a deliberately different model; observer
+// memory injection) with two allowed-delta adaptations: (1) dottie_* tables + Dottie-L1 (dottie_user_memory, no
+// scope column); (2) the model call is Azure OpenAI gpt-5 chat/completions via client-credentials getAadToken —
+// endpoint/scope/body from the deployed dottie_ask, error-envelope from the theo_message primary reference (so
+// byte-identical to neither single reference) — NOT Theo's Foundry-Claude (deliberately different model; observer
 // independence). No web-grounding tools, no history-RAG, no media. Self-contained (Node built-ins). Runs on
 // vaultgpt-func-dottie.
 
@@ -171,8 +172,9 @@ function requestUrl(urlStr, options = {}, body = null) {
   });
 }
 
-// Client-credentials token for a given Azure resource scope (same AAD app as the gateway) — byte-identical to
-// the deployed dottie_ask / theo_add_project_knowledge getAadToken.
+// Client-credentials token for a given Azure resource scope (same AAD app as the gateway). The client-credentials
+// mechanics (scope/body/token URL) mirror the deployed dottie_ask; the error-envelope (buildKnownError / 500)
+// mirrors the theo_message primary reference's getFoundryToken — an allowed delta, not byte-identical to either.
 async function getAadToken(scope) {
   const tenantId = process.env.AAD_TENANT_ID;
   const clientId = process.env.AAD_CLIENT_ID;

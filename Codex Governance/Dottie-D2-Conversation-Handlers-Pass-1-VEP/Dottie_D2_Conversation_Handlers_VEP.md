@@ -1,6 +1,6 @@
 # Dottie Phase D2 — Conversation Handlers (send→gpt-5+persist, list, get) — Pass-1 VEP
 
-Second Dottie build phase ([[VAULT_MEMORY_ARCHITECTURE.md]] §A Amendment 9). Delivers the three handlers that make Dottie a **real stateful conversational surface**, on the D1 `dottie_*` schema: **`dottie_message`** (send a turn → **Azure OpenAI gpt-5** → persist user+assistant, lazy-create the conversation, inject **Dottie-L1** relationship memory), **`dottie_list_conversations`**, **`dottie_get_conversation`**. Mirrors the deployed Theo `theo_message` (memory-injection version) / `theo_list_conversations` / `theo_get_conversation` idioms; the model call is byte-faithful to the deployed **`dottie_ask`** (client-credentials `getAadToken` → gpt-5 chat/completions), NOT Theo's Foundry-Claude (observer independence). **Handler-only — NO migration** (uses the deployed D1 tables). Self-contained (Node built-ins); Kudu-VFS deploy to `vaultgpt-func-dottie`. No web-grounding, no history-RAG, no media, no project-sharing.
+Second Dottie build phase ([[VAULT_MEMORY_ARCHITECTURE.md]] §A Amendment 9). Delivers the three handlers that make Dottie a **real stateful conversational surface**, on the D1 `dottie_*` schema: **`dottie_message`** (send a turn → **Azure OpenAI gpt-5** → persist user+assistant, lazy-create the conversation, inject **Dottie-L1** relationship memory), **`dottie_list_conversations`**, **`dottie_get_conversation`**. Mirrors the deployed Theo `theo_message` (memory-injection version) / `theo_list_conversations` / `theo_get_conversation` idioms (shared envelope helpers byte-identical to `theo_message`); the gpt-5 model call is an **allowed delta** — endpoint/scope/body from the deployed **`dottie_ask`**, error-envelope from the `theo_message` primary reference (byte-identical to neither single reference) — NOT Theo's Foundry-Claude (observer independence). **Handler-only — NO migration** (uses the deployed D1 tables). Self-contained (Node built-ins); Kudu-VFS deploy to `vaultgpt-func-dottie`. No web-grounding, no history-RAG, no media, no project-sharing.
 
 ## Grounding Conformance Receipt
 Role: Claude Code
@@ -19,7 +19,7 @@ Sub-phase Track: N/A
 | 5 | Execution Orchestration — `governance/THEO_EXECUTION_ORCHESTRATION_STANDARD.md` (§1D ordered pass; §1E deploy-after-Codex-APPROVED — func-dottie authority per the Walter authorization below) | `Grep("ordered, non-skippable")` this turn | `565559b699c1309f8e750b0dbbac859c13d807c8` |
 | 6 | SCHEMA TRUTH — `spec/DOTTIE_AZURE_POSTGRES_SCHEMA.md` (the deployed D1 `dottie_conversations`/`dottie_messages`/`dottie_user_memory` these handlers read+write) | `Read`(§3/§4) this turn | `bb096db53a8d76dc3589b3744f6492ddad8f1f7f` |
 | 7 | **CANONICAL PRIMARY REFERENCE (DEPLOYED)** — Theo `theo_message` handler + function.json (memory-injection version; pool/set_config/envelope/EasyAuth, lazy-create conversation, persist user+assistant, memory injection) | `Read`(theo_message.index.js, full) this turn; byte-identical copies in-package | index.js `f41362bb020a2488915fce0699f8598344b558e8`; function.json `bd476fc8d144ed9592b561b4c0ded84f5911cff0` |
-| 8 | GPT-5-CALL MIRROR (DEPLOYED, vault-dottie) — `dottie_ask.index.js` (client-credentials `getAadToken` → Azure OpenAI gpt-5 chat/completions; the model-call block byte-faithfully reused) | `Read`(dottie_ask.index.js, full — this session) this turn | vault-dottie `531568ca1ef7768ad2ce11fd8692f90911a265ad` |
+| 8 | GPT-5-CALL SOURCE (DEPLOYED, vault-dottie) — `dottie_ask.index.js` (client-credentials `getAadToken` → Azure OpenAI gpt-5 chat/completions; endpoint/scope/body reused as an allowed-delta — error-envelope taken from the `theo_message` primary reference, so byte-identical to neither) | `Read`(dottie_ask.index.js, full — this session) this turn | vault-dottie `531568ca1ef7768ad2ce11fd8692f90911a265ad` |
 | 9 | LIST/GET MIRROR (DEPLOYED, vault-theo) — `theo_list_conversations` + `theo_get_conversation` (the owner-scoped list SELECT + get SELECT + `_exists_unscoped` 403/404 the D2 list/get SELECT-deltas mirror) | survey (paths + SQL) this turn | theo_list_conversations `5eaf178d03bf77fe45b4f99edc2866c150f234a6`; theo_get_conversation `7e31d701fbd2404f4dc2cd8d92d1576d5382d71f` |
 
 ## Rule Anchor Table
@@ -47,7 +47,7 @@ Claude Code deploys the D2 handlers to `vaultgpt-func-dottie` only after this VE
 ## §1 — Feature + design
 
 Three handlers on `vaultgpt-func-dottie`, EasyAuth-gated, on the D1 `dottie_*` schema:
-- **`dottie_message`** (`POST`) — body `{ messages: [{role:'user'|'assistant', content:string}], conversation_id?, system?, max_completion_tokens? }`. Injects **Dottie-L1** memory (`dottie_user_memory`, salience-ordered) into the system prompt (with the Dottie persona), calls **gpt-5** chat/completions (client-credentials `getAadToken`, byte-faithful to `dottie_ask`), then persists the new user turn + the assistant reply in one txn (lazy-creating the conversation on the first turn, or owner-gating an existing one). Returns `200 { data:{ conversation_id, role, model, content, finish_reason, usage } }`.
+- **`dottie_message`** (`POST`) — body `{ messages: [{role:'user'|'assistant', content:string}], conversation_id?, system?, max_completion_tokens? }`. Injects **Dottie-L1** memory (`dottie_user_memory`, salience-ordered) into the system prompt (with the Dottie persona), calls **gpt-5** chat/completions (client-credentials `getAadToken`; allowed delta — `dottie_ask` endpoint + `theo_message` error-envelope), then persists the new user turn + the assistant reply in one txn (lazy-creating the conversation on the first turn, or owner-gating an existing one). Returns `200 { data:{ conversation_id, role, model, content, finish_reason, usage } }`.
 - **`dottie_list_conversations`** (`GET ?limit=`) — the caller's conversations, `last_opened_at DESC NULLS LAST, updated_at DESC` (restore-on-reopen ordering). `200 { data:{ conversations } }`.
 - **`dottie_get_conversation`** (`GET ?conversationId=`) — one owned conversation + its messages (seq order), stamps `last_opened_at`. `200 { data:{ conversation, messages } }`.
 
@@ -57,15 +57,15 @@ Errors (all three): `401 UNAUTHORIZED` (no EasyAuth identity); `400 BAD_REQUEST`
 
 **Dottie's conversational surface (Amendment 9).** These handlers turn the D1 substrate into a working stateful console: Dottie remembers your conversations and **knows you** — `dottie_message` injects **Dottie-L1** (`dottie_user_memory`, `"consensual 1:1 relationship"`) into every turn's system prompt.
 
-**Independence + faithful mirror.** The conversation/persist/memory-injection structure is byte-faithful to the deployed Theo `theo_message` (the canonical primary reference, §5); the **model call is gpt-5** (client-credentials → Azure OpenAI chat/completions), byte-faithful to the deployed `dottie_ask` — deliberately NOT Theo's Foundry-Claude (observer independence). Owner-gating uses `created_by = $oid` + `dottie_conversation_exists_unscoped` (the pre-SPW / `theo_list_project_knowledge` idiom) — Dottie has **no project-sharing**, so the SPW `theo_conversation_access` branch is intentionally omitted.
+**Independence + faithful mirror.** The shared envelope helpers are **byte-identical** to the deployed Theo `theo_message` (the canonical primary reference, §5; verified this turn), and the conversation/persist/memory-injection structure mirrors it with documented `dottie_*` allowed-deltas; the **model call is gpt-5** (client-credentials → Azure OpenAI chat/completions) — an **allowed delta** adapting the deployed `dottie_ask` endpoint with the `theo_message` error-envelope — deliberately NOT Theo's Foundry-Claude (observer independence). Owner-gating uses `created_by = $oid` + `dottie_conversation_exists_unscoped` (the pre-SPW / `theo_list_project_knowledge` idiom) — Dottie has **no project-sharing**, so the SPW `theo_conversation_access` branch is intentionally omitted.
 
 **Boundary.** No `reporting_*`; no `theo_*` (Dottie-L1 is separate from Theo's L1 — never crossed); no Blob; no migration; no web-grounding/RAG/media. Reads+writes only the deployed D1 `dottie_*` tables; the only external call is the AAD token + the in-tenant Azure OpenAI gpt-5 endpoint. Runs on `vaultgpt-func-dottie`. **Fail-closed:** no identity → 401; unconfigured endpoint → 500; gpt-5 non-2xx → 502; memory-fetch failure is NON-FATAL (degrades to no memory block); the AAD secret is a KV reference.
 
 ## §3 — Schema Reality Lock (deployed grounding)
 
 Nothing invented (Governor §3/§4):
-- **Tables** = the DEPLOYED D1 `dottie_conversations` / `dottie_messages` / `dottie_user_memory` + `dottie_conversation_exists_unscoped` (schema doc §3/§4, GCR row 6) — catalog-verified this session. The persist txn (lazy-create → `FOR`-count seq → INSERT user+assistant → `updated_at`), the memory SELECT (salience-ordered), and the owner-gate + exists-discrimination are byte-faithful to the deployed `theo_message` (GCR row 7) adapted to `dottie_*` (no `scope` column on `dottie_user_memory`; no `app_key`/`app_context`/`citations` columns).
-- **Model call** = byte-faithful to the deployed `dottie_ask` (GCR row 8): `getAadToken` client-credentials (scope `cognitiveservices`) → `POST {AZURE_OPENAI_ENDPOINT}/openai/deployments/gpt-5/chat/completions` with `max_completion_tokens`.
+- **Tables** = the DEPLOYED D1 `dottie_conversations` / `dottie_messages` / `dottie_user_memory` + `dottie_conversation_exists_unscoped` (schema doc §3/§4, GCR row 6) — catalog-verified this session. The persist txn (lazy-create → count seq → INSERT user+assistant → `updated_at`+`last_opened_at`), the memory SELECT (salience-ordered), and the owner-gate + exists-discrimination are **structurally faithful** to the deployed `theo_message` (GCR row 7) with documented `dottie_*` allowed-deltas (no `scope` clause on the memory SELECT; no `app_key`/`app_context`/`citations` columns; adds the `last_opened_at` stamp).
+- **Model call** = ALLOWED DELTA: the `getAadToken` client-credentials mechanics + the `chat/completions` endpoint/scope/body (`cognitiveservices` scope, `max_completion_tokens`) mirror the deployed `dottie_ask` (GCR row 8); the error-envelope (`buildKnownError`/502/429) mirrors the `theo_message` primary reference — byte-identical to neither single reference.
 - **List/get SELECTs** mirror the deployed `theo_list_conversations` / `theo_get_conversation` (GCR row 9), on `dottie_*`.
 - **Deployed app fact:** `vaultgpt-func-dottie` has pg (`POSTGRES_CONNECTION_STRING`), the OpenAI env + `getAadToken` config (`AAD_*` KV-ref), EasyAuth, and is Kudu-VFS writable (used for `dottie_ask`). Zero new infra.
 
@@ -81,24 +81,26 @@ Handler-only. The `dottie_*` tables landed in D1 (Walter-run, catalog-verified).
 
 | Region | Classification vs primary reference `theo_message` | Notes |
 | ------ | -------------------------------------------------- | ----- |
-| pool + `set_config` preamble + `corsHeaders`/`send`/`nowIso`/`errorBody`/`successBody`/`getPrincipal`/`getClaimValue`/`parseBody`/`buildKnownError`/`isUuid`/`parseJsonSafe`/`requestUrl` | **EXACT** | byte-identical |
-| Dottie-L1 memory injection (SELECT salience-ordered → memory block) | **EXACT (adapted table)** | same idiom; `dottie_user_memory` (no `scope='user'` clause — the column doesn't exist); Dottie-worded block |
-| persist txn (lazy-create → seq count → INSERT user+assistant → `updated_at`) + owner-gate + `_exists_unscoped` | **EXACT (adapted table)** | byte-faithful to `theo_message`'s owner-only branch; `dottie_*` tables; drops `app_key`/`app_context`/`citations`; also stamps `last_opened_at` on write |
-| `getAadToken(scope)` + the model call (Azure OpenAI gpt-5 chat/completions, `max_completion_tokens`) | **ALLOWED DELTA (EXACT-mirrored on deployed `dottie_ask`)** | Golden Handler §4 EXACT-mirror route — byte-faithful to the DEPLOYED `dottie_ask` (GCR row 8); replaces Theo's Foundry-Claude call (observer independence) |
+| `corsHeaders` + `send`/`nowIso`/`errorBody`/`successBody`/`getPrincipal`/`getClaimValue`/`parseBody`/`buildKnownError`/`isUuid`/`parseJsonSafe`/`requestUrl` + pool + `set_config` preamble | **EXACT** | **byte-identical to the primary reference — verified this turn** (all 11 helpers + `corsHeaders` diffed equal) |
+| Dottie-L1 memory injection (SELECT salience-ordered → memory block) | **ALLOWED DELTA** | same idiom on `dottie_user_memory`; drops the `AND scope='user'` clause (no `scope` column); Dottie-worded memory block |
+| persist txn (lazy-create → seq count → INSERT user+assistant → `updated_at`+`last_opened_at`) + owner-gate + `_exists_unscoped` | **ALLOWED DELTA** | same SQL structure as `theo_message`'s owner-only branch on `dottie_*`; drops `app_key`/`app_context`/`citations`; adds the `last_opened_at` stamp |
+| `getAadToken(scope)` + the model call (Azure OpenAI gpt-5 chat/completions, `max_completion_tokens`) | **ALLOWED DELTA** | endpoint/scope/body from the deployed `dottie_ask` (GCR row 8); error-envelope (`buildKnownError`/502/429) from the `theo_message` primary reference — byte-identical to neither; replaces Theo's Foundry-Claude call (observer independence) |
 | web-grounding tools (`buildGroundingTools`, WEB_* config) | **NOT MIRRORED** | Dottie does no web grounding; region omitted |
 
 ### §5.2 `dottie_list_conversations` mirror table
 
 | Region | Classification | Notes |
 | ------ | -------------- | ----- |
-| envelope + EasyAuth + pool + `set_config` | **EXACT** | byte-identical to the primary reference |
+| the six shared envelope helper bodies `send`/`nowIso`/`errorBody`/`successBody`/`getPrincipal`/`getClaimValue` + pool + `set_config` | **EXACT** | **byte-identical to the `theo_message` primary reference — verified this turn** (helper bodies normalized to the primary reference in this rev-2) |
+| `corsHeaders` methods `GET, OPTIONS`; POST-only helpers (`parseBody`/`buildKnownError`/`isUuid`/`parseJsonSafe`/`requestUrl`) omitted | **ALLOWED DELTA** | this is a GET reader — method differs from `theo_message`'s POST; helpers a reader does not use are not carried |
 | the owner-scoped list SELECT (`last_opened_at DESC NULLS LAST, updated_at DESC`) | **ALLOWED DELTA** | mirrors the DEPLOYED `theo_list_conversations` (GCR row 9), on `dottie_conversations` (drops project/publish columns) |
 
 ### §5.3 `dottie_get_conversation` mirror table
 
 | Region | Classification | Notes |
 | ------ | -------------- | ----- |
-| envelope + EasyAuth + pool + `set_config` + `_exists_unscoped` 403/404 discrimination | **EXACT** | byte-identical to the primary reference |
+| the six shared envelope helper bodies + `buildKnownError`/`isUuid` + pool + `set_config` + `_exists_unscoped` 403/404 discrimination | **EXACT** | **byte-identical to the `theo_message` primary reference — verified this turn** (helper bodies normalized in this rev-2) |
+| `corsHeaders` methods `GET, OPTIONS`; POST-only helpers (`parseBody`/`parseJsonSafe`/`requestUrl`) omitted | **ALLOWED DELTA** | GET reader — method differs from `theo_message`'s POST; unused helpers not carried |
 | the get SELECT (conversation + messages seq-ordered) + `last_opened_at` stamp | **ALLOWED DELTA** | mirrors the DEPLOYED `theo_get_conversation` (GCR row 9), on `dottie_*`; drops SPW `theo_conversation_access`, publish state, media re-sign |
 
 No DEVIATION regions.
@@ -669,7 +671,7 @@ module.exports = async function (context, req) {
 
 ## §6 — The handlers
 
-All `node --check` clean; the `getAadToken` + gpt-5 model call byte-faithful to deployed `dottie_ask`; the envelope/persist/memory idioms byte-faithful to the `theo_message` primary reference.
+All `node --check` clean; the shared envelope helpers byte-identical to the `theo_message` primary reference (verified this turn); the `getAadToken` + gpt-5 model call an allowed delta (`dottie_ask` endpoint + `theo_message` error-envelope); the persist/memory SQL structurally faithful to `theo_message` with documented `dottie_*` allowed-deltas.
 
 ### §6.1 `dottie_message` index.js
 
@@ -679,9 +681,10 @@ const { Pool } = require("pg");
 
 // dottie_message — Dottie's send→reply→persist handler (Phase D2). Mirrors the deployed Theo memory-injection
 // theo_message (pool/set_config/envelope/EasyAuth, lazy-create conversation, persist user+assistant, Dottie-L1
-// memory injection) with two adaptations: (1) dottie_* tables + Dottie-L1 (dottie_user_memory, no scope column);
-// (2) the model call is Azure OpenAI gpt-5 chat/completions via client-credentials getAadToken — byte-faithful to
-// the deployed dottie_ask — NOT Theo's Foundry-Claude (Dottie is a deliberately different model; observer
+// memory injection) with two allowed-delta adaptations: (1) dottie_* tables + Dottie-L1 (dottie_user_memory, no
+// scope column); (2) the model call is Azure OpenAI gpt-5 chat/completions via client-credentials getAadToken —
+// endpoint/scope/body from the deployed dottie_ask, error-envelope from the theo_message primary reference (so
+// byte-identical to neither single reference) — NOT Theo's Foundry-Claude (deliberately different model; observer
 // independence). No web-grounding tools, no history-RAG, no media. Self-contained (Node built-ins). Runs on
 // vaultgpt-func-dottie.
 
@@ -847,8 +850,9 @@ function requestUrl(urlStr, options = {}, body = null) {
   });
 }
 
-// Client-credentials token for a given Azure resource scope (same AAD app as the gateway) — byte-identical to
-// the deployed dottie_ask / theo_add_project_knowledge getAadToken.
+// Client-credentials token for a given Azure resource scope (same AAD app as the gateway). The client-credentials
+// mechanics (scope/body/token URL) mirror the deployed dottie_ask; the error-envelope (buildKnownError / 500)
+// mirrors the theo_message primary reference's getFoundryToken — an allowed delta, not byte-identical to either.
 async function getAadToken(scope) {
   const tenantId = process.env.AAD_TENANT_ID;
   const clientId = process.env.AAD_CLIENT_ID;
@@ -1154,7 +1158,14 @@ const corsHeaders = {
 };
 
 function send(context, status, body) {
-  context.res = { status, headers: { ...corsHeaders, "Content-Type": "application/json" }, body };
+  context.res = {
+    status,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+    },
+    body,
+  };
 }
 
 function nowIso() {
@@ -1162,16 +1173,30 @@ function nowIso() {
 }
 
 function errorBody(code, message, status) {
-  return { error: { code, message, status, timestamp: nowIso() } };
+  return {
+    error: {
+      code,
+      message,
+      status,
+      timestamp: nowIso(),
+    },
+  };
 }
 
 function successBody(data) {
-  return { data, meta: { timestamp: nowIso(), version: "1.0" } };
+  return {
+    data,
+    meta: {
+      timestamp: nowIso(),
+      version: "1.0",
+    },
+  };
 }
 
 function getPrincipal(req) {
   const raw = req.headers["x-ms-client-principal"];
   if (!raw || typeof raw !== "string") return null;
+
   try {
     return JSON.parse(Buffer.from(raw, "base64").toString("utf8"));
   } catch {
@@ -1181,12 +1206,14 @@ function getPrincipal(req) {
 
 function getClaimValue(principal, claimTypes) {
   if (!principal || !Array.isArray(principal.claims)) return null;
+
   for (const claimType of claimTypes) {
     const match = principal.claims.find((c) => c.typ === claimType);
     if (match && typeof match.val === "string" && match.val.trim() !== "") {
       return match.val.trim();
     }
   }
+
   return null;
 }
 
@@ -1286,7 +1313,14 @@ const corsHeaders = {
 };
 
 function send(context, status, body) {
-  context.res = { status, headers: { ...corsHeaders, "Content-Type": "application/json" }, body };
+  context.res = {
+    status,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+    },
+    body,
+  };
 }
 
 function nowIso() {
@@ -1294,16 +1328,30 @@ function nowIso() {
 }
 
 function errorBody(code, message, status) {
-  return { error: { code, message, status, timestamp: nowIso() } };
+  return {
+    error: {
+      code,
+      message,
+      status,
+      timestamp: nowIso(),
+    },
+  };
 }
 
 function successBody(data) {
-  return { data, meta: { timestamp: nowIso(), version: "1.0" } };
+  return {
+    data,
+    meta: {
+      timestamp: nowIso(),
+      version: "1.0",
+    },
+  };
 }
 
 function getPrincipal(req) {
   const raw = req.headers["x-ms-client-principal"];
   if (!raw || typeof raw !== "string") return null;
+
   try {
     return JSON.parse(Buffer.from(raw, "base64").toString("utf8"));
   } catch {
@@ -1313,12 +1361,14 @@ function getPrincipal(req) {
 
 function getClaimValue(principal, claimTypes) {
   if (!principal || !Array.isArray(principal.claims)) return null;
+
   for (const claimType of claimTypes) {
     const match = principal.claims.find((c) => c.typ === claimType);
     if (match && typeof match.val === "string" && match.val.trim() !== "") {
       return match.val.trim();
     }
   }
+
   return null;
 }
 
@@ -1454,7 +1504,7 @@ Authenticated `az` bearer (audience `api://4e1a1e31-5c20-4480-99e4-098901707d9e`
 | C6 | `GET /api/dottie_get_conversation?conversationId=<random uuid>` | **404** NOT_FOUND |
 | C7 | (unauth) any | **401** |
 
-C1 is the milestone — a conversation created, a live gpt-5 turn persisted; C3/C4 prove the seq/persist round-trip. Verifying the Dottie-L1 injection end-to-end (Dottie referencing a remembered fact) is exercised once D3 writes memory / via the FE; the memory SELECT itself is byte-faithful to the deployed `theo_message` and degrades non-fatally.
+C1 is the milestone — a conversation created, a live gpt-5 turn persisted; C3/C4 prove the seq/persist round-trip. Verifying the Dottie-L1 injection end-to-end (Dottie referencing a remembered fact) is exercised once D3 writes memory / via the FE; the memory SELECT itself mirrors the deployed `theo_message` (allowed-delta: no `scope` clause) and degrades non-fatally.
 
 ## §8 — Gap Register
 
@@ -1473,17 +1523,22 @@ C1 is the milestone — a conversation created, a live gpt-5 turn persisted; C3/
 ## Codex activation note (Walter forwards)
 
 ```
-Codex is activated for Pass-2 review of Dottie Phase D2 (conversation handlers), vault-dottie,
+Codex is activated for Pass-2 RE-REVIEW of Dottie Phase D2 (conversation handlers), vault-dottie,
 "Codex Governance/Dottie-D2-Conversation-Handlers-Pass-1-VEP/Dottie_D2_Conversation_Handlers_VEP.md".
-Open with a governance-bound GCR + Rule Anchor Table (standards mirrored into vault-dottie). HANDLER-ONLY
-(no migration; Claude Kudu-VFS deploy to the Walter-authorized vaultgpt-func-dottie + golden curls). Review:
-(1) faithful mirror — is the conversation/persist/memory-injection structure byte-faithful to the theo_message
-canonical primary reference (§5.1-5.3), with the gpt-5 model call an EXACT-mirror ALLOWED-DELTA on the deployed
-dottie_ask, and list/get SELECTs mirrored on the deployed theo_list_conversations/theo_get_conversation? (2) the
-one-primary-reference choice (theo_message) for a 3-handler package, with list/get reusing its envelope EXACT +
-a SELECT delta. (3) boundary — dottie_* only (Dottie-L1 separate from Theo's L1), gpt-5 not Claude, owner-gate
-created_by=$oid (SPW conversation_access intentionally omitted — no project-sharing), no web/RAG/media. (4)
-fail-closed — 401/400/403/404/429/502/500; non-fatal memory fetch; KV-ref secret. (5) deploy plan — Kudu-VFS to
-func-dottie; the Dottie-L1-injection-end-to-end + streaming + memory-write correctly deferred (D3). Emit
-APPROVED or REJECTED only.
+This is rev-2 after the T13/T12 REJECT. Repairs: (a) dottie_list_conversations/dottie_get_conversation envelope
+helper BODIES normalized to be byte-identical to the theo_message primary reference (verified: send/nowIso/
+errorBody/successBody/getPrincipal/getClaimValue diff equal); (b) the gpt-5 model call reclassified honestly as an
+ALLOWED DELTA (endpoint/scope/body from dottie_ask, error-envelope from the theo_message primary reference —
+byte-identical to neither), in the intro, GCR row 8, §3, §5.1, §6, and the handler comments; (c) the Dottie-L1
+memory SELECT and the persist txn reclassified EXACT→ALLOWED DELTA (no scope clause; drops app_key/app_context/
+citations; adds last_opened_at). Open with a governance-bound GCR + Rule Anchor Table. HANDLER-ONLY (no migration;
+Claude Kudu-VFS deploy to the Walter-authorized vaultgpt-func-dottie + golden curls). Review:
+(1) faithful mirror — are the shared envelope helpers now byte-identical to the theo_message canonical primary
+reference (§5.1), the gpt-5 call an accurately-labelled ALLOWED DELTA, and the memory/persist SQL structurally
+faithful with the documented dottie_* deltas? (2) the primary-reference structure (theo_message canonical; list/get
+envelope bodies byte-identical + GET/SELECT allowed-deltas). (3) boundary — dottie_* only (Dottie-L1 separate from
+Theo's L1), gpt-5 not Claude, owner-gate created_by=$oid (SPW conversation_access intentionally omitted — no
+project-sharing), no web/RAG/media. (4) fail-closed — 401/400/403/404/429/502/500; non-fatal memory fetch; KV-ref
+secret. (5) deploy plan — Kudu-VFS to func-dottie; the Dottie-L1-injection-end-to-end + streaming + memory-write
+correctly deferred (D3/D2-Stream). Emit APPROVED or REJECTED only.
 ```
