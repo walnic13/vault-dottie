@@ -28,10 +28,10 @@ The FE calls the `dottie_*` routes below; the handlers are deployed to func-dott
 | --- | --- | --- |
 | `dottie_list_people` (GET) | ListPeople package (Graph OBO; func-dottie) | ✅ LIVE end-to-end (golden curls green: `200` roster of 9, self first; `401` unauth). FE un-gated (`DOTTIE_CAPABILITIES.people = true`) + deployed to dev SWA 2026-08-01. |
 
-## D. Attachments — ❌ MISSING (5)
-| FE call | What breaks | Disposition |
+## D. Attachments — ✅ LIVE (Attachments-Schema + Attachments-Handlers packages, deployed 2026-08-01)
+| FE call (now) | Backend | Status |
 | --- | --- | --- |
-| `theo_create_attachment_upload` / `theo_finalize_attachment` / `theo_delete_attachment` / `theo_list_conversation_attachments` | File upload / PDF+image analysis — the paperclip errors | BUILD `dottie_*` attachments + `dottie-content` blob (mirror Theo B8) |
+| `dottie_create_attachment_upload` / `dottie_finalize_attachment` / `dottie_delete_attachment` / `dottie_list_conversation_attachments` | `dottie_attachments` table + `dottie-content` blob (`vaultgptdottiestore`); Attachments packages | ✅ LIVE — deployed + golden-curl round-trip green (create→SAS PUT→finalize/extract→list→delete; 400/404/401 fail-closed). FE un-gated (`DOTTIE_CAPABILITIES.attachments = true`). |
 
 ## E. Projects — ❌ MISSING (14) — **DECISION NEEDED**
 | FE calls | What breaks | Disposition |
@@ -57,8 +57,8 @@ The FE calls the `dottie_*` routes below; the handlers are deployed to func-dott
 | `sigma_review_agent_stream` | ⛔ N/A | Sigma-specific |
 
 ## Summary
-- **Live:** 4 core-chat endpoints + web-search grounding + conversation-management (rename/delete/star — ConvMgmt package) + people roster (`dottie_list_people` — ListPeople package, FE un-gated). FE gate/hide package deployed (Projects/Artifacts nav hidden; attachments/voice controls gated) so nothing errors on click.
-- **Missing & errors today:** attachments (5), artifacts-persist (3), voice (2), image/video tools.
+- **Live:** 4 core-chat endpoints + web-search grounding + conversation-management (rename/delete/star — ConvMgmt) + people roster (`dottie_list_people` — ListPeople) + **attachments (create/finalize/delete/list + `dottie-content` blob — Attachments packages, FE un-gated)**. FE gate/hide package deployed (Projects/Artifacts nav hidden; voice controls gated) so nothing errors on click.
+- **Missing & errors today:** artifacts-persist (3), voice (2), image/video tools.
 - **DECIDED:** Projects (14) + publish/SPW → HIDE in the UI (revisit later). Everything else → BUILD every missing `dottie_*` backend now, replicating from Theo (Walter 2026-08-01).
 
 **Honest status: Dottie does NOT yet fully match Theo at the backend — core chat + grounding + conversation-management are live; people, attachments, artifacts, voice, and image/video are still to build.** Closing this is a sequenced set of governed backend packages (each `dottie_*` mirroring the Theo original), tracked here. The FE controls for still-missing features should be **gated/hidden** until their backend lands, so nothing errors.

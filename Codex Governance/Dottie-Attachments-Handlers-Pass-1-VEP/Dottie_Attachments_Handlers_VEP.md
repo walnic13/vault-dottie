@@ -1,5 +1,12 @@
 # Dottie Attachments Handlers — Pass-1 VEP (dottie_create/finalize/delete/list_attachment)
 
+## Role-C completion — DEPLOYED + golden-curl round-trip green (2026-08-01)
+Codex Pass-2 **APPROVED** (rev-3). Full ordered deploy executed:
+- **Infra:** created `dottie-content` container on `vaultgptdottiestore`; granted the func-dottie MI (`86c251f4…`) **Storage Blob Data Contributor**; Kudu zip-installed `xlsx`/`mammoth`/`officeparser`/`pdf-parse@1.1.1` (+ `pdf-parse/lib/pdf-parse.js` present); set `DOTTIE_BLOB_ACCOUNT`/`DOTTIE_BLOB_CONTAINER`; added Blob CORS (PUT/OPTIONS/HEAD/GET) for the dev-SWA origins.
+- **Deploy:** the 4 handlers to `vaultgpt-func-dottie` (Kudu VFS, GET-back byte-identical — create 13818b/311b, finalize 21006b/306b, delete 7750b/304b, list 4548b/315b; restart).
+- **Golden curls green (EasyAuth aud `api://4e1a1e31…`):** extract round-trip — `create 201` → blob `PUT 201` (24-field user-delegation SAS + CORS) → `finalize 201` (`content_type:text/plain`, `byte_size:45`, `ingestion_class:extract`, **`extracted_text_path` written** — the `.extracted.md` sibling confirmed in `dottie-content`); native round-trip — pdf `PUT 201` → `finalize 201` (`ingestion_class:native`, HEAD-authoritative type); **list** `200` (owner-gated; **no blob_path projected**); **delete** `200`; negatives — unsupported type `400`, missing-blob finalize `404`, unauthenticated `401`.
+- **Role-C:** `spec/DOTTIE_API_SPEC.md § Attachments` (4 endpoints LIVE) + `spec/DOTTIE_THEO_RECONCILIATION.md §D/Summary` (→ ✅ LIVE); `DOTTIE_CAPABILITIES.attachments` flipped **true** (un-gates the paperclip + the `selectRecent` reopen read) → CI-deployed to the dev SWA. G-INFRA + G-APISPEC + G-UNGATE closed.
+
 ## Update note (rev-3 — schema gate now SATISFIED)
 Not a rejection fix — a status update to keep this VEP truthful (the same shared-status discipline as rev-2). The paired schema package is now **Codex-APPROVED, Walter-run, and read-only-verified** (deployed 2026-08-01; schema doc §5). §3, §7 (G-SCHEMA → CLOSED), §8 (step 1 → DONE), and the Codex note are flipped from "awaiting Codex / hard gate pending" to "gate satisfied." Grounding parent re-anchored to `96dd12789f3ad0dad481608b6d9826085807b63b` (the commit containing the schema Role-C). No handler-code change; the 16 inlined blocks are unchanged and remain Codex-cleared from rev-1.
 
