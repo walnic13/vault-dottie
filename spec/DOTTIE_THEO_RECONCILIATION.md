@@ -26,12 +26,12 @@ The FE calls the `dottie_*` routes below; the handlers are deployed to func-dott
 ## C. People / roster — ✅ backend LIVE (ListPeople package, deployed 2026-08-01)
 | FE call (now) | Backend | Status |
 | --- | --- | --- |
-| `dottie_list_people` (GET) | ListPeople package (Graph OBO; func-dottie) | ✅ LIVE end-to-end (golden curls green: `200` roster of 9, self first; `401` unauth). FE un-gated (`DOTTIE_CAPABILITIES.people = true`) + deployed to dev SWA 2026-08-01. |
+| `dottie_list_people` (GET) | ListPeople package (Graph OBO; func-dottie) | ✅ LIVE end-to-end (backend golden curls green: `200` roster of 9, self first; `401` unauth). FE un-gated (`DOTTIE_CAPABILITIES.people = true`); **FE gateway repointed `theo_list_people`→`dottie_list_people` 2026-08-01** (corrected a flip-without-repoint bug where the FE was still calling `theo_list_people`). |
 
 ## D. Attachments — ✅ LIVE (Attachments-Schema + Attachments-Handlers packages, deployed 2026-08-01)
 | FE call (now) | Backend | Status |
 | --- | --- | --- |
-| `dottie_create_attachment_upload` / `dottie_finalize_attachment` / `dottie_delete_attachment` / `dottie_list_conversation_attachments` | `dottie_attachments` table + `dottie-content` blob (`vaultgptdottiestore`); Attachments packages | ✅ LIVE — deployed + golden-curl round-trip green (create→SAS PUT→finalize/extract→list→delete; 400/404/401 fail-closed). FE un-gated (`DOTTIE_CAPABILITIES.attachments = true`). |
+| `dottie_create_attachment_upload` / `dottie_finalize_attachment` / `dottie_delete_attachment` / `dottie_list_conversation_attachments` | `dottie_attachments` table + `dottie-content` blob (`vaultgptdottiestore`); Attachments packages | ✅ LIVE — deployed + backend golden-curl round-trip green (create→SAS PUT→finalize/extract→list→delete; 400/404/401 fail-closed). FE un-gated (`DOTTIE_CAPABILITIES.attachments = true`); **FE gateway repointed the 4 `theo_*` attachment routes → `dottie_*` 2026-08-01** (corrected a flip-without-repoint bug where the FE still called `theo_*` and would 404 on real upload). |
 
 ## E. Projects — ❌ MISSING (14) — **DECISION NEEDED**
 | FE calls | What breaks | Disposition |

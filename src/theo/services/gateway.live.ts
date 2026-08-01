@@ -97,7 +97,7 @@ async function authHeaders(): Promise<Record<string, string>> {
 
 // ── Voice I/O (VA-T8 / API §2.11) — dictation + read-aloud through the deployed func-chat handlers
 // (theo_transcribe_audio / theo_synthesize_speech), reached via `apiBase` + `authHeaders()` exactly
-// like the other theo_* calls (theo_create_attachment_upload, also func-chat-hosted). No mock: voice
+// like the other calls (dottie_create_attachment_upload is on func-dottie; voice is func-chat-hosted). No mock: voice
 // requires a live backend (the composer gates the controls on `voiceAvailable()` = isLive()). Bytes
 // travel base64 in/out of the JSON envelope; nothing is persisted in the browser (media APIs only). ──
 export function voiceAvailable(): boolean {
@@ -216,7 +216,7 @@ export async function sendMessage(req: GatewayRequest, opts?: { signal?: AbortSi
 export async function createAttachmentUpload(filename: string, contentType: string): Promise<AttachmentUpload> {
   if (!isLive()) throw new Error("Attachments are unavailable in the standalone preview.");
   const headers = await authHeaders();
-  const res = await fetch(`${apiBase}/api/theo_create_attachment_upload`, {
+  const res = await fetch(`${apiBase}/api/dottie_create_attachment_upload`, {
     method: "POST",
     credentials: "same-origin",
     headers,
@@ -251,7 +251,7 @@ export async function finalizeAttachment(
 ): Promise<{ id: string }> {
   if (!isLive()) throw new Error("Attachments are unavailable in the standalone preview.");
   const headers = await authHeaders();
-  const res = await fetch(`${apiBase}/api/theo_finalize_attachment`, {
+  const res = await fetch(`${apiBase}/api/dottie_finalize_attachment`, {
     method: "POST",
     credentials: "same-origin",
     headers,
@@ -272,7 +272,7 @@ export async function finalizeAttachment(
 export async function deleteAttachment(id: string): Promise<void> {
   if (!isLive()) return; // nothing persisted in the standalone preview
   const headers = await authHeaders();
-  await fetch(`${apiBase}/api/theo_delete_attachment`, {
+  await fetch(`${apiBase}/api/dottie_delete_attachment`, {
     method: "POST",
     credentials: "same-origin",
     headers,
@@ -396,7 +396,7 @@ export async function listConversationAttachments(conversationId: string): Promi
   if (!DOTTIE_CAPABILITIES.attachments) return [];
   const headers = await authHeaders();
   const res = await fetch(
-    `${apiBase}/api/theo_list_conversation_attachments?conversationId=${encodeURIComponent(conversationId)}`,
+    `${apiBase}/api/dottie_list_conversation_attachments?conversationId=${encodeURIComponent(conversationId)}`,
     {
       method: "GET",
       credentials: "same-origin",
@@ -512,7 +512,7 @@ export async function setProjectVisibility(id: string, visibility: string): Prom
 }
 
 // B5c: invite a specific Vault user to a project (theo_share_project; owner-only server-side). memberOid
-// is an Entra object id (the identity theo_list_people returns). Idempotent server-side. Unconfigured → mock.
+// is an Entra object id (the identity dottie_list_people returns). Idempotent server-side. Unconfigured → mock.
 export async function shareProject(projectId: string, memberOid: string): Promise<void> {
   if (!apiBase && !tokenProvider) return mockShareProject(projectId, memberOid);
   const headers = await authHeaders();
@@ -647,13 +647,13 @@ function toPerson(r: RawPerson): Person {
   };
 }
 
-// B5c: the Vault Staff roster + presence (theo_list_people; §2.9) — the invite picker's source. Delegated
+// B5c: the Vault Staff roster + presence (dottie_list_people; §2.9) — the invite picker's source. Delegated
 // Graph OBO server-side; the FE sends only the bearer. Unconfigured harness → mock (empty roster).
 export async function listPeople(): Promise<Person[]> {
   if (!apiBase && !tokenProvider) return mockListPeople();
   if (!DOTTIE_CAPABILITIES.people) return []; // No dottie_list_people yet — degrade to empty roster (no 404).
   const headers = await authHeaders();
-  const res = await fetch(`${apiBase}/api/theo_list_people`, { method: "GET", credentials: "same-origin", headers });
+  const res = await fetch(`${apiBase}/api/dottie_list_people`, { method: "GET", credentials: "same-origin", headers });
   let json: { data?: { people?: RawPerson[] }; error?: { message?: string } } | null = null;
   try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
   if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
@@ -902,7 +902,7 @@ function toArtifactSummary(r: RawArtifact): ArtifactSummary {
   };
 }
 
-// theo_get_artifact → the in-memory Artifact shape (versions ordered ascending; content from Blob).
+// dottie_get_artifact → the in-memory Artifact shape (versions ordered ascending; content from Blob).
 function toArtifact(r: RawArtifact): Artifact {
   const versions = Array.isArray(r.versions) ? r.versions : [];
   return {
@@ -920,7 +920,7 @@ export async function persistArtifact(input: { title: string; type: string; cont
   // caller is best-effort and ignores the return). Prevents a background 404 on every producing turn.
   if (!DOTTIE_CAPABILITIES.artifactsPersistence) return { id: "", currentVersion: 1 };
   const headers = await authHeaders();
-  const res = await fetch(`${apiBase}/api/theo_upsert_artifact`, {
+  const res = await fetch(`${apiBase}/api/dottie_upsert_artifact`, {
     method: "POST",
     credentials: "same-origin",
     headers,
@@ -943,7 +943,7 @@ export async function listServerArtifacts(): Promise<ArtifactSummary[]> {
   if (!apiBase && !tokenProvider) return mockListServerArtifacts();
   if (!DOTTIE_CAPABILITIES.artifactsPersistence) return []; // No backend — empty gallery, no 404 on mount.
   const headers = await authHeaders();
-  const res = await fetch(`${apiBase}/api/theo_list_artifacts`, { method: "GET", credentials: "same-origin", headers });
+  const res = await fetch(`${apiBase}/api/dottie_list_artifacts`, { method: "GET", credentials: "same-origin", headers });
   let json: { data?: { artifacts?: RawArtifact[] }; error?: { message?: string } } | null = null;
   try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
   if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
@@ -954,7 +954,7 @@ export async function listServerArtifacts(): Promise<ArtifactSummary[]> {
 export async function getServerArtifact(id: string): Promise<Artifact> {
   if (!apiBase && !tokenProvider) return mockGetServerArtifact(id);
   const headers = await authHeaders();
-  const res = await fetch(`${apiBase}/api/theo_get_artifact?artifactId=${encodeURIComponent(id)}`, { method: "GET", credentials: "same-origin", headers });
+  const res = await fetch(`${apiBase}/api/dottie_get_artifact?artifactId=${encodeURIComponent(id)}`, { method: "GET", credentials: "same-origin", headers });
   let json: { data?: { artifact?: RawArtifact }; error?: { message?: string } } | null = null;
   try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
   if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
