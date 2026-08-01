@@ -2,6 +2,11 @@
 
 Formalizes, under the frontend governance regime, the Dottie frontend already deployed to the dev SWA (`brave-dune-0a97c7d03`). Dottie's FE is a **byte-verbatim transplant of Theo's deployed, already-governed frontend** (`vault-theo/src/theo/*` — all ~35 components + the Tailwind/TS/Vite/module-federation stack), reproduced faithfully (Governor §4 "reproduce the reference surface, do not redesign"), with a small, enumerated **Dottie delta**: (1) identity rebrand via the `swapBlock` single-point-of-truth (ASSISTANT_NAME → "Dottie", MODEL → gpt-5, Dottie persona), (2) standalone Entra/MSAL auth (`App.tsx` + `entraAuth.ts`) wiring the live gateway via TheoSurface's `getAccessToken` prop, (3) the gateway repointed to Dottie's `dottie_*` endpoints + an OpenAI-shape SSE parse branch, (4) the module-federation remote renamed `dottieApp/DottieSurface`. This VEP grounds and CCT-locks that delta so Codex reviews the standing base and everything after sits on a reviewed foundation. **Retroactive** (the delta is already deployed — Walter directed formalization without reverting); the Gap Disclosure records the follow-on governed packages (markdown/citation fidelity, Responses-API grounding, image/video via the shared tools, VO mount).
 
+## Repair note (rev-3 — addresses Codex REJECT T13 / T4)
+Two fixes, both made in the LIVE code / doc (not summary-only):
+- **T13 (residual stale comments in `gateway.live.ts`):** swept EVERY remaining comment that named the Theo/old runtime and contradicted the repaired Dottie behavior — the base-URL note (`hosts theo_message` → `hosts dottie_message`), the send-body doc (`body {max_tokens…}` + `THEO_FOUNDRY_DEPLOYMENT` → Dottie `{max_completion_tokens…}` + gpt-5 `AZURE_OPENAI_DEPLOYMENT`), the delete-cascade note (`theo_messages`/`theo_attachments` → `dottie_messages`; no attachments), the streaming header (`theo_message_stream on the v4 sidecar` + `Anthropic SSE events` → `dottie_message_stream` on `vaultgpt-func-dottie-stream`; OpenAI-shaped chunks with an Anthropic-compat branch), the Sigma-share note (`theo_message_stream` → `dottie_message_stream`; Sigma path is inherited-but-unused), and the projects-base note (now: Dottie has no Projects backend — hidden; base unused). `grep` for the contradicting tokens now returns 0; `tsc -p tsconfig.app.json` clean.
+- **T4 (VA-T1 anchor was non-concrete):** GCR row 6 currency anchor replaced the `(survey)` placeholder with the concrete blob SHA `c03088ae7ae5337e03e971211f11505909140c3e` — and, decisively, that SHA is **byte-identical** for `TheoSurface.tsx` in both `vault-theo` and `vault-dottie` at HEAD, which is git-verifiable proof of the byte-verbatim transplant (same bytes ⇒ same blob SHA), not merely an assertion.
+
 ## Repair note (rev-2 — addresses Codex REJECT T20 / T13 / T13-T22 / T13)
 Four fixes, all made in the LIVE code (not just the doc) + redeployed:
 - **T20 (CCT incomplete):** the `gateway.live.ts` and `entraAuth.ts` CCT rows now list the COMPLETE literal exported surfaces (no ellipsis/summary).
@@ -12,7 +17,7 @@ Four fixes, all made in the LIVE code (not just the doc) + redeployed:
 ## Grounding Conformance Receipt
 Role: Claude Code
 Turn Type: Pass 1 — Frontend Verified Evidence Pack
-Grounding parent (source baseline): `bf022ac99053be2ea6f9cfcd61763d9bda101746` (vault-dottie, `development`)
+Grounding parent (source baseline): `ec7a2abf5cab4eddee513e3848a44213dbee2f2a` (vault-dottie, `development`)
 Grounding mode: Full Baseline Grounding
 Pass: Pass 1
 Sub-phase Track: N/A
@@ -24,7 +29,7 @@ Sub-phase Track: N/A
 | 3 | Codex Theo Frontend Review Standard — `governance/CODEX_THEO_FRONTEND_REVIEW_STANDARD.md` (Pass-2 review surface) | cited; unchanged blob @ HEAD | `25cc488091d619d8f6642b10552df0d019a87933` |
 | 4 | Theo Golden Component Pack Standard — `governance/THEO_GOLDEN_COMPONENT_PACK_STANDARD.md` (canonical primary reference; structural mirror; visual parity) | `Grep("canonical")` this turn | `0035a1d9fed103d07bf420b957c3727ec47fcc6b` |
 | 5 | Theo Phase 1A Frontend Plan — `governance/THEO_PHASE_1A_FRONTEND_PLAN.md` (surface + feature basis for the transplanted FE) | cited; unchanged basis @ HEAD | `901271478e8bec29177d379fadbbf3d4701a90fe` |
-| 6 | **VISUAL AUTHORITY (VA-T1) — the deployed Theo FE** = `vault-theo/src/theo/*` (the reference surface Dottie transplants verbatim; the CCT delta components cite their Theo originals as primary references) | `Read`(TheoSurface.tsx, swapBlock.ts, gateway.live.ts, prompt.ts, ChatView.tsx §render, markdown.tsx, CitedText.tsx) this turn | vault-theo `TheoSurface.tsx` blob (survey) — the 35 components are transplanted byte-verbatim; Dottie delta is enumerated in §CCT |
+| 6 | **VISUAL AUTHORITY (VA-T1) — the deployed Theo FE** = `vault-theo/src/theo/*` (the reference surface Dottie transplants verbatim; the CCT delta components cite their Theo originals as primary references) | `Read`(TheoSurface.tsx, swapBlock.ts, gateway.live.ts, prompt.ts, ChatView.tsx §render, markdown.tsx, CitedText.tsx) this turn | `c03088ae7ae5337e03e971211f11505909140c3e` — `TheoSurface.tsx` blob SHA, **byte-identical in `vault-theo` (`HEAD:src/theo/TheoSurface.tsx`) and `vault-dottie` (`HEAD:src/theo/TheoSurface.tsx`)**: git-verifiable proof of the byte-verbatim transplant (identical content → identical blob SHA). The 35 transplanted components carry the same identity; the Dottie delta is enumerated in §CCT |
 
 No ChatGPT advisory cited. No `reporting_*` change. This is a frontend package (no migration; no write SQL).
 

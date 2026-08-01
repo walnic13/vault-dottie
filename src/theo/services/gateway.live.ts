@@ -50,12 +50,12 @@ let apiBase: string = normalizeBase((import.meta.env as Record<string, unknown>)
 let streamBase: string = normalizeBase((import.meta.env as Record<string, unknown>).VITE_STREAM_FUNCTIONS_URL);
 // VA-T8 voice (G-APIBASE Pass-3 resolution): the dictation + read-aloud handlers
 // (theo_transcribe_audio / theo_synthesize_speech) live on the dedicated `vaultgpt-func-chat` app
-// (Claude-deployable per DR-T7), NOT the monolith `apiBase` (which hosts theo_message). Its base URL
+// (Claude-deployable), NOT `apiBase` (which hosts dottie_message). Its base URL
 // is baked via VITE_CHAT_FUNCTIONS_URL (or injected via configureGateway), mirroring `streamBase` for
 // the func-stream sidecar. Used ONLY by the two voice calls; falls back to `apiBase` when unset.
 let chatBase: string = normalizeBase((import.meta.env as Record<string, unknown>).VITE_CHAT_FUNCTIONS_URL);
 // Projects Phase C: file-backed project knowledge (theo_add_project_knowledge_file) lives on the
-// dedicated `vaultgpt-func-projects` app (Claude-deployable per DR-T12; run-from-package per DR-T13),
+// dedicated projects app (Dottie has NO Projects backend — Projects are hidden; this base is unused),
 // NOT the monolith `apiBase`. Baked via VITE_PROJECTS_FUNCTIONS_URL (or injected via configureGateway),
 // mirroring streamBase/chatBase; defaults to the known func-projects host so the call never falls back
 // to `apiBase` (which does not host the endpoint). Used ONLY by addProjectKnowledgeFile.
@@ -158,9 +158,9 @@ export async function sendMessage(req: GatewayRequest, opts?: { signal?: AbortSi
 
   const headers = await authHeaders();
 
-  // GatewayRequest {model, max_tokens, system, messages, conversation_id?, app_key?, app_context?,
-  // attachment_ids?} → body {max_tokens, system, messages, conversation_id?, app_key?, app_context?,
-  // attachment_ids?}. The handler injects the configured model (THEO_FOUNDRY_DEPLOYMENT); the client's
+  // GatewayRequest {model, max_tokens, system, messages, conversation_id?, ...} → Dottie body
+  // {max_completion_tokens, system, messages, conversation_id?}. The Dottie handler injects gpt-5 (its own
+  // AZURE_OPENAI_DEPLOYMENT); the client's
   // `model` is unused. conversation_id (B3a) appends to an existing thread; attachment_ids (B8d) inject
   // the owner-scoped attachments into the upstream user turn.
   const res = await fetch(`${apiBase}/api/dottie_message`, {
@@ -361,7 +361,7 @@ export async function renameConversation(id: string, title: string): Promise<{ i
 }
 
 // B4f: delete a conversation permanently (theo_delete_conversation {id}; deployed B4f). Owner-scoped;
-// theo_messages cascade, theo_attachments.conversation_id → NULL. Unconfigured dev harness → mock no-op.
+// dottie_messages cascade (D1 FK); Dottie has no attachments. Unconfigured dev harness → mock no-op.
 export async function deleteConversation(id: string): Promise<void> {
   if (!apiBase && !tokenProvider) return mockDeleteConversation(id);
   const headers = await authHeaders();
@@ -946,8 +946,9 @@ export async function getServerArtifact(id: string): Promise<Artifact> {
   return toArtifact(a);
 }
 
-// ── B9 streaming chat (theo_message_stream on the v4 sidecar) ───────────────────────────────
-// Calls the streaming endpoint and invokes `handlers` as Anthropic SSE events arrive: text deltas
+// ── streaming chat (dottie_message_stream on the v4 sidecar vaultgpt-func-dottie-stream) ─────────
+// Calls the streaming endpoint and invokes `handlers`; Dottie relays OpenAI-shaped chunks (a compat
+// branch also handles Anthropic content-block events): text deltas
 // (the live answer), thinking deltas (collapsible panel), citations, and the final app-level
 // `vault_meta` event (the conversation id). Pre-stream failures arrive as a normal JSON error body
 // (the handler returns JSON before committing to the stream) and are thrown with the server message,
@@ -1139,7 +1140,8 @@ export async function sendMessageStream(req: GatewayRequest, handlers: StreamHan
 }
 
 // ── Sigma K-1 review agent (streaming) — sibling of sendMessageStream on the SAME func-stream sidecar
-// (theo_message_stream + sigma_review_agent_stream share `streamBase`), different path. Consumes the
+// (dottie_message_stream + sigma_review_agent_stream share `streamBase`; the Sigma path is inherited
+// from the Theo transplant and unused by Dottie), different path. Consumes the
 // agent's CLEAN SSE protocol (NOT the raw Anthropic frames sendMessageStream parses):
 //   event: delta        {kind:'text'|'thinking', text}  → onText / onThinking
 //   event: tool         {name, input}                    → onTool     (a deterministic tool fired)
