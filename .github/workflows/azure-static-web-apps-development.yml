@@ -24,18 +24,19 @@ jobs:
           submodules: true
           lfs: false
 
-      # Bake VITE_* vars at build time from repo secrets. Safe to keep before any secret exists
-      # (values resolve empty). Set these under Settings -> Secrets and variables -> Actions when
-      # the FE VEP wires auth + the Dottie backend.
-      - name: Create .env for Vite build (from GitHub Secrets)
+      # Bake VITE_* vars at build time. All values here are PUBLIC identifiers (Entra client/tenant
+      # ids, the API scope, and the function-app URLs) — none are secrets, so they are set inline so the
+      # build always wires standalone auth + the live Dottie backend. gateway.live reads VITE_FUNCTIONS_URL
+      # (func-dottie) + VITE_STREAM_FUNCTIONS_URL (func-dottie-stream); entraAuth reads VITE_ENTRA_*.
+      - name: Create .env for Vite build
         shell: bash
         run: |
           cat > .env <<EOF
-          VITE_ENTRA_CLIENT_ID=${{ secrets.VITE_ENTRA_CLIENT_ID }}
-          VITE_ENTRA_TENANT_ID=${{ secrets.VITE_ENTRA_TENANT_ID }}
-          VITE_ENTRA_AUTHORITY=${{ secrets.VITE_ENTRA_AUTHORITY }}
-          VITE_ENTRA_API_SCOPE=${{ secrets.VITE_ENTRA_API_SCOPE }}
-          VITE_DOTTIE_FUNCTIONS_URL=https://vaultgpt-func-dottie.azurewebsites.net
+          VITE_ENTRA_CLIENT_ID=20188c2b-3899-48d0-9f32-ff936a9bfddc
+          VITE_ENTRA_TENANT_ID=6a0a4c17-1f74-4898-bec7-20f4fb9c9692
+          VITE_ENTRA_API_SCOPE=api://4e1a1e31-5c20-4480-99e4-098901707d9e/access_as_user
+          VITE_FUNCTIONS_URL=https://vaultgpt-func-dottie.azurewebsites.net
+          VITE_STREAM_FUNCTIONS_URL=https://vaultgpt-func-dottie-stream.azurewebsites.net
           EOF
 
       - name: Deploy to Azure Static Web Apps (dev)
