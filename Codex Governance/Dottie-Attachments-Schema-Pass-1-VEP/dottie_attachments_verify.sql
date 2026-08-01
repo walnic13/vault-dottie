@@ -20,10 +20,17 @@ SELECT relrowsecurity FROM pg_class WHERE oid = 'public.dottie_attachments'::reg
 SELECT policyname, cmd FROM pg_policies
 WHERE schemaname = 'public' AND tablename = 'dottie_attachments' ORDER BY policyname;
 
--- 4) exists-unscoped helper (expect prosecdef=t, search_path=public, EXECUTE to authenticated)
-SELECT p.proname, p.prosecdef, p.proconfig
+-- 4) exists-unscoped helper: SECURITY DEFINER, search_path=public, and EXECUTE granted to
+--    authenticated but NOT to PUBLIC (Dottie D1 hardening idiom). The acl must show `authenticated=X`
+--    and must NOT contain a bare `=X/` PUBLIC entry.
+SELECT p.proname, p.prosecdef,
+       (SELECT string_agg(cfg, ', ') FROM unnest(p.proconfig) cfg) AS settings,
+       pg_catalog.array_to_string(p.proacl, ' ') AS acl,
+       has_function_privilege('authenticated', p.oid, 'EXECUTE') AS authenticated_can_execute
 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
 WHERE n.nspname = 'public' AND p.proname = 'dottie_attachment_exists_unscoped';
+-- expect: prosecdef=t; settings='search_path=public'; acl contains 'authenticated=X' and NO bare '=X/'
+-- (PUBLIC) entry; authenticated_can_execute = t.
 
 -- 5) indexes (expect the two idx_dottie_attachments_* plus the PK)
 SELECT indexname FROM pg_indexes

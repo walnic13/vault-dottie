@@ -51,6 +51,10 @@ CREATE OR REPLACE FUNCTION public.dottie_attachment_exists_unscoped(p_id uuid)
 RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
   SELECT EXISTS (SELECT 1 FROM public.dottie_attachments WHERE id = p_id);
 $$;
+-- Dottie D1 hardening idiom (stricter than Theo B8a): a SECURITY DEFINER function is EXECUTE-able by
+-- PUBLIC by default, so REVOKE that before granting only to authenticated. Byte-faithful to the deployed
+-- dottie_conversation_exists_unscoped / dottie_user_memory_exists_unscoped grants (D1).
+REVOKE ALL ON FUNCTION public.dottie_attachment_exists_unscoped(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.dottie_attachment_exists_unscoped(uuid) TO authenticated;
 
 COMMENT ON COLUMN public.dottie_attachments.ingestion_class IS

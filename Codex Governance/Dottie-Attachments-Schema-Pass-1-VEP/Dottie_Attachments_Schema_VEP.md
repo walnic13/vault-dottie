@@ -1,5 +1,8 @@
 # Dottie Attachments Schema — Pass-1 VEP (dottie_attachments migration)
 
+## Repair note (rev-2 — addresses Codex REJECT T13 / T26)
+Codex found the new `dottie_attachment_exists_unscoped` helper only `GRANT`ed EXECUTE to `authenticated` without revoking the SECURITY-DEFINER default PUBLIC grant — I had mirrored the older Theo B8a helper, but Dottie's **deployed D1** idiom is stricter (`REVOKE ALL … FROM PUBLIC` first). Fixed in all three files: (1) the migration now `REVOKE ALL ON FUNCTION … FROM PUBLIC;` before the `GRANT EXECUTE … TO authenticated;`, byte-faithful to the deployed `dottie_conversation_exists_unscoped` / `dottie_user_memory_exists_unscoped` grants (`Dottie-D1-Schema-Foundation-Pass-1-VEP/dottie_d1_migration.sql`); (2) the §3 Structural Mirror Table reclassifies the REVOKE as an **ALLOWED DELTA (Dottie D1 hardening)** from Theo B8a, not "matches Theo"; (3) `dottie_attachments_verify.sql` now checks `proacl` + `has_function_privilege('authenticated', …, 'EXECUTE')` — EXECUTE to `authenticated`, no bare `=X/` PUBLIC entry.
+
 Schema half of the attachments build-out (`spec/DOTTIE_THEO_RECONCILIATION.md` §D). The transplanted FE has a full attachment surface (paperclip, upload, reload-parity chips) but Dottie has no `dottie_attachments` table, so it is gated off today. This package lands that table — a **byte-faithful mirror of the deployed `theo_attachments`** (Tier B8a base + B8c extraction columns + B8i reload-parity column, consolidated into one net-new `CREATE TABLE`). The paired **handlers** package (`dottie_create_attachment_upload` / `dottie_finalize_attachment` / `dottie_delete_attachment` / `dottie_list_conversation_attachments`) is a separate Pass-1 VEP that grounds against THIS table once deployed — the Golden Handler Schema Reality Lock requires the handlers reference a **deployed** table, which is why schema lands first (mirroring Theo's B8a→B8b split). **Migration only** (Walter runs it as `pgadmin_vault`); no handler, no blob, no FE change in this package.
 
 ## Grounding Conformance Receipt
@@ -18,6 +21,7 @@ Sub-phase Track: N/A
 | 4 | Golden Handler — `governance/THEO_GOLDEN_HANDLER_STANDARD.md` (§4 EXACT mirror / allowed delta; §5.2 migrations carry no top-level BEGIN/COMMIT) | `Grep("EXACT mirror")` this turn | `f8f0e5ea36447502e35fb87b373c94e376f05cbb` |
 | 5 | Execution Orchestration — `governance/THEO_EXECUTION_ORCHESTRATION_STANDARD.md` (§1D ordered pass; migrations run by Walter as pgadmin_vault) | `Grep("ordered, non-skippable")` this turn | `565559b699c1309f8e750b0dbbac859c13d807c8` |
 | 6 | DEPLOYED D1 SCHEMA — `spec/DOTTIE_AZURE_POSTGRES_SCHEMA.md` (the FK parent `dottie_conversations`; the `dottie_*` RLS + exists-helper idiom this table mirrors) | `Read` this turn | `bb096db53a8d76dc3589b3744f6492ddad8f1f7f` |
+| 6b | DEPLOYED D1 MIGRATION (helper-grant idiom authority) — `Codex Governance/Dottie-D1-Schema-Foundation-Pass-1-VEP/dottie_d1_migration.sql` (`REVOKE ALL … FROM PUBLIC` + `GRANT EXECUTE … TO authenticated` on the `_exists_unscoped` helpers) | `Grep("exists_unscoped(uuid) FROM PUBLIC")` this turn | `6c51847b5b878cb7f5bf639005b1697b676884f3` |
 | 7 | **PRIMARY REFERENCE (DEPLOYED migration) — `theo_attachments` base** — `vault-theo/Codex Governance/Theo-1B-B8a-Attachments-Schema-Pass-1-VEP/b8a_migration.sql` | `Read`(full) this turn; inlined §4 | `cc61acf1bbb2187260fd88232b92e445141ea395` |
 | 8 | **PRIMARY REFERENCE (DEPLOYED migration) — B8c addendum** — `vault-theo/Codex Governance/Theo-1B-B8c-Attachment-Extraction-Pass-1-VEP/b8c_addendum.sql` (`ingestion_class`, `extracted_text_path`) | `Read`(full) this turn; inlined §4 | `e3cdb948643cc4e50c8ea4fc7b428825f4ca6021` |
 | 9 | **PRIMARY REFERENCE (DEPLOYED migration) — B8i addendum** — `vault-theo/Codex Governance/Theo-1B-B8i-Reload-Parity-Backend-Pass-1-VEP/b8i_addendum.sql` (`message_seq`) | `Read`(full) this turn; inlined §4 | `62c432bf9eeac2eae12fca547cc71a7c444ce1cb` |
@@ -43,7 +47,7 @@ One net-new table `public.dottie_attachments`: the per-file metadata + Blob poin
 Additive net-new `dottie_*` table on the shared `vaultgpt-postgres-prod` (schema `public`). Mirrors the deployed `dottie_*` idiom (D1): RLS `TO authenticated` keyed on `created_by = auth.uid()` + a SECURITY DEFINER exists-helper. FK to the DEPLOYED D1 table `dottie_conversations(id)` ON DELETE SET NULL (attachments survive an unlinked conversation, byte-faithful to `theo_attachments`). No `theo_*`/`reporting_*` object touched; no RLS change to any existing table; no data backfill. Idempotent (`CREATE TABLE IF NOT EXISTS`, guarded `CREATE POLICY`, `CREATE OR REPLACE FUNCTION`). No top-level BEGIN/COMMIT (Golden §5.2). Run by Walter as `pgadmin_vault`.
 
 ## §3 — Schema Reality Lock + Structural Mirror Table (Governor §4 / Golden §4)
-FK parent `dottie_conversations(id)` is DEPLOYED (D1, schema doc §3/§4, GCR row 6, catalog-verified). `gen_random_uuid()`, `auth.uid()`, and the RLS/exists-helper idiom are the same primitives D1 already uses. Nothing invented.
+FK parent `dottie_conversations(id)` is DEPLOYED (D1, schema doc §3/§4, GCR row 6, catalog-verified). `gen_random_uuid()`, `auth.uid()`, and the RLS + exists-helper idiom are the same primitives D1 already uses — including the helper's grant surface: `REVOKE ALL … FROM PUBLIC` then `GRANT EXECUTE … TO authenticated`, matching the deployed `dottie_conversation_exists_unscoped` / `dottie_user_memory_exists_unscoped` (GCR row 6b), which is stricter than the Theo B8a original. Nothing invented.
 
 `dottie_attachments` is the consolidated EXACT mirror of the deployed `theo_attachments` (base b8a + b8c + b8i). Every column, type, CHECK, index, policy, and the helper are identical; the ONLY deltas are the `theo_`→`dottie_` identifiers and the FK parent:
 
@@ -51,10 +55,11 @@ FK parent `dottie_conversations(id)` is DEPLOYED (D1, schema doc §3/§4, GCR ro
 | ------ | -------------- | ----- |
 | all 12 columns + types + CHECKs (`filename` non-empty, `byte_size >= 0`) + `created_at` default + `id` PK default `gen_random_uuid()` | **EXACT** | byte-identical to `theo_attachments` (base + b8c `ingestion_class`/`extracted_text_path` + b8i `message_seq`) |
 | the four RLS policies (`select/insert/update/delete_own`, `TO authenticated`, `created_by = auth.uid()`) + `ENABLE ROW LEVEL SECURITY` | **EXACT** | same predicates; only the policy names carry the `dottie_` prefix |
-| the two indexes + the `_exists_unscoped(uuid)` SECURITY DEFINER helper (`search_path=public`, `GRANT EXECUTE TO authenticated`) | **EXACT** | same shape; `dottie_` names |
-| table/policy/index/helper NAMES (`theo_`→`dottie_`); the FK parent (`theo_conversations`→`dottie_conversations`); the container comment (`theo-content`→`dottie-content`) | **ALLOWED DELTA (adapted identity)** | the only changes; no structural difference |
+| the two indexes + the `_exists_unscoped(uuid)` SECURITY DEFINER helper body (`search_path=public`) | **EXACT** | same shape; `dottie_` names |
+| table/policy/index/helper NAMES (`theo_`→`dottie_`); the FK parent (`theo_conversations`→`dottie_conversations`); the container comment (`theo-content`→`dottie-content`) | **ALLOWED DELTA (adapted identity)** | the only identity changes; no structural difference |
+| the helper's grant surface: **`REVOKE ALL … FROM PUBLIC` then `GRANT EXECUTE … TO authenticated`** (Theo B8a only `GRANT`s, leaving the SECURITY DEFINER default PUBLIC-executable) | **ALLOWED DELTA (Dottie D1 hardening)** | Dottie's deployed D1 helpers (`dottie_conversation_exists_unscoped`, `dottie_user_memory_exists_unscoped`) REVOKE PUBLIC first; this table's helper matches that stricter, deployed Dottie idiom — byte-faithful to `Dottie-D1-Schema-Foundation-Pass-1-VEP/dottie_d1_migration.sql`, not to the older Theo B8a grant |
 
-No DEVIATION regions. Theo's B8a/B8c/B8i arrive as three files (a base + two `ALTER … ADD COLUMN` addenda accreted over time); Dottie consolidates them into one net-new `CREATE TABLE` with all columns inline — same end-state schema, no separate ALTERs needed because the table does not pre-exist.
+No DEVIATION regions. Theo's B8a/B8c/B8i arrive as three files (a base + two `ALTER … ADD COLUMN` addenda accreted over time); Dottie consolidates them into one net-new `CREATE TABLE` with all columns inline — same end-state schema, no separate ALTERs needed because the table does not pre-exist. The one intentional divergence from Theo B8a is the helper's `REVOKE ALL FROM PUBLIC` (row above) — a hardening delta that conforms this table to the CURRENT deployed Dottie D1 idiom rather than the looser Theo original.
 
 ## §4 — Migration (the deliverable) + primary references
 ### §4.1 `dottie_attachments_migration.sql` (Walter runs as pgadmin_vault)
@@ -112,6 +117,10 @@ CREATE OR REPLACE FUNCTION public.dottie_attachment_exists_unscoped(p_id uuid)
 RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
   SELECT EXISTS (SELECT 1 FROM public.dottie_attachments WHERE id = p_id);
 $$;
+-- Dottie D1 hardening idiom (stricter than Theo B8a): a SECURITY DEFINER function is EXECUTE-able by
+-- PUBLIC by default, so REVOKE that before granting only to authenticated. Byte-faithful to the deployed
+-- dottie_conversation_exists_unscoped / dottie_user_memory_exists_unscoped grants (D1).
+REVOKE ALL ON FUNCTION public.dottie_attachment_exists_unscoped(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.dottie_attachment_exists_unscoped(uuid) TO authenticated;
 
 COMMENT ON COLUMN public.dottie_attachments.ingestion_class IS
@@ -203,7 +212,7 @@ COMMENT ON COLUMN public.theo_attachments.message_seq IS
 ```
 
 ## §5 — Verify (read-only catalog; run after apply)
-`dottie_attachments_verify.sql` (in-package) SELECT-only: (1) 12 columns; (2) FK→`dottie_conversations` `delete_rule = SET NULL`; (3) `relrowsecurity=t` + 4 policies; (4) helper `prosecdef=t`, `search_path=public`; (5) the two indexes + PK; (6) the two CHECKs. Expected outputs noted inline.
+`dottie_attachments_verify.sql` (in-package) SELECT-only: (1) 12 columns; (2) FK→`dottie_conversations` `delete_rule = SET NULL`; (3) `relrowsecurity=t` + 4 policies; (4) helper `prosecdef=t`, `search_path=public`, **and the grant surface — `proacl` shows `authenticated=X` with no bare `=X/` PUBLIC entry + `has_function_privilege('authenticated', …, 'EXECUTE') = t`** (the rev-2 hardening check); (5) the two indexes + PK; (6) the two CHECKs. Expected outputs noted inline.
 
 ## §6 — Gap Register
 **PROCEED.** No missing CURRENT authority (the FK parent `dottie_conversations` is deployed).
