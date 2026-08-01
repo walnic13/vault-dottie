@@ -1,0 +1,6 @@
+{
+  "bindings": [
+    { "authLevel": "anonymous", "type": "httpTrigger", "direction": "in", "name": "req", "methods": ["get", "options"], "route": "dottie_get_conversation" },
+    { "type": "http", "direction": "out", "name": "res" }
+  ]
+}
