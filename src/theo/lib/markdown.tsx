@@ -22,8 +22,11 @@ const MD: Components = {
   h3: ({ children }) => <div style={{ fontWeight: 650, fontSize: 15.5, margin: "14px 0 6px" }}>{children}</div>,
   h4: ({ children }) => <div style={{ fontWeight: 650, fontSize: 14, color: C.ink2, margin: "12px 0 6px" }}>{children}</div>,
   p: ({ children }) => <p style={{ margin: "0 0 12px", lineHeight: 1.65 }}>{children}</p>,
-  ul: ({ children }) => <ul style={{ margin: "8px 0 12px", paddingLeft: 22, lineHeight: 1.6 }}>{children}</ul>,
-  ol: ({ children }) => <ol style={{ margin: "8px 0 12px", paddingLeft: 22, lineHeight: 1.6 }}>{children}</ol>,
+  // listStyleType/Position are asserted explicitly so bullets/numbers render regardless of ambient
+  // CSS. Tailwind Preflight (`@tailwind base`) resets `ul,ol { list-style: none }`; without these the
+  // markers vanish when the surface runs standalone (mounted hosts happen to restore them). Self-contained.
+  ul: ({ children }) => <ul style={{ margin: "8px 0 12px", paddingLeft: 22, lineHeight: 1.6, listStyleType: "disc", listStylePosition: "outside" }}>{children}</ul>,
+  ol: ({ children }) => <ol style={{ margin: "8px 0 12px", paddingLeft: 22, lineHeight: 1.6, listStyleType: "decimal", listStylePosition: "outside" }}>{children}</ol>,
   li: ({ children }) => <li style={{ margin: "4px 0" }}>{children}</li>,
   a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: C.coral, textDecoration: "underline" }}>{children}</a>,
   strong: ({ children }) => <strong style={{ fontWeight: 650 }}>{children}</strong>,
