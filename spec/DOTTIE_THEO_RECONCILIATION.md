@@ -38,11 +38,10 @@ The FE calls the `dottie_*` routes below; the handlers are deployed to func-dott
 | --- | --- | --- |
 | `theo_create_project`, `theo_update_project`, `theo_delete_project`, `theo_list_projects`, `theo_list_project_conversations`, `theo_add_project_knowledge(+_file)`, `theo_list_project_knowledge`, `theo_remove_project_knowledge`, `theo_list_project_members`, `theo_share_project`, `theo_unshare_project`, `theo_set_project_visibility`, `theo_get_or_create_review_project` | The **Projects** tab + all project features error | **DECIDED (Walter 2026-08-01): HIDE Projects for now** — not visible in the UI (gate the Projects nav + project controls); may add the capability later. No backend build now. |
 
-## F. Artifacts — 🟡 schema LIVE; FE repointed; handlers deploy pending (Artifacts packages)
-The `dottie_artifacts` + `dottie_artifact_versions` tables are DEPLOYED (Artifacts-Schema, §6 of the schema doc). The FE gateway is repointed to the `dottie_*` names below (Artifacts-Handlers rev-2). The 3 handlers are authored + awaiting Codex → deploy; the capability stays gated (`DOTTIE_CAPABILITIES.artifactsPersistence = false`) until they land, so nothing errors. The in-reply `[[ARTIFACT]]` render already works (text-parsed, local) — only saving/gallery needs the backend.
+## F. Artifacts — ✅ LIVE (Artifacts-Schema + Artifacts-Handlers packages, deployed 2026-08-01)
 | FE call (now) | Backend | Status |
 | --- | --- | --- |
-| `dottie_upsert_artifact` / `dottie_list_artifacts` / `dottie_get_artifact` | `dottie_artifacts` + `dottie_artifact_versions` + `dottie-content` blob; Artifacts packages | 🟡 schema LIVE + FE repointed; handlers deploy pending. On deploy → flip `artifactsPersistence` true. |
+| `dottie_upsert_artifact` / `dottie_list_artifacts` / `dottie_get_artifact` | `dottie_artifacts` + `dottie_artifact_versions` + `dottie-content` blob (MI-token; no SAS); Artifacts packages | ✅ LIVE — deployed + golden-curl round-trip green (upsert v1→v2 version bump + type-change; list metadata-only; get versions ASC content-hydrated from Blob; 400/404/401 fail-closed). FE un-gated (`DOTTIE_CAPABILITIES.artifactsPersistence = true`). |
 
 ## G. Voice I/O — ❌ MISSING (2)
 | FE call | What breaks | Disposition |
@@ -58,10 +57,10 @@ The `dottie_artifacts` + `dottie_artifact_versions` tables are DEPLOYED (Artifac
 | `sigma_review_agent_stream` | ⛔ N/A | Sigma-specific |
 
 ## Summary
-- **Live:** 4 core-chat endpoints + web-search grounding + conversation-management (rename/delete/star — ConvMgmt) + people roster (`dottie_list_people` — ListPeople) + **attachments (create/finalize/delete/list + `dottie-content` blob — Attachments packages, FE un-gated)**. FE gate/hide package deployed (Projects/Artifacts nav hidden; voice controls gated) so nothing errors on click.
-- **Missing & errors today:** artifacts-persist (3), voice (2), image/video tools.
+- **Live:** 4 core-chat endpoints + web-search grounding + conversation-management (rename/delete/star — ConvMgmt) + people roster (`dottie_list_people`) + attachments (create/finalize/delete/list + `dottie-content` blob) + **artifacts persistence (upsert/list/get + versions + `dottie-content` blob — Artifacts packages, FE un-gated)**. FE gate/hide package deployed (Projects nav hidden; voice controls gated) so nothing errors on click; the Artifacts nav is now un-hidden (`artifactsPersistence = true`).
+- **Missing & errors today:** voice (2), image/video tools.
 - **DECIDED:** Projects (14) + publish/SPW → HIDE in the UI (revisit later). Everything else → BUILD every missing `dottie_*` backend now, replicating from Theo (Walter 2026-08-01).
 
-**Honest status: core chat + grounding + conversation-management + people roster + attachments are LIVE; artifacts persistence is schema-live + FE-repointed with handlers deploy-pending; voice + image/video are still to build.** Closing the rest is a sequenced set of governed backend packages (each `dottie_*` mirroring the Theo original), tracked here. The FE controls for still-missing features stay **gated/hidden** until their backend lands, so nothing errors.
+**Honest status: core chat + grounding + conversation-management + people roster + attachments + artifacts persistence are LIVE; only voice + image/video are still to build.** Closing the rest is a sequenced set of governed backend packages (each `dottie_*` mirroring the Theo original), tracked here. The FE controls for still-missing features stay **gated/hidden** until their backend lands, so nothing errors.
 
 _Reconciled 2026-08-01 by direct FE-gateway grep vs deployed func-dottie functions; conv-management moved to LIVE 2026-08-01 after the ConvMgmt package deploy + golden curls._

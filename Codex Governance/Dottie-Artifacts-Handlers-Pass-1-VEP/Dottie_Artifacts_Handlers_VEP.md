@@ -1,5 +1,14 @@
 # Dottie Artifacts Handlers — Pass-1 VEP (dottie_upsert/list/get_artifact)
 
+## Role-C completion — DEPLOYED + golden-curl round-trip green (2026-08-01)
+Codex Pass-2 **APPROVED** (rev-4). Deployed `dottie_upsert/list/get_artifact` to `vaultgpt-func-dottie` (Kudu VFS, GET-back byte-identical — upsert 12624b/302b, list 3732b/300b, get 8445b/298b; restart). No migration (schema live), no infra (blob reused). Golden curls green (EasyAuth aud `api://4e1a1e31…`):
+- **upsert** — create `201` (`current_version:1`, `version_number:1`, type document); same title re-version `200` (`current_version:2`, `version_number:2`, **type changed → code**); blobs `artifacts/{oid}/{id}/v1.txt` + `v2.txt` confirmed in `dottie-content`.
+- **list** — `200`, GC Memo `current_version:2`, **metadata-only** (no `content`/`versions`/`blob_path`).
+- **get** — `200`, versions **[1,2] ascending**, each `content` hydrated from Blob (`# hello` / `console.log(1)`), content_type per version.
+- **negatives** — bad type `400`, blank title `400`, get random uuid `404`, unauthenticated `401`.
+
+Role-C — the three coordinated un-gate changes done together (per the flip-without-repoint lesson): (1) `DOTTIE_CAPABILITIES.artifactsPersistence` → `true`; (2) the FE gateway already calls `dottie_*` (repointed rev-2); (3) status prose swept — `spec/DOTTIE_API_SPEC.md § Artifacts` (LIVE), `spec/DOTTIE_THEO_RECONCILIATION.md §F/Summary/Live` (→ ✅ LIVE), gateway `persistArtifact`/`listServerArtifacts` guard comments (→ LIVE). Un-hides the Artifacts nav + activates persist/gallery. CI-deployed to dev SWA. G-APISPEC + G-UNGATE closed.
+
 ## Repair note (rev-4 — addresses Codex REJECT T13: residual status drift the rev-3 sweep missed)
 Two real residues rev-3 missed (both now fixed), plus one already-correct item:
 - `gateway.live.ts:877` — the artifacts section HEADER comment still read `theo_upsert/list/get_artifact` (an **abbreviated** form my rev-3 grep for full route names didn't catch) → now `dottie_upsert/list/get_artifact`. (The `B4c projects` header keeps `theo_*_project` — Projects are gated/unbuilt, so that's accurate.)

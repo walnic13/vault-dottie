@@ -916,7 +916,7 @@ function toArtifact(r: RawArtifact): Artifact {
 // Persist (create-or-add-version, keyed by title server-side). Best-effort caller; returns id + version.
 export async function persistArtifact(input: { title: string; type: string; content: string; conversationId?: string | null }): Promise<{ id: string; currentVersion: number }> {
   if (!apiBase && !tokenProvider) return mockPersistArtifact(input);
-  // No dottie artifacts-persistence backend yet — no-op (the in-reply [[ARTIFACT]] render is local; the
+  // Artifacts persistence LIVE (dottie_upsert_artifact). Guard retained; artifactsPersistence=true so not hit. (The in-reply [[ARTIFACT]] render is local; the
   // caller is best-effort and ignores the return). Prevents a background 404 on every producing turn.
   if (!DOTTIE_CAPABILITIES.artifactsPersistence) return { id: "", currentVersion: 1 };
   const headers = await authHeaders();
@@ -941,7 +941,7 @@ export async function persistArtifact(input: { title: string; type: string; cont
 
 export async function listServerArtifacts(): Promise<ArtifactSummary[]> {
   if (!apiBase && !tokenProvider) return mockListServerArtifacts();
-  if (!DOTTIE_CAPABILITIES.artifactsPersistence) return []; // No backend — empty gallery, no 404 on mount.
+  if (!DOTTIE_CAPABILITIES.artifactsPersistence) return []; // Guard retained; artifactsPersistence=true (LIVE), so not hit.
   const headers = await authHeaders();
   const res = await fetch(`${apiBase}/api/dottie_list_artifacts`, { method: "GET", credentials: "same-origin", headers });
   let json: { data?: { artifacts?: RawArtifact[] }; error?: { message?: string } } | null = null;

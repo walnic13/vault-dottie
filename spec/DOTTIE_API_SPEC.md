@@ -49,6 +49,15 @@ Body `{ id }`. Owner-scoped `DELETE … RETURNING blob_path`; 0 rows → `dottie
 ### GET `/api/dottie_list_conversation_attachments` (func-dottie)
 Query `?conversationId=uuid`. Owner-gates the conversation, then its rows `{ id, filename, content_type, byte_size, ingestion_class, message_seq, created_at }` (blob paths **not** projected) ordered `message_seq ASC NULLS LAST, created_at ASC`. → `200 { data:{ attachments:[…] } }`. `400`/`401`/`403`/`404`/`500`.
 
+## Artifacts persistence (func-dottie) — **LIVE** (Artifacts-Schema + Artifacts-Handlers packages)
+> Persisted `[[ARTIFACT]]` deliverables. Content lives in Azure Blob (`dottie-content` on `vaultgptdottiestore`, key `artifacts/{oid}/{artifactId}/v{n}.txt`, written server-side via the Function MI bearer — no SAS); `dottie_artifacts` (metadata + `current_version`) + `dottie_artifact_versions` (immutable Blob-pointer rows) hold the rest. No `project_id` (Dottie has no Projects). Deployed 2026-08-01; golden-curl round-trip green.
+### POST `/api/dottie_upsert_artifact` (func-dottie)
+Body `{ title (≤200, non-blank), type ∈ {document,code,html}, content (≤1 MiB utf8), conversation_id? (uuid) }`. Title-keyed owner-scoped upsert (case-insensitive): reused title → new version at `current_version+1`; new title → create at v1. Writes the version blob, inserts the version row, bumps the parent pointer/type. → `201` (created) / `200` (new version) `{ data:{ artifact:{ id, conversation_id, title, type, current_version, created_at, updated_at, version_number } } }`. `400 BAD_REQUEST|INVALID_REQUEST`, `401`, `404` (conversation not owned), `403`(42501), `500`; ROLLBACK + best-effort orphan-blob delete on failure.
+### GET `/api/dottie_list_artifacts` (func-dottie)
+Query `?conversationId=?`. → `200 { data:{ artifacts:[{ id, conversation_id, title, type, current_version, created_at, updated_at }] } }` ordered `updated_at DESC, id DESC` LIMIT 500 — **metadata only, no content**. `401`/`400`/`403`/`500`.
+### GET `/api/dottie_get_artifact` (func-dottie)
+Query `?artifactId=uuid`. Owner-gated (`403`/`404` via `dottie_artifact_exists_unscoped`), then all versions ASCENDING with each version's Blob content hydrated (a failed blob read degrades to `content:""`). → `200 { data:{ artifact:{ …, versions:[{ version_number, content, byte_size, content_type, created_at }] } } }`. `401`/`400`/`403`/`404`/`500`.
+
 ## Notes
 - `dottie_ask` (POST `/api/dottie_ask`, func-dottie) — the original stateless gpt-5 round-trip (Stage-0 frame). Superseded for chat by `dottie_message`.
 - Dottie-L1 memory WRITE/CRUD + distillation is Phase D3 (the read-injection is live but degrades to empty until D3 populates `dottie_user_memory`).

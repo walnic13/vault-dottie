@@ -18,7 +18,7 @@ export const DOTTIE_CAPABILITIES = {
   projects: false,             // §B/§E — hidden indefinitely (no Projects/SPW backend)
   people: true,                // §C — dottie_list_people LIVE (ListPeople package; deployed + golden curls green 2026-08-01)
   attachments: true,           // §D — dottie attachments LIVE (4 handlers + dottie-content blob; deployed + golden-curl round-trip green 2026-08-01)
-  artifactsPersistence: false, // §F — dottie artifacts persistence (3 handlers) not built yet
+  artifactsPersistence: true,  // §F — dottie artifacts persistence LIVE (Artifacts packages; deployed + golden-curl round-trip green 2026-08-01)
   voice: false,                // §G — dottie voice (transcribe/synthesize) not built yet
 } as const;
 
