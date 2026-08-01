@@ -1,6 +1,9 @@
 # Dottie Artifacts Schema — Pass-1 VEP (dottie_artifacts + dottie_artifact_versions migration)
 
-Schema half of the artifacts-persistence build-out (`spec/DOTTIE_THEO_RECONCILIATION.md` §F). The transplanted FE persists `[[ARTIFACT]]` deliverables to a gallery; Dottie has no artifacts tables, so persistence is gated off today (the in-reply `[[ARTIFACT]]` render already works — it is text-parsed and local). This package lands the two tables — a **byte-faithful mirror of the deployed `theo_artifacts` + `theo_artifact_versions`** (Theo Tier B2) — with **two documented Dottie deltas**: (1) the `project_id` column/FK/index is DROPPED (Dottie has no Projects backend → no `dottie_projects` table to FK to); (2) the `_exists_unscoped` helper adds `REVOKE ALL FROM PUBLIC` (the deployed Dottie D1 hardening idiom, stricter than the looser Theo B2 grant). The paired **handlers** package (`dottie_upsert/list/get_artifact`) grounds against THIS schema once deployed (Golden Handler Schema Reality Lock → schema first, mirroring Theo's B2→B4h split). **Migration only** (Walter runs it as `pgadmin_vault`); no handler, no blob, no FE change in this package.
+## Repair note (rev-2 — addresses Codex REJECT T13: delta-count self-contradiction)
+Codex cleared the schema substance but found a self-contradictory delta count: the abstract + the runnable migration header said **two** Dottie deltas (counting only project_id-drop + REVOKE-PUBLIC, treating the `theo_`→`dottie_` rename as implicit), while the §3 Structural Mirror Table, the Rule Anchor row, and the activation note said **three**. Aligned on **three** everywhere: the abstract (intro) and the migration file header now both enumerate (1) `theo_`→`dottie_` identifiers (names + conversation FK parent), (2) DROP `project_id`, (3) helper `REVOKE ALL FROM PUBLIC` hardening — matching the mirror table. The inlined §4.1 was re-spliced to the updated migration file (byte-identical); no DDL change. Lint re-run PASS.
+
+Schema half of the artifacts-persistence build-out (`spec/DOTTIE_THEO_RECONCILIATION.md` §F). The transplanted FE persists `[[ARTIFACT]]` deliverables to a gallery; Dottie has no artifacts tables, so persistence is gated off today (the in-reply `[[ARTIFACT]]` render already works — it is text-parsed and local). This package lands the two tables — a **byte-faithful mirror of the deployed `theo_artifacts` + `theo_artifact_versions`** (Theo Tier B2) — with **three documented Dottie deltas** (enumerated in the §3 Structural Mirror Table): (1) `theo_`→`dottie_` identifiers (names + the conversation FK parent); (2) the `project_id` column/FK/index is DROPPED (Dottie has no Projects backend → no `dottie_projects` table to FK to); (3) the `_exists_unscoped` helper adds `REVOKE ALL FROM PUBLIC` (the deployed Dottie D1 hardening idiom, stricter than the looser Theo B2 grant). The paired **handlers** package (`dottie_upsert/list/get_artifact`) grounds against THIS schema once deployed (Golden Handler Schema Reality Lock → schema first, mirroring Theo's B2→B4h split). **Migration only** (Walter runs it as `pgadmin_vault`); no handler, no blob, no FE change in this package.
 
 ## Grounding Conformance Receipt
 Role: Claude Code
@@ -65,11 +68,13 @@ No DEVIATION regions.
 -- Plain PostgreSQL SQL; no top-level BEGIN/COMMIT (migration governance). Idempotent.
 -- Run as pgadmin_vault (owner), same as every prior dottie migration (D1 / attachments).
 --
--- Byte-faithful mirror of the deployed theo_artifacts + theo_artifact_versions (Theo Tier B2), with two
--- Dottie deltas, both documented in the Structural Mirror Table of the VEP:
---   (1) DROP the `project_id` column + its FK + its index — Dottie has NO Projects backend (Projects are
+-- Byte-faithful mirror of the deployed theo_artifacts + theo_artifact_versions (Theo Tier B2), with three
+-- Dottie deltas, all documented in the Structural Mirror Table of the VEP:
+--   (1) theo_ -> dottie_ identifiers (table / policy / index / helper names + the conversation FK parent
+--       theo_conversations -> dottie_conversations).
+--   (2) DROP the `project_id` column + its FK + its index — Dottie has NO Projects backend (Projects are
 --       hidden; there is no `dottie_projects` table to FK to). The conversation link is retained.
---   (2) The `_exists_unscoped` helper adds `REVOKE ALL FROM PUBLIC` before `GRANT ... TO authenticated`,
+--   (3) The `_exists_unscoped` helper adds `REVOKE ALL FROM PUBLIC` before `GRANT ... TO authenticated`,
 --       matching the deployed Dottie D1 hardening idiom (dottie_conversation/user_memory_exists_unscoped),
 --       which is stricter than the looser Theo B2 grant.
 -- Content lives in Azure Blob (`dottie-content` on `vaultgptdottiestore`, key

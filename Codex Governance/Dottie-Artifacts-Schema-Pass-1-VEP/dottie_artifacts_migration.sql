@@ -4,11 +4,13 @@
 -- Plain PostgreSQL SQL; no top-level BEGIN/COMMIT (migration governance). Idempotent.
 -- Run as pgadmin_vault (owner), same as every prior dottie migration (D1 / attachments).
 --
--- Byte-faithful mirror of the deployed theo_artifacts + theo_artifact_versions (Theo Tier B2), with two
--- Dottie deltas, both documented in the Structural Mirror Table of the VEP:
---   (1) DROP the `project_id` column + its FK + its index — Dottie has NO Projects backend (Projects are
+-- Byte-faithful mirror of the deployed theo_artifacts + theo_artifact_versions (Theo Tier B2), with three
+-- Dottie deltas, all documented in the Structural Mirror Table of the VEP:
+--   (1) theo_ -> dottie_ identifiers (table / policy / index / helper names + the conversation FK parent
+--       theo_conversations -> dottie_conversations).
+--   (2) DROP the `project_id` column + its FK + its index — Dottie has NO Projects backend (Projects are
 --       hidden; there is no `dottie_projects` table to FK to). The conversation link is retained.
---   (2) The `_exists_unscoped` helper adds `REVOKE ALL FROM PUBLIC` before `GRANT ... TO authenticated`,
+--   (3) The `_exists_unscoped` helper adds `REVOKE ALL FROM PUBLIC` before `GRANT ... TO authenticated`,
 --       matching the deployed Dottie D1 hardening idiom (dottie_conversation/user_memory_exists_unscoped),
 --       which is stricter than the looser Theo B2 grant.
 -- Content lives in Azure Blob (`dottie-content` on `vaultgptdottiestore`, key
