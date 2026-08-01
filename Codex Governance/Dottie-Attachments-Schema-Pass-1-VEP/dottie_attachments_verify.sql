@@ -8,12 +8,13 @@ FROM information_schema.columns
 WHERE table_schema = 'public' AND table_name = 'dottie_attachments'
 ORDER BY ordinal_position;
 
--- 2) FK to dottie_conversations ON DELETE SET NULL
-SELECT tc.constraint_name, rc.delete_rule, ccu.table_name AS references_table
-FROM information_schema.table_constraints tc
-JOIN information_schema.referential_constraints rc ON rc.constraint_name = tc.constraint_name
-JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name
-WHERE tc.table_schema = 'public' AND tc.table_name = 'dottie_attachments' AND tc.constraint_type = 'FOREIGN KEY';
+-- 2) FK to dottie_conversations ON DELETE SET NULL. Use pg_catalog (information_schema.*_column_usage
+--    is invisible to a read-only role that can't see the parent table's grants). confdeltype 'n' = SET NULL.
+SELECT conname, confrelid::regclass AS references_table, confdeltype AS del_rule,
+       pg_get_constraintdef(oid) AS def
+FROM pg_constraint
+WHERE conrelid = 'public.dottie_attachments'::regclass AND contype = 'f';
+-- expect 1 row: references dottie_conversations, del_rule='n' (SET NULL)
 
 -- 3) RLS enabled + the four ownership policies (expect rowsecurity=t; 4 policy rows)
 SELECT relrowsecurity FROM pg_class WHERE oid = 'public.dottie_attachments'::regclass;
