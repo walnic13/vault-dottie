@@ -35,7 +35,6 @@ jobs:
           VITE_ENTRA_CLIENT_ID=20188c2b-3899-48d0-9f32-ff936a9bfddc
           VITE_ENTRA_TENANT_ID=6a0a4c17-1f74-4898-bec7-20f4fb9c9692
           VITE_ENTRA_API_SCOPE=api://4e1a1e31-5c20-4480-99e4-098901707d9e/access_as_user
-          VITE_DEBUG_AUTH=true
           VITE_FUNCTIONS_URL=https://vaultgpt-func-dottie.azurewebsites.net
           VITE_STREAM_FUNCTIONS_URL=https://vaultgpt-func-dottie-stream.azurewebsites.net
           EOF

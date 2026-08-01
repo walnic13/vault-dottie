@@ -170,9 +170,6 @@ class EntraAuthService {
             const payload = JSON.parse(atob(tokenParts[1]));
             console.log('[EntraAuth] Token info:', {
               aud: payload.aud,
-              iss: payload.iss,
-              ver: payload.ver,
-              appid: payload.appid,
               scp: payload.scp,
               roles: payload.roles,
               exp: payload.exp ? new Date(payload.exp * 1000).toISOString() : 'unknown',
