@@ -30,6 +30,7 @@ Sub-phase Track: N/A
 | 12 | **STRUCTURAL REFERENCE — Theo tool-loop registry (DEPLOYED)** — `vault-theo/Codex Governance/Theo-Backend-FindImage-Offset-ChatTools-Pass-1-VEP/engine/chat-tools.js` (`dispatchChatTool` route→POST, `{data}` unwrap; the pattern mirrored) | `Read`(full, via Explore) this turn | `8850c347205430b937d5117a8446d8549ec02efc` |
 | 13 | **STRUCTURAL REFERENCE — Theo streaming tool-loop (DEPLOYED)** — `vault-theo/Codex Governance/Theo-SPW-Phase2b3e-Member-Project-Knowledge-Pass-1-VEP/handlers/theo_message_stream.js` (the detect→dispatch→feed-back→re-open loop + `vault_image`/`vault_video` SSE the FE mirrors) | `Read`(full, via Explore) this turn | `76d69204047f60d2d3c1b6ee55b467b33468261f` |
 | 14 | **MODIFIED HANDLER (proposed, committed at this package's HEAD; = deployed base + this package's media-tool loop) — `dottie_message_stream`** — `Codex Governance/Dottie-D2-Stream-Backend-Pass-1-VEP/proposed-app/src/functions/dottie_message_stream.js` | `Read`(full) + `Edit` this turn; `node --check` PASS | `031364a635fb81bef6b647a9cc1fd4aff503ef27` (base @HEAD before this package: `460681e93703d7c264c84607fec6f397833fefbd`) |
+| 15 | **DEPLOY AUTHORITY (v4 sidecar) — `Codex Governance/Dottie-D2-Stream-Backend-Pass-1-VEP/Dottie_D2_Stream_Backend_VEP.md` (§7 G-2 / §8 — v4 zip-deploy / run-from-package of the WHOLE sidecar, NOT per-function Kudu-VFS)** — the approved authority §7 step 3 conforms to | `Read`(§7 G-2 / §8) this turn | `35f8dc485350292f199c45a06347dd59fd14039c` |
 
 No ChatGPT advisory cited. No `reporting_*` / `theo_*` object touched. No `func-theo-tools` file modified (reuse only). Backend handler package (no migration; no write SQL by Claude).
 
@@ -96,7 +97,7 @@ Authenticated az bearer for Dottie's stream endpoint.
 ## §7 — Deploy plan (ordered; §1D)
 1. Codex Pass-2 → APPROVED/REJECTED.
 2. **Env:** discover the `func-theo-tools` EasyAuth audience (`az webapp auth show -n vaultgpt-func-theo-tools`); set `THEO_TOOLS_SCOPE=<audience>/.default` (and, if overriding defaults, `THEO_TOOLS_BASE`) on `vaultgpt-func-dottie-stream`.
-3. Claude Kudu-VFS deploys `dottie_message_stream` to `vaultgpt-func-dottie-stream` — PUT `index.js`, GET-back byte-identical, restart.
+3. **Claude v4 zip-deploys the sidecar** to `vaultgpt-func-dottie-stream`: rebuild the whole v4 package (`host.json` + `package.json` + `src/functions/dottie_message_stream.js` + installed `node_modules`) and deploy the **whole app** via zip / run-from-package — **NOT** per-function Kudu-VFS (v4 apps deploy the whole package; the per-fn Kudu-VFS PUT path is v3 `func-dottie` only). This mirrors the approved D2-Stream sidecar deploy authority (`Dottie_D2_Stream_Backend_VEP.md` §7 G-2 / §8; GCR row 15). The sidecar already exists from D2-Stream — this re-deploys the updated handler; restart and verify the deployed `dottie_message_stream` reflects the new blob (`031364a6…`).
 4. Claude runs §5 golden tests, including the G-AUTH gate (M3). If M3 fails, escalate the one-line Azure authorization to Walter; re-run.
 5. Role-C: reconciliation §H → LIVE; API-spec media-SSE note.
 6. Walter FE smoke test (M6).
