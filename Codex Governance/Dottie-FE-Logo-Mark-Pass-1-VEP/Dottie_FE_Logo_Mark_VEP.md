@@ -1,11 +1,11 @@
 # Dottie FE Logo Mark — Pass-1 Frontend VEP (DottieMark / DottieSpiral; gold, deconstruct)
 
-Implements Dottie's brand mark per the **binding** design system (`spec/DOTTIE_DESIGN_SYSTEM.md`, Codex-APPROVED). New `DottieSpiral.tsx` exports **`DottieMark`** (static identity mark) + **`DottieSpiral`** (active "thinking" mark), and the transplanted warm Theo marks (`VaultMark` / `SpiralAssemble`) are swapped out at every call site in `ChatView.tsx` + `Sidebar.tsx`. **The geometry is byte-verbatim from Theo's `SpiralMark`/`SpiralAssemble`** (the shared Vault wedges from `vault-origin/public/icon.svg`) — Dottie only **recolours it monochrome-gold** and, in the thinking state, **animates it as her signature deconstruct**: the spiral dissolves outer→seed to the fixed centre dot (the "Dottie number", +30% size), which slow-heartbeats, blooms to ~5.6×, and drifts back to a glowing dot, then rebuilds — the exact inverse of Theo's *constructing* spiral (Walter-approved concept, iterated + locked). Dot radius/glow are driven in JS (reliable SVG animation). `tsc -p tsconfig.app.json` + `npm run build` clean.
+Implements Dottie's brand mark per the **binding** design system (`spec/DOTTIE_DESIGN_SYSTEM.md`, Codex-APPROVED). New `DottieSpiral.tsx` exports **`DottieMark`** (static identity mark) + **`DottieSpiral`** (active "thinking" mark), and the transplanted warm Theo marks (`VaultMark` / `SpiralAssemble`) are swapped out at every call site in `ChatView.tsx` + `Sidebar.tsx`. **The geometry is byte-verbatim from Theo's `SpiralMark`/`SpiralAssemble`** (the shared Vault wedges from `vault-origin/public/icon.svg`) — Dottie only **recolours it monochrome-gold** and, in the thinking state, **animates it as her signature deconstruct**: the spiral dissolves outer→seed to the fixed centre dot (the "Dottie number", +30% size), which slow-heartbeats, blooms to ~5.6×, and drifts back to a glowing dot, then rebuilds — the exact inverse of Theo's *constructing* spiral (Walter-approved concept, iterated + locked). Dot radius/glow are driven in JS (reliable SVG animation). **Final tuning per Walter's dev-SWA review:** the gold ramp is **rich all-gold end-to-end** (no muddy olive tail; the core is a solid gold, not near-white, so it holds on today's cream surface as well as the dark console it's designed for), and render sizes are bumped (welcome/splash 40→64, thinking/message avatar 22→30, sidebar 20→24). Locked geometry/params: STEP 150, BLOOM 12 s, swell 5.6×, dot r 4.42. `tsc -p tsconfig.app.json` + `npm run build` clean.
 
 ## Grounding Conformance Receipt
 Role: Claude Code
 Turn Type: Pass 1 — Frontend Verified Evidence Pack
-Grounding parent (source baseline): `b7174d6f0cfdf8a66b78db316389bd6d86526a30` (vault-dottie, `development`)
+Grounding parent (source baseline): `546fd21c4a8d83d346e487761f51fec7be9dab73` (vault-dottie, `development`)
 Grounding mode: Full Baseline Grounding
 Pass: Pass 1
 Sub-phase Track: N/A
@@ -19,9 +19,9 @@ Sub-phase Track: N/A
 | 5 | **VISUAL AUTHORITY (binding) — `spec/DOTTIE_DESIGN_SYSTEM.md`** (Codex-APPROVED; §1 P1/P2 gold-on-ink identity; §2.3 gold accent; the mark logo direction) — the authority this mark realises | `Read`(§1/§2) this turn | `744523cf905df1186d954b86519b1cdeddac539c` |
 | 6 | **PRIMARY REFERENCE (geometry) — `src/theo/components/SpiralMark.tsx`** (byte-verbatim Vault wedges; the static mark Dottie recolours) | `Read`(full) this turn | `404f9463022646c8f21af6cf72f39c76778bddd8` |
 | 7 | **PRIMARY REFERENCE (animation) — `src/theo/components/SpiralAssemble.tsx`** (the same wedges + generated tail; the reveal-order / breathing loop Dottie inverts) | `Read`(full) this turn | `b460afa1a5fc438e95fbf6fbc280a9a3be9cc218` |
-| 8 | **NEW COMPONENT — `src/theo/components/DottieSpiral.tsx`** (exports `DottieMark` + `DottieSpiral`) | `Read`(full) this turn | `7127260e15cd2b34384aee60e48545c77ea1b90c` |
-| 9 | **SWAP — `src/theo/components/ChatView.tsx`** (VaultMark→DottieMark ×3, SpiralAssemble→DottieSpiral ×2) | `Read`(§imports/§L427/600/649/744) this turn | `15af0f123c1be8cd719584aed94b7c3d81d80eab` |
-| 10 | **SWAP — `src/theo/components/Sidebar.tsx`** (VaultMark→DottieMark ×1) | `Read`(§imports/§L59) this turn | `46882a137627efa11ceb19b7970a62aea89b9cfd` |
+| 8 | **NEW COMPONENT — `src/theo/components/DottieSpiral.tsx`** (exports `DottieMark` + `DottieSpiral`; final gold ramp + params) | `Read`(full) this turn | `2dd0df3dc82b9cd2d484d229dbb6e15e459d4617` |
+| 9 | **SWAP — `src/theo/components/ChatView.tsx`** (VaultMark→DottieMark ×3, SpiralAssemble→DottieSpiral ×2; sizes bumped) | `Read`(§imports/§L427/600/649/744) this turn | `d92045658c3f73b8783931d2c95efccd82a12fff` |
+| 10 | **SWAP — `src/theo/components/Sidebar.tsx`** (VaultMark→DottieMark ×1; size bumped) | `Read`(§imports/§L59) this turn | `107a982b7c010f3cc64208a80ff6ff0d53845421` |
 
 No ChatGPT advisory cited. No `reporting_*` change; no backend/route/schema/migration. Frontend component package (no write SQL).
 
@@ -54,8 +54,8 @@ The visual authority for Dottie is now `DOTTIE_DESIGN_SYSTEM.md` (binding), whic
 | ---------------- | --------------------------- | ------------------------ | -------------------------- |
 | `DottieMark` (`src/theo/components/DottieSpiral.tsx`, NEW export) | `DottieMark({ size = 40 }: { size?: number; variant?: "static" \| "building" })` — renders the gold-recoloured byte-verbatim wedges (`STATIC_MARKUP`) + a fixed glowing centre `<circle r=4.42>` (+30%). `variant` accepted for drop-in parity with `VaultMark` (no motion either way). | `DOTTIE_DESIGN_SYSTEM.md` §2 (gold #D7B15C/#EBC97D on ink) | none (static SVG). Replaces `VaultMark` at identical call sites. |
 | `DottieSpiral` (`src/theo/components/DottieSpiral.tsx`, NEW export) | `DottieSpiral({ size = 22 }: { size?: number })` — same wedges as `ANIM_MARKUP` + a `.dot`; `useEffect` loop: deconstruct outer→seed (`data-o`, STEP 150) → JS rAF dot bloom (heartbeat → 5.6× swell → drift, `KF`/`scaleAt`, glow via drop-shadow) → rebuild seed→out → PAUSE → loop. `prefers-reduced-motion` holds the finished gold mark. Cleanup clears timers + rAF. | `DOTTIE_DESIGN_SYSTEM.md` §1 P1/P2 + the deconstruct concept | none. Replaces `SpiralAssemble` (thinking state). |
-| `ChatView` (`src/theo/components/ChatView.tsx`) | `ChatView` prop interface UNCHANGED. Delta: import line now `import { DottieSpiral, DottieMark } from "./DottieSpiral";`; `<VaultMark …>`→`<DottieMark …>` (L427 `size={40} variant="static"`, L600 `size={40} variant="building"`, L649 `size={22}`) and `<SpiralAssemble size={22} />`→`<DottieSpiral size={22} />` (L649 loading branch, L744). | VA-T1 chat surface unchanged except the mark identity | consumes DottieMark/DottieSpiral |
-| `Sidebar` (`src/theo/components/Sidebar.tsx`) | `Sidebar` prop interface UNCHANGED. Delta: `import { DottieMark } from "./DottieSpiral";`; `<VaultMark size={20} />`→`<DottieMark size={20} />` (L59, workspace/product header). | VA-T1 sidebar unchanged except the mark | consumes DottieMark |
+| `ChatView` (`src/theo/components/ChatView.tsx`) | `ChatView` prop interface UNCHANGED. Delta: import line now `import { DottieSpiral, DottieMark } from "./DottieSpiral";`; `<VaultMark …>`→`<DottieMark …>` (L427 `size={64} variant="static"`, L600 `size={64} variant="building"`, L649 `size={30}`) and `<SpiralAssemble size={22} />`→`<DottieSpiral size={30} />` (L649 loading branch, L744). | VA-T1 chat surface unchanged except the mark identity | consumes DottieMark/DottieSpiral |
+| `Sidebar` (`src/theo/components/Sidebar.tsx`) | `Sidebar` prop interface UNCHANGED. Delta: `import { DottieMark } from "./DottieSpiral";`; `<VaultMark size={20} />`→`<DottieMark size={24} />` (L59, workspace/product header). | VA-T1 sidebar unchanged except the mark | consumes DottieMark |
 
 ## §GAP — Gap Disclosure
 `PROCEED` (deployable; `tsc`+build clean; identity per the binding authority).
@@ -70,12 +70,12 @@ The visual authority for Dottie is now `DOTTIE_DESIGN_SYSTEM.md` (binding), whic
 ```
 Codex — Dottie FE Logo Mark Pass-1 VEP. Open your Pass-2 with a governance-bound GCR + Rule Anchor Table
 per the Codex Theo Frontend Review Standard, hard-gate, APPROVED/REJECTED only. vault-dottie @ development
-HEAD b7174d6f0cfdf8a66b78db316389bd6d86526a30. VEP: Codex Governance/Dottie-FE-Logo-Mark-Pass-1-VEP/
+HEAD 546fd21c4a8d83d346e487761f51fec7be9dab73. VEP: Codex Governance/Dottie-FE-Logo-Mark-Pass-1-VEP/
 Dottie_FE_Logo_Mark_VEP.md. Frontend component package (no backend/route/schema/migration). Realises the
-BINDING spec/DOTTIE_DESIGN_SYSTEM.md (GCR row 5, blob 744523c). New DottieSpiral.tsx (blob 7127260) exports
+BINDING spec/DOTTIE_DESIGN_SYSTEM.md (GCR row 5, blob 744523c). New DottieSpiral.tsx (blob 2dd0df3d) exports
 DottieMark (static gold identity) + DottieSpiral (thinking = deconstruct outer→seed + JS-driven dot bloom +
 rebuild); geometry is byte-verbatim from SpiralMark/SpiralAssemble (GCR rows 6/7) — deltas are gold recolour,
 deconstruct-lead, and the +30% glowing dot (§CCT). VaultMark→DottieMark / SpiralAssemble→DottieSpiral swapped
-at all call sites in ChatView (blob 15af0f1) + Sidebar (blob 46882a1); prop interfaces unchanged. tsc -p
+at all call sites in ChatView (blob d9204565) + Sidebar (blob 107a982b); prop interfaces unchanged. tsc -p
 tsconfig.app.json + npm run build clean. APPROVED or REJECTED only.
 ```
