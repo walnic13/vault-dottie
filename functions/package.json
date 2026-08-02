@@ -1,0 +1,6 @@
+{
+  "name": "vaultgpt-func-dottie",
+  "version": "1.0.0",
+  "description": "Dottie — L4 governance observer backend. In-tenant Azure OpenAI (keyless via MI). Handlers are self-contained (Node built-ins).",
+  "dependencies": {}
+}

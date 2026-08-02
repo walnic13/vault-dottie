@@ -1,0 +1,62 @@
+name: Azure Static Web Apps CI/CD (development)
+
+# Deploys the Dottie FE to the DEV SWA (brave-dune-0a97c7d0) on push to `development`.
+# Mirror of the vault-theo FE workflow. vault-origin DEV mounts Dottie from this SWA (once the
+# FE is promoted to a federated remote). Secret: AZURE_STATIC_WEB_APPS_API_TOKEN (dev SWA token).
+
+on:
+  push:
+    branches:
+      - development
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - development
+
+jobs:
+  build_and_deploy_job:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    runs-on: ubuntu-latest
+    name: Build and Deploy Job
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          lfs: false
+
+      # Bake VITE_* vars at build time. All values here are PUBLIC identifiers (Entra client/tenant
+      # ids, the API scope, and the function-app URLs) — none are secrets, so they are set inline so the
+      # build always wires standalone auth + the live Dottie backend. gateway.live reads VITE_FUNCTIONS_URL
+      # (func-dottie) + VITE_STREAM_FUNCTIONS_URL (func-dottie-stream); entraAuth reads VITE_ENTRA_*.
+      - name: Create .env for Vite build
+        shell: bash
+        run: |
+          cat > .env <<EOF
+          VITE_ENTRA_CLIENT_ID=20188c2b-3899-48d0-9f32-ff936a9bfddc
+          VITE_ENTRA_TENANT_ID=6a0a4c17-1f74-4898-bec7-20f4fb9c9692
+          VITE_ENTRA_API_SCOPE=api://4e1a1e31-5c20-4480-99e4-098901707d9e/access_as_user
+          VITE_FUNCTIONS_URL=https://vaultgpt-func-dottie.azurewebsites.net
+          VITE_STREAM_FUNCTIONS_URL=https://vaultgpt-func-dottie-stream.azurewebsites.net
+          EOF
+
+      - name: Deploy to Azure Static Web Apps (dev)
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: "upload"
+          app_location: "/"
+          api_location: ""
+          output_location: "dist"
+          production_branch: "development"
+
+  close_pull_request_job:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    name: Close Pull Request Job
+    steps:
+      - name: Close Pull Request
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: "close"
+          production_branch: "development"

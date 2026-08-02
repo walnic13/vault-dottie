@@ -1,0 +1,10 @@
+{
+  "name": "vaultgpt-func-dottie-stream",
+  "version": "1.0.0",
+  "description": "Dottie streaming sidecar — dottie_message_stream (v4 model, SSE relay of Azure OpenAI gpt-5).",
+  "main": "src/functions/*.js",
+  "dependencies": {
+    "@azure/functions": "^4.5.0",
+    "pg": "^8.11.0"
+  }
+}
