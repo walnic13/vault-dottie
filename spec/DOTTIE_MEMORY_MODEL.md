@@ -1,6 +1,6 @@
 # Dottie Memory Model — persistence design (v0.1 DRAFT)
 
-**Status:** DRAFT for Walter's confirmation. Defines how Dottie's memory persists, incorporating the Vault memory-layer architecture and the Six Plates. **Grounded in the governing authority** `vault-theo/governance/VAULT_MEMORY_ARCHITECTURE.md` (§5 layers, §7.5 Six-Plates lens, §A **Amendment 8** = Dottie is L4, **Amendment 9** = Dottie's own layered memory). This spec is *downstream* of that authority — it must not silently rewrite it; where it needs a new architectural decision it is flagged as an Open Question for the authority.
+**Status:** **APPROVED — Codex Pass-2 (2026-08-02, rev-2), binding.** Defines how Dottie's memory persists, incorporating the Vault memory-layer architecture and the Six Plates. **Grounded in the governing authority** `vault-theo/governance/VAULT_MEMORY_ARCHITECTURE.md` (§5 layers, §7.5 Six-Plates lens, §A **Amendment 8** = Dottie is L4, **Amendment 9** = Dottie's own layered memory). This spec is *downstream* of that authority — it must not silently rewrite it; where it needs a new architectural decision it is flagged as an Open Question for the authority.
 
 **Context:** Dottie is a **spoke of the Projects program**, not a standalone product. She is the **L4 governance layer** made conversational. Her memory is deliberately *separate* from Theo's and is governed by hard invariants.
 
