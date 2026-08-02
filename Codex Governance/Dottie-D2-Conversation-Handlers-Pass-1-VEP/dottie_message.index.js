@@ -1,4 +1,5 @@
 const https = require("https");
+const http = require("http");
 const { Pool } = require("pg");
 
 // dottie_message — Dottie's send→reply→persist handler (Phase D2). Mirrors the deployed Theo memory-injection
@@ -149,12 +150,13 @@ function parseJsonSafe(raw) {
 function requestUrl(urlStr, options = {}, body = null) {
   return new Promise((resolve, reject) => {
     const url = new URL(urlStr);
+    const lib = url.protocol === "http:" ? http : https;
 
-    const req = https.request(
+    const req = lib.request(
       {
         method: options.method || "GET",
         hostname: url.hostname,
-        port: url.port ? Number(url.port) : 443,
+        port: url.port ? Number(url.port) : (url.protocol === "http:" ? 80 : 443),
         path: url.pathname + url.search,
         headers: options.headers || {},
       },
@@ -263,7 +265,7 @@ async function buildAttachmentParts(context, rows) {
   if (!rows.length) return [];
   let storageToken;
   try { storageToken = await getManagedIdentityAccessToken("https://storage.azure.com/"); }
-  catch (tokErr) { context.error("dottie_message: storage token for attachments failed (non-fatal)", tokErr); return rows.map((r) => ({ type: "text", text: `[Attached file "${r.filename}" could not be loaded.]` })); }
+  catch (tokErr) { context.log.error("dottie_message: storage token for attachments failed (non-fatal)", tokErr); return rows.map((r) => ({ type: "text", text: `[Attached file "${r.filename}" could not be loaded.]` })); }
   const parts = [];
   for (const row of rows) {
     const isExtractRow = row.ingestion_class === "extract";
@@ -280,7 +282,7 @@ async function buildAttachmentParts(context, rows) {
         parts.push({ type: "text", text: `[Attached file "${row.filename}" (${row.content_type}) could not be read into this message on the non-streaming path.]` });
       }
     } catch (rowErr) {
-      context.error("dottie_message: attachment row failed (non-fatal)", rowErr);
+      context.log.error("dottie_message: attachment row failed (non-fatal)", rowErr);
       parts.push({ type: "text", text: `[Attached file "${row.filename}" could not be loaded.]` });
     }
   }
@@ -428,7 +430,7 @@ module.exports = async function (context, req) {
         rowsBySeq.get(lastUserIndex).push(...cur);
       }
     } catch (attErr) {
-      context.error("dottie_message: attachment fetch failed", attErr);
+      context.log.error("dottie_message: attachment fetch failed", attErr);
       return send(context, 500, errorBody("INTERNAL_SERVER_ERROR", "Failed to load attachments.", 500));
     } finally { if (attClient) attClient.release(); }
     if (rowsBySeq.size > 0) {
