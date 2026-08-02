@@ -36,8 +36,9 @@ function bounds(n: number): [number, number, number, number] {
 }
 const VB = bounds(17).join(" "); // logo-only frame
 
-// monochrome-gold ramp (deep antique → bright core)
-const GOLD = ["#6d4f1e", "#8a6a2e", "#b28a3c", "#d7b15c", "#ebc97d", "#f6e2ae"];
+// monochrome-gold ramp — richly gold throughout (no muddy olive end, no near-white core), so the mark
+// reads gold on both the dark console and the current cream surface
+const GOLD = ["#a06d16", "#bd8a2a", "#cc9b3e", "#d7ab54", "#e2bb6b", "#edcb82"];
 function goldAt(j: number): string {
   const x = Math.max(0, Math.min(1, j)) * (GOLD.length - 1);
   const i = Math.floor(x);
@@ -54,7 +55,7 @@ const GOLD_WEDGES = PATHS.map((p, i) => {
   const d = (p.match(/\sd="([^"]*)"/) || [])[1] || "";
   const o = (NW - 1) - i;
   const j = o / (NW - 1);
-  return { d, o, fill: goldAt(1 - j * 0.9), op: (1 - 0.3 * j).toFixed(3) };
+  return { d, o, fill: goldAt(1 - j * 0.82), op: (1 - 0.14 * j).toFixed(3) };
 });
 const STATIC_MARKUP = GOLD_WEDGES.map((w) => `<path d="${w.d}" fill="${w.fill}" opacity="${w.op}"/>`).join("");
 const ANIM_MARKUP = GOLD_WEDGES.map((w) => `<path class="w" data-o="${w.o}" d="${w.d}" fill="${w.fill}" opacity="${w.op}"/>`).join("");

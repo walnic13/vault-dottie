@@ -56,7 +56,7 @@ export function Sidebar(props: SidebarProps) {
     <aside className="vo-aside" style={{ width: fluid ? "100%" : railW, maxWidth: "100%", boxSizing: "border-box", flexShrink: 0, background: C.sidebar, borderRight: `1px solid ${C.line}`, display: "flex", flexDirection: "column", transition: "width .18s" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "space-between", padding: "14px 12px 8px" }}>
         {!collapsed && (<div style={{ display: "flex", alignItems: "center", gap: 9, overflow: "hidden" }}>
-          <DottieMark size={20} /><span style={{ fontWeight: 600, fontSize: 14, whiteSpace: "nowrap" }}>{workspaceName}</span><span style={{ color: C.ink3, fontSize: 12.5 }}>· {productName}</span>
+          <DottieMark size={24} /><span style={{ fontWeight: 600, fontSize: 14, whiteSpace: "nowrap" }}>{workspaceName}</span><span style={{ color: C.ink3, fontSize: 12.5 }}>· {productName}</span>
         </div>)}
         <button onClick={onToggleCollapse} title="Toggle sidebar" style={{ background: "none", border: "none", cursor: "pointer", color: C.ink3, padding: 4, display: "flex" }}><IcPanel s={18} /></button>
       </div>
