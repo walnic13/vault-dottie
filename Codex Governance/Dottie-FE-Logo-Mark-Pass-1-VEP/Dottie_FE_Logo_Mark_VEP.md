@@ -64,7 +64,7 @@ The visual authority for Dottie is now `DOTTIE_DESIGN_SYSTEM.md` (binding), whic
 - **G-3 (Walter dev-SWA verify): PRE-LAND.** Landed on `development`→dev SWA (`brave-dune-0a97c7d03`); Walter eyeballs the static mark (header/sidebar/avatar) + the thinking animation (send a message) before any prod promotion.
 
 ## §DELTA — the changed files (implementation evidence)
-`DottieSpiral.tsx` (new) is the full component (GCR row 8, blob `7127260…`) — the byte-verbatim `WEDGES`, the shared `O`/`U`/`tailPoints`/`bounds`/`VB`, the `goldAt` ramp + reveal-order recolour, `DottieMark` (static), and `DottieSpiral` (the deconstruct + JS dot-bloom loop, params locked with Walter: STEP 150, BLOOM 12 s, swell 5.6×, dot r 4.42). The swaps are the import + JSX-tag substitutions enumerated in §CCT (ChatView blob `15af0f1…`, Sidebar blob `46882a1…`). No other lines change.
+`DottieSpiral.tsx` (new) is the full component (GCR row 8, blob `2dd0df3d…`) — the byte-verbatim `WEDGES`, the shared `O`/`U`/`tailPoints`/`bounds`/`VB`, the rich all-gold `GOLD` ramp + reveal-order recolour, `DottieMark` (static), and `DottieSpiral` (the deconstruct + JS dot-bloom loop, params locked with Walter: STEP 150, BLOOM 12 s, swell 5.6×, dot r 4.42). The swaps are the import + JSX-tag substitutions enumerated in §CCT with the bumped render sizes (ChatView blob `d9204565…`, Sidebar blob `107a982b…`). No other lines change.
 
 ## §CODEX — activation
 ```
