@@ -192,8 +192,14 @@ async function getAadToken(scope) {
 // B8i linkage. Content is ADAPTED for the gpt-5 Responses API — Claude {type:image|document|text} →
 // {type:input_image|input_file|input_text}; NO cache_control (gpt-5 has none). Blob bytes read via the
 // Function's system-assigned MI (Storage Blob Data Contributor on vaultgptdottiestore), same technique
-// as the dottie attachment handlers. Full injection (no budget truncation), matching current Theo.
+// as the dottie attachment handlers. Per-message size/char budgets bound the upstream payload (mirrors
+// Theo's ATTACH_*_BUDGET): an oversize native file or an over-budget extracted text (e.g. a bloated Excel
+// CSV) is truncated/omitted with a note rather than blowing the model input (which returns an empty reply).
 const ATTACH_MAX_COUNT = parseInt(process.env.DOTTIE_ATTACH_MAX_COUNT, 10) > 0 ? parseInt(process.env.DOTTIE_ATTACH_MAX_COUNT, 10) : 10;
+const ATTACH_NATIVE_BUDGET_BYTES = parseInt(process.env.DOTTIE_ATTACH_NATIVE_BUDGET_BYTES, 10) > 0 ? parseInt(process.env.DOTTIE_ATTACH_NATIVE_BUDGET_BYTES, 10) : 14 * 1024 * 1024;
+// 100000 (not Theo's 200000): gpt-5 is a reasoning model that returns an EMPTY reply when the input is
+// very large (it spends its output budget reasoning), so the char budget is tuned below that failure zone.
+const ATTACH_EXTRACT_BUDGET_CHARS = parseInt(process.env.DOTTIE_ATTACH_EXTRACT_BUDGET_CHARS, 10) > 0 ? parseInt(process.env.DOTTIE_ATTACH_EXTRACT_BUDGET_CHARS, 10) : 100000;
 const ATTACH_STORAGE_ACCOUNT = process.env.DOTTIE_BLOB_ACCOUNT || "vaultgptdottiestore";
 const ATTACH_STORAGE_CONTAINER = process.env.DOTTIE_BLOB_CONTAINER || "dottie-content";
 const NATIVE_MEDIA_TYPES = {
@@ -247,7 +253,7 @@ async function downloadBlobText(token, blobKey) {
 // gpt-5 Responses-API content PARTS for the owned attachment rows. image → input_image (data URI);
 // native PDF → input_file (base64 file_data); extract-class → input_text (stored extracted text).
 // Per-attachment failures degrade to a text note, never throw.
-async function buildAttachmentParts(context, rows) {
+async function buildAttachmentParts(context, rows, budget) {
   if (!rows.length) return [];
   let storageToken;
   try { storageToken = await getManagedIdentityAccessToken("https://storage.azure.com/"); }
@@ -259,13 +265,25 @@ async function buildAttachmentParts(context, rows) {
     try {
       if (native) {
         const buf = await downloadBlobBinary(storageToken, row.blob_path);
+        if (budget.nativeBytes + buf.length > ATTACH_NATIVE_BUDGET_BYTES) {
+          parts.push({ type: "input_text", text: `[Attached file "${row.filename}" omitted — exceeds the per-message attachment size budget.]` });
+          continue;
+        }
+        budget.nativeBytes += buf.length;
         const dataUri = `data:${row.content_type};base64,${buf.toString("base64")}`;
         if (native === "image") parts.push({ type: "input_image", image_url: dataUri });
         else parts.push({ type: "input_file", filename: row.filename, file_data: dataUri }); // native PDF
         parts.push({ type: "input_text", text: `(above is the attached file "${row.filename}")` });
       } else if (isExtractRow && row.extracted_text_path) {
         const text = await downloadBlobText(storageToken, row.extracted_text_path);
-        parts.push({ type: "input_text", text: `Attached file "${row.filename}" (${row.content_type}):\n\n${text}` });
+        const remaining = ATTACH_EXTRACT_BUDGET_CHARS - budget.extractChars;
+        if (remaining <= 0) {
+          parts.push({ type: "input_text", text: `[Attached file "${row.filename}" omitted — exceeds the per-message extracted-text budget.]` });
+          continue;
+        }
+        const clipped = text.length > remaining ? text.slice(0, remaining) + "\n…[truncated]" : text;
+        budget.extractChars += clipped.length;
+        parts.push({ type: "input_text", text: `Attached file "${row.filename}" (${row.content_type}):\n\n${clipped}` });
       } else {
         parts.push({ type: "input_text", text: `[Attached file "${row.filename}" (${row.content_type}) is stored but could not be read into this message.]` });
       }
@@ -599,13 +617,25 @@ app.http("dottie_message_stream", {
         return jsonErr(500, "INTERNAL_SERVER_ERROR", "Failed to load attachments.");
       } finally { if (attClient) attClient.release(); }
       if (rowsBySeq.size > 0) {
-        messagesForUpstream = await Promise.all(chatMessages.map(async (m, i) => {
+        // One shared budget across ALL turns' attachments (the conversation-scoped injection re-injects
+        // every prior turn's files each message, so a per-turn budget would still let N turns × the same
+        // large file blow the input). Allocate the budget CURRENT-turn-first, then most-recent prior turns,
+        // so the file the user is asking about keeps its content and only the oldest re-injected copies
+        // truncate. Sequential (not Promise.all) so the shared counter is race-free.
+        const attBudget = { nativeBytes: 0, extractChars: 0 };
+        const order = [...rowsBySeq.keys()].sort((a, b) => (a === lastUserIndex ? -1 : b === lastUserIndex ? 1 : b - a));
+        const partsByIndex = new Map();
+        for (const i of order) {
           const rows = rowsBySeq.get(i);
-          if (!rows || rows.length === 0 || m.role !== "user" || typeof m.content !== "string") return m;
-          const attParts = await buildAttachmentParts(context, rows);
-          if (attParts.length === 0) return m;
+          const m = chatMessages[i];
+          if (!rows || rows.length === 0 || !m || m.role !== "user" || typeof m.content !== "string") continue;
+          partsByIndex.set(i, await buildAttachmentParts(context, rows, attBudget));
+        }
+        messagesForUpstream = chatMessages.map((m, i) => {
+          const attParts = partsByIndex.get(i);
+          if (!attParts || attParts.length === 0) return m;
           return { ...m, content: [...attParts, { type: "input_text", text: m.content }] };
-        }));
+        });
       }
     }
 
