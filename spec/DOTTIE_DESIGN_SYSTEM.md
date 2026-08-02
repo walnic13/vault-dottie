@@ -4,6 +4,8 @@
 
 **Authored:** 2026-08-02 (Walter-directed). **Reviewer:** Codex (Dottie FE governance). **Repo:** `vault-dottie`.
 
+**Program context — Dottie is a spoke, not the hub.** Dottie is the conversational face of the **L4 governance layer** of the Vault memory architecture (`vault-theo/governance/VAULT_MEMORY_ARCHITECTURE.md`, §A Amendments 8/9), which itself serves the larger **Projects program** (two-Theo: personal "better half" in Orbit + Project-Theo moderating each project; the cross-agent TODO tool; SPW Phase 3). This design system governs Dottie's *look*; her *memory persistence* (Dottie-L1/L2/L3 + Six-Plates lens + governance-findings store, and reading Theo's shared L1.5/L2/L3 via the live access-policy engine, never L1) is defined in `spec/DOTTIE_MEMORY_MODEL.md`.
+
 ---
 
 ## 1. Purpose & principle
