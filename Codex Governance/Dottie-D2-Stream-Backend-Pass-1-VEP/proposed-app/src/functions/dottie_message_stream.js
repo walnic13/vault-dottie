@@ -6,15 +6,18 @@ const { PassThrough } = require("node:stream");
 
 // dottie_message_stream — Dottie's STREAMING send→reply→persist handler (Phase D2-Stream). The faithful
 // Dottie port of the deployed Theo B9 streaming sidecar (theo_message_stream): v4 programming model with
-// HTTP streaming, an SSE relay of the upstream model to the browser verbatim, and persistence of the full
-// turn on stream completion (identical DB write to the buffered dottie_message → history/reload identical).
-// Two allowed deltas vs the Theo mechanism (Golden §4): (1) the model call is Azure OpenAI gpt-5 chat/completions
-// with stream:true via client-credentials getAadToken — endpoint/scope/body from the deployed dottie_ask,
-// error-envelope from the theo_message_stream reference (byte-identical to neither) — NOT Foundry-Anthropic
-// (observer independence); (2) the SSE it relays + the parse-for-persistence follow the OpenAI chunk shape
-// (choices[].delta.content … [DONE]) rather than Anthropic events.
-// Dottie-L1 relationship memory is injected (dottie_user_memory). No attachments, no history-RAG, no web
-// tools, no extended thinking, no project-sharing. Runs on the v4 sidecar vaultgpt-func-dottie-stream.
+// HTTP streaming, an SSE relay of the upstream model to the browser, and persistence of the full turn on
+// stream completion (identical DB write to the buffered dottie_message → history/reload identical).
+// Allowed deltas vs the Theo mechanism (Golden §4): (1) the model call is Azure OpenAI gpt-5 via the
+// RESPONSES API (/openai/responses) with stream:true and client-credentials getAadToken — NOT Foundry-
+// Anthropic (observer independence); (2) the relayed SSE + parse-for-persistence follow the OpenAI/Responses
+// shape (choices[].delta.content) rather than Anthropic events; (3) internet grounding uses gpt-5's built-in
+// server-side web_search tool, and image/video use model-callable find_image/find_video FUNCTION tools that
+// reuse the deployed func-theo-tools handlers via a client-credentials call (Dottie has no user token to
+// forward — see the Media tools block) — relayed to the FE as the vault_image/vault_video frames it already
+// renders; the model is told not to paste URLs.
+// Dottie-L1 relationship memory (dottie_user_memory) + conversation-scoped attachments (B8d/B8i) are injected.
+// No history-RAG, no extended thinking, no project-sharing. Runs on the v4 sidecar vaultgpt-func-dottie-stream.
 
 // HTTP streaming must be explicitly enabled in the v4 Node model (proven on Windows EP1 — Theo B9 Gate 2).
 app.setup({ enableHttpStream: true });
@@ -184,6 +187,81 @@ async function getAadToken(scope) {
     throw buildKnownError("INTERNAL_SERVER_ERROR", message, 500);
   }
   return payload.access_token;
+}
+
+// ── Media tools (find_image / find_video) — model-callable gpt-5 Responses-API FUNCTION tools that reuse the
+// deployed func-theo-tools handlers (SerpAPI image/video search; proxy-only URLs). DISTINCT from the built-in
+// server-side web_search: these are client-side function tools this handler dispatches. Dottie calls
+// func-theo-tools with a CLIENT-CREDENTIALS bearer for the tools audience (THEO_TOOLS_SCOPE) — the same
+// client-credentials mechanism Dottie already uses for gpt-5 and Blob (an ALLOWED DELTA vs Theo's
+// user-delegated forward: Dottie has no user token, so the tool runs under Dottie's app identity). Results are
+// relayed to the FE as the vault_image / vault_video SSE frames the transplanted Theo FE already renders; the
+// tool DESCRIPTIONS tell the model NOT to paste URLs. Media tools are offered only when THEO_TOOLS_SCOPE is
+// configured (Never-Guess: the exact audience is set at deploy, never hard-coded here).
+const TOOLS_BASE = (process.env.THEO_TOOLS_BASE || "https://vaultgpt-func-theo-tools.azurewebsites.net").replace(/\/+$/, "");
+const TOOLS_SCOPE = process.env.THEO_TOOLS_SCOPE || "";
+const MAX_TOOL_TURNS = parseInt(process.env.DOTTIE_MAX_TOOL_TURNS, 10) > 0 ? parseInt(process.env.DOTTIE_MAX_TOOL_TURNS, 10) : 8;
+const MEDIA_TOOL_ROUTES = { find_image: "theo_find_image", find_video: "theo_find_video" };
+const MEDIA_TOOLS = [
+  {
+    type: "function",
+    name: "find_image",
+    description:
+      "Search the web for an image of a subject and display it to the user automatically as a gallery. Pass the FULL descriptive phrase as `subject`. The app renders the returned image(s) itself — DO NOT paste any URL or a markdown image into your reply; after calling, briefly say what you found. Optional `offset` (0-40) fetches a different result for the same subject.",
+    parameters: {
+      type: "object",
+      properties: {
+        subject: { type: "string", description: "Full descriptive phrase of the image to find (max 300 chars)." },
+        offset: { type: "integer", minimum: 0, maximum: 40, description: "Result offset to fetch a different image for the same subject." },
+      },
+      required: ["subject"],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function",
+    name: "find_video",
+    description:
+      "Search the web for a video of a subject; the app plays it inline automatically (a YouTube embed, or a thumbnail link-card). Pass the FULL descriptive phrase as `subject`. DO NOT paste any URL — after calling, briefly say what you found.",
+    parameters: {
+      type: "object",
+      properties: {
+        subject: { type: "string", description: "Full descriptive phrase of the video to find (max 300 chars)." },
+      },
+      required: ["subject"],
+      additionalProperties: false,
+    },
+  },
+];
+const TOOLS_ENABLED = TOOLS_SCOPE !== "";
+const ACTIVE_TOOLS = TOOLS_ENABLED ? [{ type: "web_search" }, ...MEDIA_TOOLS] : [{ type: "web_search" }];
+
+// Dispatch a media tool to func-theo-tools: POST {subject[,offset]} to /api/theo_find_* with the client-
+// credentials bearer; unwrap the {data} envelope (mirrors Theo's dispatchChatTool). Never throws — returns
+// {error} on any non-2xx / malformed response so the tool loop can feed it back to the model.
+async function dispatchMediaTool(name, input, bearer) {
+  const route = MEDIA_TOOL_ROUTES[name];
+  if (!route) return { error: `unknown tool: ${name}` };
+  const subject = typeof input.subject === "string" ? input.subject.slice(0, 300) : "";
+  if (!subject.trim()) return { error: "subject is required" };
+  const payload =
+    name === "find_image" && Number.isInteger(input.offset)
+      ? { subject, offset: Math.max(0, Math.min(40, input.offset)) }
+      : { subject };
+  const bodyStr = JSON.stringify(payload);
+  let res;
+  try {
+    res = await requestUrl(
+      `${TOOLS_BASE}/api/${route}`,
+      { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${bearer}`, "Content-Length": Buffer.byteLength(bodyStr) } },
+      bodyStr
+    );
+  } catch (e) {
+    return { error: `tool call failed: ${String((e && e.message) || e)}` };
+  }
+  const parsed = parseJsonSafe(res.body);
+  if (res.statusCode >= 200 && res.statusCode < 300 && parsed && parsed.data) return parsed.data;
+  return { error: (parsed && parsed.error && parsed.error.message) || `tool call failed (HTTP ${res.statusCode})` };
 }
 
 // ── Attachment injection (B8d/B8i, gpt-5-adapted) ──────────────────────────────────────────────
@@ -532,7 +610,10 @@ app.http("dottie_message_stream", {
         }
       }
     }
-    const effectiveSystem = [DOTTIE_SYSTEM_PROMPT, memoryBlock, systemPrompt]
+    const mediaToolNote = TOOLS_ENABLED
+      ? "MEDIA DISPLAY: When the user asks to see an image or watch a video, call find_image or find_video with a full descriptive subject. The app displays the result automatically — do NOT paste any URL or a markdown image/link; after calling, briefly say what you found."
+      : "";
+    const effectiveSystem = [DOTTIE_SYSTEM_PROMPT, memoryBlock, systemPrompt, mediaToolNote]
       .filter((s) => typeof s === "string" && s.trim() !== "")
       .join("\n\n");
 
@@ -639,128 +720,214 @@ app.http("dottie_message_stream", {
       }
     }
 
-    // gpt-5 Responses API request with the built-in web_search tool (server-side internet grounding).
-    // `instructions` = the Dottie ruleset + memory; `input` = the chat turns (+ any attachment parts).
-    const upstreamPayload = JSON.stringify({
-      model: AZURE_OPENAI_DEPLOYMENT,
-      instructions: effectiveSystem,
-      input: messagesForUpstream,
-      tools: [{ type: "web_search" }],
-      reasoning: { effort: "low" },
-      max_output_tokens: Math.max(maxCompletionTokens, 16000),
-      stream: true,
-    });
-
-    const upstreamRes = await new Promise((resolve) => {
-      const u = new URL(`${AZURE_OPENAI_ENDPOINT}/openai/responses?api-version=${RESPONSES_API_VERSION}`);
-      const lib = u.protocol === "http:" ? http : https;
-      const r = lib.request(
-        {
-          method: "POST",
-          hostname: u.hostname,
-          port: u.port ? Number(u.port) : 443,
-          path: u.pathname + u.search,
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-            "Content-Length": Buffer.byteLength(upstreamPayload),
-            Accept: "text/event-stream",
+    // ---- gpt-5 Responses API turn opener. `instructions` = the Dottie ruleset + memory; `input` = the chat
+    // turns (+ attachment parts) on turn 1, then grows with function_call / function_call_output items on each
+    // media-tool turn. `tools` = the built-in web_search PLUS (when THEO_TOOLS_SCOPE is set) the find_image/
+    // find_video FUNCTION tools. The same client-credentials `token` is reused across turns. ----
+    const openUpstream = (inputItems) =>
+      new Promise((resolve) => {
+        const payload = JSON.stringify({
+          model: AZURE_OPENAI_DEPLOYMENT,
+          instructions: effectiveSystem,
+          input: inputItems,
+          tools: ACTIVE_TOOLS,
+          reasoning: { effort: "low" },
+          max_output_tokens: Math.max(maxCompletionTokens, 16000),
+          stream: true,
+        });
+        const u = new URL(`${AZURE_OPENAI_ENDPOINT}/openai/responses?api-version=${RESPONSES_API_VERSION}`);
+        const lib = u.protocol === "http:" ? http : https;
+        const r = lib.request(
+          {
+            method: "POST",
+            hostname: u.hostname,
+            port: u.port ? Number(u.port) : 443,
+            path: u.pathname + u.search,
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+              "Content-Length": Buffer.byteLength(payload),
+              Accept: "text/event-stream",
+            },
           },
-        },
-        (res) => resolve(res)
-      );
-      r.on("error", (e) => {
-        context.error("dottie_message_stream: upstream connect failed", e);
-        resolve(null);
+          (res) => resolve(res)
+        );
+        r.on("error", (e) => {
+          context.error("dottie_message_stream: upstream connect failed", e);
+          resolve(null);
+        });
+        r.write(payload);
+        r.end();
       });
-      r.write(upstreamPayload);
-      r.end();
-    });
 
-    if (!upstreamRes) {
+    // Open the FIRST turn BEFORE committing to the stream, so a pre-stream non-2xx (429/5xx) surfaces as a
+    // clean JSON error (not a mid-stream break) — unchanged from the single-shot path.
+    let inputItems = messagesForUpstream;
+    const firstRes = await openUpstream(inputItems);
+    if (!firstRes) {
       return jsonErr(502, "BAD_GATEWAY", "Model gateway call failed.");
     }
-    if (upstreamRes.statusCode < 200 || upstreamRes.statusCode >= 300) {
+    if (firstRes.statusCode < 200 || firstRes.statusCode >= 300) {
       const errText = await new Promise((res) => {
         let d = "";
-        upstreamRes.setEncoding("utf8");
-        upstreamRes.on("data", (c) => { d += c; });
-        upstreamRes.on("end", () => res(d));
-        upstreamRes.on("error", () => res(d));
+        firstRes.setEncoding("utf8");
+        firstRes.on("data", (c) => { d += c; });
+        firstRes.on("end", () => res(d));
+        firstRes.on("error", () => res(d));
       });
-      context.error("dottie_message_stream: gateway non-2xx", upstreamRes.statusCode, errText.slice(0, 300));
-      if (upstreamRes.statusCode === 429) {
+      context.error("dottie_message_stream: gateway non-2xx", firstRes.statusCode, errText.slice(0, 300));
+      if (firstRes.statusCode === 429) {
         return jsonErr(429, "RATE_LIMITED", "Model gateway rate limit exceeded.");
       }
       return jsonErr(502, "BAD_GATEWAY", "Model gateway call failed.");
     }
 
     // ---- 2xx → stream. TRANSLATE the Responses-API event stream into the shape the FE already parses:
-    // text deltas → OpenAI chat chunks ({choices:[{delta:{content}}]}); web-search activity → tool/
-    // tool_result events (drives the "searching…" indicator); accumulate the answer text for persistence.
-    // (Citations arrive as inline markdown links in the text, which the FE's markdown renderer shows.) ----
+    // text deltas → OpenAI chat chunks ({choices:[{delta:{content}}]}); web-search AND media-tool activity →
+    // tool / tool_result events (the activity indicator); media results → the vault_image / vault_video SSE
+    // frames the FE already renders. When the model calls find_image/find_video, the tool is dispatched to
+    // func-theo-tools and its result is fed back as a function_call_output so the model can continue the turn
+    // (bounded by MAX_TOOL_TURNS). Answer text accumulates across turns for persistence. ----
     const stream = new PassThrough();
     let text = "";
     let respModel = AZURE_OPENAI_DEPLOYMENT;
     let searchOpen = 0;
-    let buf = "";
-    const handleEvent = (block) => {
-      const dataLine = block.split("\n").find((l) => l.startsWith("data:"));
-      if (!dataLine) return;
-      const json = parseJsonSafe(dataLine.slice(5).trim());
-      if (!json || typeof json.type !== "string") return;
-      switch (json.type) {
-        case "response.output_text.delta":
-          if (typeof json.delta === "string" && json.delta) {
-            text += json.delta;
-            stream.write(`data: ${JSON.stringify({ choices: [{ delta: { content: json.delta } }] })}\n\n`);
-          }
-          break;
-        case "response.web_search_call.in_progress":
-        case "response.web_search_call.searching":
-          if (searchOpen === 0) stream.write(`event: tool\ndata: ${JSON.stringify({ name: "web_search", input: {} })}\n\n`);
-          searchOpen += 1;
-          break;
-        case "response.web_search_call.completed":
-          searchOpen = Math.max(0, searchOpen - 1);
-          stream.write(`event: tool_result\ndata: ${JSON.stringify({ name: "web_search", ok: true })}\n\n`);
-          break;
-        case "response.completed":
-        case "response.created":
-          if (json.response && typeof json.response.model === "string") respModel = json.response.model;
-          break;
-        default:
-          break;
-      }
+    let toolsToken = null;
+    const getToolsToken = async () => {
+      if (!toolsToken) toolsToken = await getAadToken(TOOLS_SCOPE);
+      return toolsToken;
     };
-    upstreamRes.setEncoding("utf8");
-    upstreamRes.on("data", (chunk) => {
-      buf += chunk;
-      let idx;
-      while ((idx = buf.indexOf("\n\n")) !== -1) {
-        const block = buf.slice(0, idx);
-        buf = buf.slice(idx + 2);
-        if (block.trim() !== "") handleEvent(block);
-      }
-    });
-    upstreamRes.on("end", async () => {
-      if (buf.trim() !== "") handleEvent(buf);
-      let conversationId = null;
+
+    // Consume one upstream response: translate its SSE to the FE and collect any media function calls the
+    // model requested. Resolves on `end` with those calls (empty ⇒ the turn is final).
+    const consumeTurn = (res) =>
+      new Promise((resolve) => {
+        let buf = "";
+        const fcalls = [];
+        const handleEvent = (block) => {
+          const dataLine = block.split("\n").find((l) => l.startsWith("data:"));
+          if (!dataLine) return;
+          const json = parseJsonSafe(dataLine.slice(5).trim());
+          if (!json || typeof json.type !== "string") return;
+          switch (json.type) {
+            case "response.output_text.delta":
+              if (typeof json.delta === "string" && json.delta) {
+                text += json.delta;
+                stream.write(`data: ${JSON.stringify({ choices: [{ delta: { content: json.delta } }] })}\n\n`);
+              }
+              break;
+            case "response.web_search_call.in_progress":
+            case "response.web_search_call.searching":
+              if (searchOpen === 0) stream.write(`event: tool\ndata: ${JSON.stringify({ name: "web_search", input: {} })}\n\n`);
+              searchOpen += 1;
+              break;
+            case "response.web_search_call.completed":
+              searchOpen = Math.max(0, searchOpen - 1);
+              stream.write(`event: tool_result\ndata: ${JSON.stringify({ name: "web_search", ok: true })}\n\n`);
+              break;
+            case "response.output_item.added":
+              // early activity indicator when the model opens a media function call
+              if (json.item && json.item.type === "function_call" && MEDIA_TOOL_ROUTES[json.item.name]) {
+                stream.write(`event: tool\ndata: ${JSON.stringify({ name: json.item.name, input: {} })}\n\n`);
+              }
+              break;
+            case "response.created":
+            case "response.completed":
+              if (json.response && typeof json.response.model === "string") respModel = json.response.model;
+              if (json.type === "response.completed" && json.response && Array.isArray(json.response.output)) {
+                for (const item of json.response.output) {
+                  if (item && item.type === "function_call" && MEDIA_TOOL_ROUTES[item.name]) {
+                    fcalls.push({ call_id: item.call_id, name: item.name, arguments: item.arguments || "{}" });
+                  }
+                }
+              }
+              break;
+            default:
+              break;
+          }
+        };
+        res.setEncoding("utf8");
+        res.on("data", (chunk) => {
+          buf += chunk;
+          let idx;
+          while ((idx = buf.indexOf("\n\n")) !== -1) {
+            const block = buf.slice(0, idx);
+            buf = buf.slice(idx + 2);
+            if (block.trim() !== "") handleEvent(block);
+          }
+        });
+        res.on("end", () => {
+          if (buf.trim() !== "") handleEvent(buf);
+          resolve(fcalls);
+        });
+        res.on("error", (e) => {
+          context.error("dottie_message_stream: upstream stream error", e);
+          try { stream.write(`event: vault_error\ndata: ${JSON.stringify({ message: "The model stream was interrupted." })}\n\n`); } catch {}
+          resolve([]);
+        });
+      });
+
+    // Media tool-loop driver: consume the first turn, and while the model requests find_image/find_video,
+    // dispatch each to func-theo-tools, emit the vault_image/vault_video frame, feed the result back as a
+    // function_call_output, and re-open the turn — bounded by MAX_TOOL_TURNS. Persist on completion.
+    (async () => {
       try {
-        conversationId = await persistTurn({ oid, requestedConversationId, userText, acc: { text, model: respModel }, attachmentIds });
-        stream.write(`event: vault_meta\ndata: ${JSON.stringify({ conversation_id: conversationId, model: respModel })}\n\n`);
-      } catch (perr) {
-        context.error("dottie_message_stream: persistence failed (answer already streamed)", perr);
-        stream.write(`event: vault_meta\ndata: ${JSON.stringify({ conversation_id: null, persisted: false })}\n\n`);
+        let res = firstRes;
+        for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
+          const fcalls = await consumeTurn(res);
+          if (fcalls.length === 0) break;
+          let bearer;
+          try {
+            bearer = await getToolsToken();
+          } catch (tokErr) {
+            context.error("dottie_message_stream: media tools token failed", tokErr);
+            for (const fc of fcalls) stream.write(`event: tool_result\ndata: ${JSON.stringify({ name: fc.name, ok: false })}\n\n`);
+            break;
+          }
+          for (const fc of fcalls) {
+            inputItems = inputItems.concat([{ type: "function_call", call_id: fc.call_id, name: fc.name, arguments: fc.arguments }]);
+            let out;
+            try {
+              out = await dispatchMediaTool(fc.name, parseJsonSafe(fc.arguments) || {}, bearer);
+            } catch (e) {
+              out = { error: String((e && e.message) || e) };
+            }
+            stream.write(`event: tool_result\ndata: ${JSON.stringify({ name: fc.name, ok: !(out && out.error) })}\n\n`);
+            if (fc.name === "find_image" && out && typeof out.imageUrl === "string" && out.imageUrl.startsWith("https://")) {
+              stream.write(`event: vault_image\ndata: ${JSON.stringify({ url: out.imageUrl, title: out.title, source: out.source, pageUrl: out.pageUrl, license: out.license, creator: out.creator, images: out.images })}\n\n`);
+            } else if (fc.name === "find_video" && out && typeof out.videoUrl === "string" && out.videoUrl.startsWith("https://")) {
+              stream.write(`event: vault_video\ndata: ${JSON.stringify({ videoUrl: out.videoUrl, embedUrl: out.embedUrl, title: out.title, thumbnail: out.thumbnail, source: out.source, duration: out.duration, date: out.date })}\n\n`);
+            }
+            inputItems = inputItems.concat([{ type: "function_call_output", call_id: fc.call_id, output: JSON.stringify(out) }]);
+          }
+          const next = await openUpstream(inputItems);
+          if (!next) {
+            stream.write(`event: vault_error\ndata: ${JSON.stringify({ message: "The model stream was interrupted." })}\n\n`);
+            break;
+          }
+          if (next.statusCode < 200 || next.statusCode >= 300) {
+            context.error("dottie_message_stream: gateway non-2xx (tool-loop turn)", next.statusCode);
+            stream.write(`event: vault_error\ndata: ${JSON.stringify({ message: "The model stream was interrupted." })}\n\n`);
+            break;
+          }
+          res = next;
+        }
+      } catch (driveErr) {
+        context.error("dottie_message_stream: tool-loop driver error", driveErr);
+        try { stream.write(`event: vault_error\ndata: ${JSON.stringify({ message: "The model stream was interrupted." })}\n\n`); } catch {}
       } finally {
-        stream.end();
+        let conversationId = null;
+        try {
+          conversationId = await persistTurn({ oid, requestedConversationId, userText, acc: { text, model: respModel }, attachmentIds });
+          stream.write(`event: vault_meta\ndata: ${JSON.stringify({ conversation_id: conversationId, model: respModel })}\n\n`);
+        } catch (perr) {
+          context.error("dottie_message_stream: persistence failed (answer already streamed)", perr);
+          stream.write(`event: vault_meta\ndata: ${JSON.stringify({ conversation_id: null, persisted: false })}\n\n`);
+        } finally {
+          stream.end();
+        }
       }
-    });
-    upstreamRes.on("error", (e) => {
-      context.error("dottie_message_stream: upstream stream error", e);
-      try { stream.write(`event: vault_error\ndata: ${JSON.stringify({ message: "The model stream was interrupted." })}\n\n`); } catch {}
-      stream.end();
-    });
+    })();
 
     return {
       status: 200,
