@@ -9,7 +9,7 @@ Role: Claude Code
 Turn Type: Pass 1 re-review — authority-document establishment (design/spec; no code, no migration, no deploy)
 Grounding parent (source baseline): `1c8ef07c814df9965c68bb91a736059c6992c0aa` (vault-dottie, `development`)
 Grounding Mode: Full Baseline Grounding
-Pass: Pass 1 (rev-2)
+Pass: Pass 1
 Sub-phase Track: N/A
 
 | # | Document (name + absolute path) | Read tool invocation this turn | Currency anchor (blob SHA @ HEAD) |
