@@ -10,7 +10,7 @@
 
 - **INV-1 — Dottie NEVER reads Theo's L1** (Personal Theo memory). Inviolable. Personal Theos are outside surveillance on principle (authority §5/§7 Rule 1).
 - **INV-2 — Dottie-L1 is a SEPARATE, consensual 1:1 memory** with the individual (Amendment 9). It never crosses into Theo's L1 and Theo never reads it. Two independent personal memories, by design.
-- **INV-3 — Dottie READS Theo's shared L1.5 / L2 / L3 through the access-policy engine** (`theo_can_read` / `theo_get_project_context_item`), filtered by the one audited policy. She **never duplicates** those layers into her own store.
+- **INV-3 — Dottie READS Theo's shared layers through the access-policy engine, never duplicating them — but only what the engine serves TODAY.** **Live today: L1.5 only** — one Project Context item at a time via `theo_get_project_context_item` (the deployed composed read: `theo_can_read` classifier + Rule-5 Graph reachability + firm-role lowest-participant), caller-from-claim, fail-closed. **L2 / L3 are RESERVED fail-closed** in the deployed classifier until those schemas + layer-specific read handlers land — Dottie's L2/L3 reads are a **future** capability, not live. She never queries Theo's tables directly and never copies any layer into her own store.
 - **INV-4 — Dottie is observational at L4, not gating.** Write-time enforcement is the Tag Guard (already live in the engine). Dottie *observes* (drift, review-chain integrity, access anomalies, systemic patterns); she does not block writes.
 - **INV-5 — Life-plate state never leaves L1.** The Six-Plates life lens (opt-in) is readable only by the individual's own agent; L3/L4 do NOT read plate state (authority §4). Applies to Dottie's L1 exactly as to Theo's.
 
@@ -28,11 +28,11 @@ Dottie mirrors the layer *shape* but holds her own governance-flavoured stores.
 
 ### 2.2 Dottie-L2 — role / level (governance framing)
 - **Purpose:** level-appropriate *governance* expectations — what a partner needs from a check vs an associate (depth, tone, what to escalate). Behaviour-shaping, not content-rewriting (authority Amendment 4).
-- **Open question O-L2 (below):** own store vs. read Theo's L2 via the engine + apply a governance overlay. Leaning: **reuse Theo's L2 substrate via the engine**, apply Dottie's governance behaviour on top (avoid a second role model to keep in sync).
+- **Not engine-readable today:** Theo's L2 is **reserved fail-closed** in the deployed classifier (no L2 schema/read handler yet), so Dottie cannot read it now. **Open question O-L2 (below):** when L2 lands, Dottie's own store vs. reading Theo's L2 via a **future** engine extension + a governance overlay. Leaning: overlay on Theo's L2 substrate (avoid a second role model) — but that is future work gated on L2 existing.
 
 ### 2.3 Dottie-L3 — firm governance knowledge + accumulated findings
 - **Purpose:** her cross-engagement governance substrate — firm review standards, precedent on positions she's weighed, and the **systemic patterns she's observed over time**. This is where her L4 observation *accumulates into* knowledge.
-- Read-only to callers, rights-filtered; distinct from Theo's L3 (general knowledge graph) — Dottie's L3 is *governance* knowledge. She also *reads* Theo's L3 via the engine for factual/precedent context.
+- Read-only to callers, rights-filtered; distinct from Theo's L3 (general knowledge graph) — Dottie's L3 is *governance* knowledge. Reading **Theo's L3** for factual/precedent context is a **future** capability: L3 is **reserved fail-closed** in the deployed classifier (no L3 graph/read handler yet), so it is not available to Dottie today.
 
 ### 2.4 Dottie governance-findings store (her operational L4 memory) — `dottie_*`
 The concrete data behind the console. New `dottie_*` tables (design, not yet built):
@@ -56,14 +56,18 @@ Incorporation into Dottie:
 
 ## 4. Engine-gated reads of Theo's shared layers (INV-3)
 
-Dottie reads Theo's **L1.5 (project context)**, **L2 (role)**, **L3 (knowledge graph)** through the **already-live access-policy engine** — the composed read decision `theo_get_project_context_item` (§7.4: `theo_can_read` DB classifier + Rule-5 SharePoint Graph reachability + firm-role lowest-participant), caller-from-claim, fail-closed. She never queries those tables directly and never copies them into `dottie_*`. Her L4 observation (tag drift, review-chain integrity, access anomalies) runs **over what the engine returns**, respecting the same one policy. **She never touches L1** (INV-1) — the engine already forbids it (L1 owner-only).
+**Live today — L1.5 only.** Dottie reads Theo's **L1.5 Project Context** through the deployed composed read `theo_get_project_context_item` (`vault-theo/spec/THEO_API_SPEC.md` §2.19 / `VAULT_MEMORY_ARCHITECTURE.md` §7.4) — **one Project Context item at a time**, decided by `theo_can_read` + Rule-5 SharePoint Graph reachability + firm-role lowest-participant, caller-from-claim, fail-closed. There is **no bulk "L1.5/L2/L3 context" fetch**.
+
+**Future — L2 / L3.** The deployed `theo_can_read` classifier **reserves L2 and L3 fail-closed** until those schemas + layer-specific read handlers (or engine extensions) exist. Dottie's L2/L3 reads are a **downstream capability, NOT live today**.
+
+She never queries Theo's tables directly and never copies any layer into `dottie_*`. Her L4 observation (tag drift, review-chain integrity, access anomalies) runs **over what the engine returns** — L1.5 today, extending to L2/L3 when they land — respecting the same one policy. **She never touches L1** (INV-1) — the engine forbids it (L1 owner-only).
 
 ---
 
 ## 5. How this maps to the FE (design-system surfaces)
 
 - **Console → Overview** = `dottie_findings` + `dottie_flags` + `dottie_review_chains` (checks-on-Theo, open flags, governance queue).
-- **Second opinion (grounded intensity)** = Dottie-L1 (who she's talking to) + engine reads of Theo's L1.5/L2/L3 for context; renders through the governance component.
+- **Second opinion (grounded intensity)** = Dottie-L1 (who she's talking to) + engine reads of Theo's **L1.5** Project Context where relevant (via `theo_get_project_context_item`; L2/L3 context is future); renders through the governance component.
 - **Claim-check (verdict intensity)** = writes a `dottie_findings` row; the review-target (authority for what she's checking) comes from the shell contract (design-system §7.3 G3).
 - **"Showing her work"** = the shared cross-agent **TODO tool** (below), surfaced in her console the way Theo surfaces his.
 
@@ -80,7 +84,7 @@ The authority's Stage-1 names a **cross-Theo TODO/task tool** (model-callable, h
 1. **Dottie-L1 plates lens** — add `plate` to `dottie_user_memory` (mirrors Theo §7.5; small, self-contained migration). Makes Dottie personal-context-literate.
 2. **`dottie_findings` / `dottie_flags`** — her operational L4 store; unblocks the console Overview with real data.
 3. **`dottie_review_chains`** — her Codex-role governance queue.
-4. **Engine-gated reads** — wire Dottie to `theo_get_project_context_item` (§7.4) for L1.5/L2/L3 context (no new engine work; consume the live one).
+4. **Engine-gated L1.5 reads** — wire Dottie to `theo_get_project_context_item` (§7.4) for **L1.5** Project Context (single-item; no new engine work — consume the live one). L2/L3 reads wait on those layers landing + a future engine extension (reserved fail-closed today).
 5. **Shared TODO tool** — Projects-program deliverable (vault-theo-tools); Dottie subscribes.
 
 Each stage is Codex-governed (Dottie backend regime). Nothing here duplicates the access engine or touches L1.
@@ -99,6 +103,7 @@ Each stage is Codex-governed (Dottie backend regime). Nothing here duplicates th
 
 ## 9. Cross-references
 - Authority: `vault-theo/governance/VAULT_MEMORY_ARCHITECTURE.md` (§5, §7.5, §A Amendments 3/4/8/9).
+- Live access engine (the deployed read Dottie consumes): `vault-theo/spec/THEO_API_SPEC.md` §2.19 — `theo_get_project_context_item` reads a **single L1.5** Project Context item; L2/L3 reserved fail-closed in `theo_can_read`.
 - Dottie schema (current): `spec/DOTTIE_AZURE_POSTGRES_SCHEMA.md` (`dottie_user_memory` = Dottie-L1 today).
 - Dottie FE authority: `spec/DOTTIE_DESIGN_SYSTEM.md` (surfaces that consume this memory).
 - Projects program: SPW Phase 3 (Project-Theo moderation + Decision Log), the cross-agent TODO tool.

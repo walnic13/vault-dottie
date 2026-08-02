@@ -1,6 +1,6 @@
 # Dottie Design System — Visual Authority (v0.1 DRAFT)
 
-**Status:** DRAFT for Walter's confirmation. Once confirmed, this document is **Dottie's visual authority** and the grounding basis for every governed Dottie frontend package. It **supersedes, for Dottie, the "byte-verbatim transplant of Theo's FE (VA-T1)" basis** — Dottie now has her own design language. Theo's chat *mechanics* are still reused (see §9); Theo's *look* is not.
+**Status:** **APPROVED — Codex Pass-2 (2026-08-02), binding.** This document is **Dottie's visual authority** and the grounding basis for every governed Dottie frontend package. It **supersedes, for Dottie, the "byte-verbatim transplant of Theo's FE (VA-T1)" basis** — Dottie now has her own design language. Theo's chat *mechanics* are still reused (see §9); Theo's *look* is not.
 
 **Authored:** 2026-08-02 (Walter-directed). **Reviewer:** Codex (Dottie FE governance). **Repo:** `vault-dottie`.
 
