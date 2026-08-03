@@ -233,8 +233,82 @@ const MEDIA_TOOLS = [
     },
   },
 ];
+
+// ── TODO tools (create/list/update/complete) — model-callable gpt-5 Responses-API FUNCTION tools that reuse the
+// deployed func-theo-tools theo_*_todo handlers (the cross-agent theo_todos store). Unlike the media tools
+// (client-credentials), these run AS THE SIGNED-IN USER: the handler forwards the caller's own incoming bearer
+// (func-dottie-stream + func-theo-tools share audience api://4e1a1e31-…), so created_by is the human. `agent`
+// is fixed to "dottie" (which assistant authored). Results are relayed as text (no SSE frame). Always active
+// (they need only the user bearer + TOOLS_BASE), independent of THEO_TOOLS_SCOPE.
+const TODO_TOOL_ROUTES = { create_todo: "theo_create_todo", list_todos: "theo_list_todos", update_todo: "theo_update_todo", complete_todo: "theo_complete_todo" };
+const TODO_TOOLS = [
+  {
+    type: "function",
+    name: "create_todo",
+    description:
+      "Create a TODO / task item to show the user your work and track what needs doing (a check you raised, a document you need, a flag to clear). After creating it, briefly confirm what you captured (your text reply is how the user sees it — there is no separate task-list view yet). Set `agent` to \"dottie\". Include `project_id` ONLY when the task belongs to a specific project in context; omit it for a personal / standalone TODO. The owner is the signed-in user (handled automatically); do not pass any identity.",
+    parameters: {
+      type: "object",
+      properties: {
+        agent: { type: "string", enum: ["dottie"], description: "The authoring assistant — always \"dottie\" for tools you call." },
+        title: { type: "string", description: "Short, action-oriented task title." },
+        detail: { type: "string", description: "Optional longer description / notes." },
+        project_id: { type: "string", description: "Optional project UUID when the task belongs to a specific project; omit for a personal TODO." },
+      },
+      required: ["agent", "title"],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function",
+    name: "list_todos",
+    description:
+      "List TODOs. With no arguments, returns the caller's own TODOs (personal + across projects). Pass `project_id` to list a specific project's TODOs, or `status` to filter (open / in_progress / done / cancelled). Use this to show the user their outstanding tasks or to find a TODO's id before updating or completing it.",
+    parameters: {
+      type: "object",
+      properties: {
+        project_id: { type: "string", description: "Optional project UUID to list that project's TODOs." },
+        status: { type: "string", enum: ["open", "in_progress", "done", "cancelled"], description: "Optional status filter." },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function",
+    name: "update_todo",
+    description:
+      "Update one of your own TODOs by id — change its `title`, `detail`, or `status` (open / in_progress / done / cancelled). Provide at least one field to change. Get the id from list_todos first if you do not have it. To simply mark a task finished, prefer complete_todo.",
+    parameters: {
+      type: "object",
+      properties: {
+        id: { type: "string", description: "The TODO's UUID." },
+        title: { type: "string", description: "New title." },
+        detail: { type: "string", description: "New detail / notes." },
+        status: { type: "string", enum: ["open", "in_progress", "done", "cancelled"], description: "New status." },
+      },
+      required: ["id"],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function",
+    name: "complete_todo",
+    description:
+      "Mark one of your own TODOs done by id (sets status \"done\"). Get the id from list_todos if you do not have it.",
+    parameters: {
+      type: "object",
+      properties: {
+        id: { type: "string", description: "The TODO's UUID to complete." },
+      },
+      required: ["id"],
+      additionalProperties: false,
+    },
+  },
+];
 const TOOLS_ENABLED = TOOLS_SCOPE !== "";
-const ACTIVE_TOOLS = TOOLS_ENABLED ? [{ type: "web_search" }, ...MEDIA_TOOLS] : [{ type: "web_search" }];
+// web_search always; TODO tools always (user-bearer, no scope needed); media tools only when THEO_TOOLS_SCOPE set.
+const ACTIVE_TOOLS = [{ type: "web_search" }, ...TODO_TOOLS, ...(TOOLS_ENABLED ? MEDIA_TOOLS : [])];
 
 // Dispatch a media tool to func-theo-tools: POST {subject[,offset]} to /api/theo_find_* with the client-
 // credentials bearer; unwrap the {data} envelope (mirrors Theo's dispatchChatTool). Never throws — returns
@@ -254,6 +328,29 @@ async function dispatchMediaTool(name, input, bearer) {
     res = await requestUrl(
       `${TOOLS_BASE}/api/${route}`,
       { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${bearer}`, "Content-Length": Buffer.byteLength(bodyStr) } },
+      bodyStr
+    );
+  } catch (e) {
+    return { error: `tool call failed: ${String((e && e.message) || e)}` };
+  }
+  const parsed = parseJsonSafe(res.body);
+  if (res.statusCode >= 200 && res.statusCode < 300 && parsed && parsed.data) return parsed.data;
+  return { error: (parsed && parsed.error && parsed.error.message) || `tool call failed (HTTP ${res.statusCode})` };
+}
+
+// Dispatch a TODO tool to func-theo-tools with the USER's forwarded bearer (as-the-user — created_by is the
+// human; the tool runs under the signed-in user, NOT Dottie's app identity). Posts the model's input verbatim
+// (the deployed handler validates + rejects unknown keys). Never throws — returns {error} for the tool loop.
+async function dispatchTodoTool(name, input, userBearer) {
+  const route = TODO_TOOL_ROUTES[name];
+  if (!route) return { error: `unknown tool: ${name}` };
+  if (!userBearer) return { error: "no user token available to record the TODO as you" };
+  const bodyStr = JSON.stringify(input && typeof input === "object" ? input : {});
+  let res;
+  try {
+    res = await requestUrl(
+      `${TOOLS_BASE}/api/${route}`,
+      { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${userBearer}`, "Content-Length": Buffer.byteLength(bodyStr) } },
       bodyStr
     );
   } catch (e) {
@@ -519,6 +616,9 @@ app.http("dottie_message_stream", {
       "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier",
     ]);
     if (!oid) return jsonErr(401, "UNAUTHORIZED", "Missing or invalid EasyAuth identity.");
+    // The signed-in user's own bearer (EasyAuth passes the incoming Authorization through). Forwarded to
+    // func-theo-tools for the TODO tools so they run AS THE USER (created_by = the human; shared audience).
+    const userBearer = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
     if (!AZURE_OPENAI_ENDPOINT) {
       context.error("dottie_message_stream: missing Azure OpenAI configuration");
       return jsonErr(500, "INTERNAL_SERVER_ERROR", "Model gateway is not configured.");
@@ -613,7 +713,9 @@ app.http("dottie_message_stream", {
     const mediaToolNote = TOOLS_ENABLED
       ? "MEDIA DISPLAY: When the user asks to see an image or watch a video, call find_image or find_video with a full descriptive subject. The app displays the result automatically — do NOT paste any URL or a markdown image/link; after calling, briefly say what you found."
       : "";
-    const effectiveSystem = [DOTTIE_SYSTEM_PROMPT, memoryBlock, systemPrompt, mediaToolNote]
+    const todoToolNote =
+      "TODOS: Use create_todo / list_todos / update_todo / complete_todo to track your work for the user (checks you raise, documents you need, flags to clear). Set agent to \"dottie\" when creating. The result is relayed to the user as text — briefly confirm what you did.";
+    const effectiveSystem = [DOTTIE_SYSTEM_PROMPT, memoryBlock, systemPrompt, mediaToolNote, todoToolNote]
       .filter((s) => typeof s === "string" && s.trim() !== "")
       .join("\n\n");
 
@@ -827,7 +929,7 @@ app.http("dottie_message_stream", {
               break;
             case "response.output_item.added":
               // early activity indicator when the model opens a media function call
-              if (json.item && json.item.type === "function_call" && MEDIA_TOOL_ROUTES[json.item.name]) {
+              if (json.item && json.item.type === "function_call" && (MEDIA_TOOL_ROUTES[json.item.name] || TODO_TOOL_ROUTES[json.item.name])) {
                 stream.write(`event: tool\ndata: ${JSON.stringify({ name: json.item.name, input: {} })}\n\n`);
               }
               break;
@@ -836,7 +938,7 @@ app.http("dottie_message_stream", {
               if (json.response && typeof json.response.model === "string") respModel = json.response.model;
               if (json.type === "response.completed" && json.response && Array.isArray(json.response.output)) {
                 for (const item of json.response.output) {
-                  if (item && item.type === "function_call" && MEDIA_TOOL_ROUTES[item.name]) {
+                  if (item && item.type === "function_call" && (MEDIA_TOOL_ROUTES[item.name] || TODO_TOOL_ROUTES[item.name])) {
                     fcalls.push({ call_id: item.call_id, name: item.name, arguments: item.arguments || "{}" });
                   }
                 }
@@ -876,19 +978,30 @@ app.http("dottie_message_stream", {
         for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
           const fcalls = await consumeTurn(res);
           if (fcalls.length === 0) break;
-          let bearer;
-          try {
-            bearer = await getToolsToken();
-          } catch (tokErr) {
-            context.error("dottie_message_stream: media tools token failed", tokErr);
-            for (const fc of fcalls) stream.write(`event: tool_result\ndata: ${JSON.stringify({ name: fc.name, ok: false })}\n\n`);
-            break;
+          // Media tools use the client-credentials token (fetched lazily — only if a media call is present);
+          // TODO tools use the forwarded USER bearer (as-the-user). A media-token failure disables only the
+          // media calls this turn; TODO calls still proceed.
+          let mediaBearer = null;
+          if (fcalls.some((fc) => MEDIA_TOOL_ROUTES[fc.name])) {
+            try {
+              mediaBearer = await getToolsToken();
+            } catch (tokErr) {
+              context.error("dottie_message_stream: media tools token failed", tokErr);
+              mediaBearer = null;
+            }
           }
           for (const fc of fcalls) {
             inputItems = inputItems.concat([{ type: "function_call", call_id: fc.call_id, name: fc.name, arguments: fc.arguments }]);
+            const args = parseJsonSafe(fc.arguments) || {};
             let out;
             try {
-              out = await dispatchMediaTool(fc.name, parseJsonSafe(fc.arguments) || {}, bearer);
+              if (TODO_TOOL_ROUTES[fc.name]) {
+                out = await dispatchTodoTool(fc.name, args, userBearer);
+              } else if (!mediaBearer) {
+                out = { error: "media tool unavailable (no gateway token)" };
+              } else {
+                out = await dispatchMediaTool(fc.name, args, mediaBearer);
+              }
             } catch (e) {
               out = { error: String((e && e.message) || e) };
             }
