@@ -2,16 +2,18 @@
 // governance-console sections + the capability filter below) + the recolour handled elsewhere; every other
 // list is verbatim.
 import type { NavItem, Style, Project } from "./types";
-import { IcChat, IcOverview, IcProjects, IcArtifacts, IcCustomize } from "./components/icons";
+import { IcChat, IcOverview, IcChecks, IcProjects, IcArtifacts, IcCustomize } from "./components/icons";
 import { DOTTIE_CAPABILITIES } from "./swapBlock";
 
 // Dottie's nav surface (governance-console sections, pkg 3b): Overview (the 9/10 oversight dashboard) +
-// "Ask Dottie" (the adaptive chat, View key `chats`) + Customize are always present; Projects and Artifacts
-// are capability-gated. Live today: Overview (findings/flags handlers) + Artifacts (artifacts persistence).
+// "Checks on Theo" (the full check log, pkg 3b.2) + "Ask Dottie" (the adaptive chat, View key `chats`) +
+// Customize are present; Projects and Artifacts are capability-gated. Live today: Overview + Checks (both on
+// the findings/flags handlers, gated on DOTTIE_CAPABILITIES.overview) + Artifacts (artifacts persistence).
 // Hidden: Projects (no Projects/SPW backend). Each hidden entry's view branch in TheoMain is unreachable; the
 // un-gate is a one-line flip in DOTTIE_CAPABILITIES when the backend ships.
 const ALL_NAV: NavItem[] = [
   { key: "overview", label: "Overview", Icon: IcOverview },
+  { key: "checks", label: "Checks on Theo", Icon: IcChecks },
   { key: "chats", label: "Ask Dottie", Icon: IcChat },
   { key: "projects", label: "Projects", Icon: IcProjects },
   { key: "artifacts", label: "Artifacts", Icon: IcArtifacts },
@@ -20,6 +22,7 @@ const ALL_NAV: NavItem[] = [
 export const NAV: NavItem[] = ALL_NAV.filter(
   (n) =>
     (n.key !== "overview" || DOTTIE_CAPABILITIES.overview) &&
+    (n.key !== "checks" || DOTTIE_CAPABILITIES.overview) &&
     (n.key !== "projects" || DOTTIE_CAPABILITIES.projects) &&
     (n.key !== "artifacts" || DOTTIE_CAPABILITIES.artifactsPersistence),
 );

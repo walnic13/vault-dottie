@@ -22,6 +22,7 @@ import { ProjectsView } from "./ProjectsView";
 import { ProjectDetail } from "./ProjectDetail";
 import { ArtifactsView } from "./ArtifactsView";
 import { OverviewView } from "./OverviewView";
+import { ChecksView } from "./ChecksView";
 import { Customize } from "./Customize";
 import { ArtifactPanel } from "./ArtifactPanel";
 import type { useTheoState } from "../useTheoState";
@@ -96,7 +97,7 @@ export function TheoMain({ t, mode, suppressNarrowHeader }: TheoMainProps) {
           {mode !== "panel" && <div style={{ fontSize: 12.5, color: C.ink3 }}>{ASSISTANT_NAME} in {PRODUCT_NAME}</div>}
         </>) : (<div style={{ fontSize: 16, fontWeight: 600, display: "flex", alignItems: "center", gap: 9 }}>
           {t.view === "project" && <button onClick={() => t.go("projects")} style={{ background: "none", border: "none", cursor: "pointer", color: C.ink2, display: "flex", padding: 0 }}><IcBack s={20} /></button>}
-          {t.view === "overview" && "Overview"}{t.view === "projects" && "Projects"}{t.view === "artifacts" && "Artifacts"}{t.view === "customize" && "Customize"}{t.view === "project" && t.detail?.name}
+          {t.view === "overview" && "Overview"}{t.view === "checks" && "Checks on Theo"}{t.view === "projects" && "Projects"}{t.view === "artifacts" && "Artifacts"}{t.view === "customize" && "Customize"}{t.view === "project" && t.detail?.name}
         </div>)}
       </header>
 
@@ -131,7 +132,12 @@ export function TheoMain({ t, mode, suppressNarrowHeader }: TheoMainProps) {
           )}
           {t.view === "overview" && (
             <div style={{ flex: 1, overflowY: "auto", padding: "22px 20px" }}>
-              <OverviewView findings={t.findings} flags={t.flags} loading={t.overviewLoading} />
+              <OverviewView findings={t.findings} flags={t.flags} loading={t.overviewLoading} onOpenConversation={t.selectRecent} />
+            </div>
+          )}
+          {t.view === "checks" && (
+            <div style={{ flex: 1, overflowY: "auto", padding: "22px 20px" }}>
+              <ChecksView findings={t.findings} loading={t.overviewLoading} onOpenConversation={t.selectRecent} />
             </div>
           )}
           {t.view === "customize" && (

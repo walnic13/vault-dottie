@@ -22,7 +22,7 @@ const INSTRUCTIONS_SAVE_DEBOUNCE_MS = 800;
 // re-navigates to one by re-invoking the matching nav fn (cheap — conversations paint from cache,
 // projects are in state). In-memory only (no browser storage); the host owns window.history (VEP-2).
 type NavLoc =
-  | { k: "view"; view: View }   // a top-level nav view: overview / projects / artifacts / customize
+  | { k: "view"; view: View }   // a top-level nav view: overview / checks / projects / artifacts / customize
   | { k: "chat"; id: string }   // an open conversation
   | { k: "project"; id: string } // a project home
   | { k: "newchat" };           // a fresh empty chat
@@ -433,7 +433,7 @@ export function useTheoState() {
   // destination, or goBack's re-navigation, seeds no dead Back step.
   function currentLoc(): NavLoc {
     if (view === "project" && detailId) return { k: "project", id: detailId };
-    if (view === "projects" || view === "artifacts" || view === "customize" || view === "overview") return { k: "view", view };
+    if (view === "projects" || view === "artifacts" || view === "customize" || view === "overview" || view === "checks") return { k: "view", view };
     return conversationId ? { k: "chat", id: conversationId } : { k: "newchat" };  // view === "chats"
   }
   function pushNavIfDestinationChanges(target: NavLoc) {
@@ -442,7 +442,7 @@ export function useTheoState() {
     if (navLocKey(from) === navLocKey(target)) return;
     setNavStack((s) => [...s, from]);
   }
-  function applyView(v: View) { setView(v); setDetailId(null); if (v === "artifacts") void loadGalleryArtifacts(); if (v === "overview") void loadOverview(); }  // B4h/3b: refresh gallery / overview on open
+  function applyView(v: View) { setView(v); setDetailId(null); if (v === "artifacts") void loadGalleryArtifacts(); if (v === "overview" || v === "checks") void loadOverview(); }  // B4h/3b: refresh gallery / console data on open
   function go(v: View) {
     const target: NavLoc = v === "chats" ? (conversationId ? { k: "chat", id: conversationId } : { k: "newchat" }) : { k: "view", view: v };
     pushNavIfDestinationChanges(target);
