@@ -564,6 +564,50 @@ function parseSseForPersistence(raw) {
   return { text, model, finishReason, usage };
 }
 
+// Parse the assistant text for a governance verdict block ([[CHECK]]{json}[[/CHECK]] carrying a verdict) and
+// return the normalised finding to persist, or null. Mirrors the FE parse contract (src/theo/lib/check.ts): only
+// a valid JSON object whose `verdict` is concur|caution|challenge produces a finding — dottie_findings.verdict is
+// NOT NULL, so a grounded "My read" turn (verdict null) and any light/malformed turn create no finding. The
+// authorities column collects the support[].cites (the [[CHECK]] shape has no top-level authorities field).
+const CHECK_BLOCK_RE = /\[\[CHECK\]\]\s*([\s\S]*?)\s*\[\[\/CHECK\]\]/;
+const FINDING_VERDICTS = ["concur", "caution", "challenge"];
+function findingStr(v) { return typeof v === "string" && v.trim() !== "" ? v.trim() : null; }
+function findingStrArray(v) { return Array.isArray(v) ? v.filter((x) => typeof x === "string" && x.trim() !== "").map((x) => x.trim()) : []; }
+function collectCites(support) {
+  if (!Array.isArray(support)) return [];
+  const out = [];
+  for (const s of support) {
+    if (s && typeof s === "object" && Array.isArray(s.cites)) {
+      for (const c of s.cites) if (typeof c === "string" && c.trim() !== "") out.push(c.trim());
+    }
+  }
+  return out;
+}
+function extractVerdictFinding(text) {
+  if (typeof text !== "string") return null;
+  const m = text.match(CHECK_BLOCK_RE);
+  if (!m) return null;
+  let o;
+  try { o = JSON.parse(m[1]); } catch { return null; }
+  if (!o || typeof o !== "object") return null;
+  if (typeof o.verdict !== "string" || !FINDING_VERDICTS.includes(o.verdict)) return null;
+  const claim = o.claim && typeof o.claim === "object" ? o.claim : {};
+  const conf = o.confidence && typeof o.confidence === "object" ? o.confidence : {};
+  const level = typeof conf.level === "number" && Number.isFinite(conf.level) ? Math.max(0, Math.min(1, conf.level)) : null;
+  return {
+    verdict: o.verdict,
+    confidence_level: level,
+    confidence_label: findingStr(conf.label),
+    claim_source: findingStr(claim.source),
+    claim_text: findingStr(claim.text),
+    lead: findingStr(o.lead),
+    conclusion: findingStr(o.conclusion),
+    authorities: collectCites(o.support),
+    flags: findingStrArray(o.flags),
+    docs_expected: findingStrArray(o.docs),
+  };
+}
+
 // Persist the completed turn (explicit created_by ownership; shared vaultgpt instance). Mirrors the buffered
 // dottie_message persistence EXACTLY (lazy-create → seq count → user+assistant INSERT → updated_at). Returns
 // the conversation id.
@@ -650,6 +694,48 @@ async function persistTurn(opts) {
     );
 
     await client.query("COMMIT");
+
+    // Governance-finding persistence (DOTTIE_MEMORY_MODEL §5: a verdict-intensity turn writes a dottie_findings
+    // row + a dottie_flags row per flag). POST-COMMIT + best-effort + NON-FATAL: the turn is already durably
+    // committed, so a findings failure — or a light/grounded turn with no verdict block — never affects the
+    // conversation (post-COMMIT the client is autocommit; a failed INSERT poisons nothing). Explicit
+    // created_by = oid (shared role bypasses RLS). Interim target derivation until the Origin shell hands an
+    // explicit review target (design-system §7.3 G3): target_ref from the claim source (else the conversation);
+    // target_kind 'theo_answer' when the claim names Theo, else 'conversation'.
+    try {
+      const finding = extractVerdictFinding(acc.text);
+      if (finding) {
+        const targetRef = finding.claim_source ? finding.claim_source.slice(0, 500) : `conversation:${conversationId}`;
+        const targetKind = finding.claim_source && /theo/i.test(finding.claim_source) ? "theo_answer" : "conversation";
+        const fr = await client.query(
+          `
+          INSERT INTO public.dottie_findings
+            (created_by, target_ref, target_kind, verdict, confidence_level, confidence_label,
+             claim_source, claim_text, lead, conclusion, authorities, flags, docs_expected, conversation_id)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+          RETURNING id
+          `,
+          [oid, targetRef, targetKind, finding.verdict, finding.confidence_level, finding.confidence_label,
+           finding.claim_source, finding.claim_text, finding.lead, finding.conclusion,
+           finding.authorities, finding.flags, finding.docs_expected, conversationId]
+        );
+        const findingId = fr.rows[0] && fr.rows[0].id;
+        if (findingId) {
+          for (const flagText of finding.flags) {
+            await client.query(
+              `
+              INSERT INTO public.dottie_flags (created_by, finding_id, flag_type, severity, target_ref, summary, status)
+              VALUES ($1, $2, 'other', 'medium', $3, $4, 'open')
+              `,
+              [oid, findingId, targetRef, flagText]
+            );
+          }
+        }
+      }
+    } catch (findErr) {
+      try { console.error("dottie finding persistence (non-fatal) failed:", findErr && findErr.message); } catch {}
+    }
+
     return conversationId;
   } catch (err) {
     if (client) {
