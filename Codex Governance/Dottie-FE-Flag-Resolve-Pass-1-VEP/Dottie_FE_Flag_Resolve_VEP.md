@@ -44,7 +44,7 @@ No ChatGPT advisory cited. No backend / route / schema / migration (reads the DE
 A **Resolve** action on the Open-flags surface (§6.1): each open flag gets a `C.concur` "Resolve" pill; a resolved flag shows a ✓, strikethrough summary, dimmed row, and a "Re-open" pill. Concur-green carries the "resolved/supported" meaning (§2.4), never the gold accent.
 
 ## §F-P2 — Architecture / boundary reconciliation
-Additive, FE-only. The data path mirrors the deployed `renameConversation` POST idiom: `gateway.live.resolveFlag(flagId, status)` (POST `dottie_flag_resolve`, unconfigured harness → `null`) → `theoClient.resolveFlag` → `useTheoState.resolveFlag` (optimistic: `setFlags` flips the row's `status`/`resolved_at` immediately, then `theoClient.resolveFlag`; on error `void loadOverview()` resyncs to server truth). The shared `FlagRow` gains an optional `onResolve?` prop; `FlagsView` (via `onResolve`) and `OverviewView` (via `onResolveFlag`) thread `t.resolveFlag` through `TheoMain`. When `onResolve` is absent the row is byte-identical to 3b.3 (no button). No new component/view; no prop-interface change beyond the additive optional props; the return object gains `resolveFlag`.
+Additive, FE-only. The data path mirrors the deployed `renameConversation` POST idiom: `gateway.live.resolveFlag(flagId, status)` (POST `dottie_flag_resolve`, unconfigured harness → `null`) → `theoClient.resolveFlag` → `useTheoState.resolveFlag` (optimistic: `setFlags` flips the row's `status`/`resolved_at` immediately, then `theoClient.resolveFlag`; on error `void loadOverview()` resyncs to server truth). The shared `FlagRow` gains an optional `onResolve?` prop; `FlagsView` (via `onResolve`) and `OverviewView` (via `onResolveFlag`) thread `t.resolveFlag` through `TheoMain`. When `onResolve` is absent, **only the Resolve/Re-open button is suppressed**; the **resolved-row styling** (✓ icon, `C.concur`, strikethrough summary, dimmed row) is **unconditional** — it keys on `status === "resolved"`, so any resolved flag renders resolved regardless of `onResolve`. This is a new visual for resolved rows, which only exist once the resolve action is used (in 3b.3 no flag was resolvable, so every row was open-styled); an open row is byte-identical to 3b.3. No new component/view; no prop-interface change beyond the additive optional props; the return object gains `resolveFlag`.
 
 ## §F-P3 — Backend grounding
 Calls the DEPLOYED `dottie_flag_resolve` (GCR row 5; Codex-APPROVED `c7dbef7`, Kudu-VFS-deployed + GET-back-verified `c1f6fb3f` + liveness 401 this turn): POST `{ flag_id, status }` → `data.flag`. Owner-scoped by EasyAuth. No new route/contract.
@@ -65,14 +65,14 @@ See §CCT. Net-new: `resolveFlag` on the gateway/client/state; `FlagRow`'s optio
 This pack (GCR + Rule Anchor Table + F-P walk + UI-RECON + CCT + GAP + DELTA + CODEX). Mechanical lint PASS.
 
 ## §UI-RECON — AUTHORIZED build (realises the visual authority; not a redesign)
-A token-styled action on the existing flag row — realises the §6.1 Open-flags resolve affordance; not a redesign. Concur-green = resolved (§2.4, not the gold accent). Purely additive: with no `onResolve` the row is identical to 3b.3. No VISUAL-AUTHORITY-DEVIATION rows.
+A token-styled action on the existing flag row — realises the §6.1 Open-flags resolve affordance; not a redesign. Concur-green = resolved (§2.4, not the gold accent). Additive: absent `onResolve` only the button is suppressed; the resolved-row styling (✓/strikethrough/dim) is an unconditional visual for `status === "resolved"` rows (§F-P2/§CCT). An open row is unchanged from 3b.3. No VISUAL-AUTHORITY-DEVIATION rows.
 
 ## §CCT — Component Contract Table
 | Component (file) | Prop / input interface (TS) | Visual authority (VA-id) | Data / contract dependency |
 | --- | --- | --- | --- |
 | `gateway.live` / `theoClient` (`services/*`) | added `resolveFlag(flagId: string, status: "open"\|"resolved"): Promise<Flag \| null>`; **no existing signature changed** | — | POST the deployed `dottie_flag_resolve` (`data.flag`) |
 | `useTheoState` (`useTheoState.ts`) | **prop-less hook; return object gains `resolveFlag`** (additive); optimistic `setFlags` + resync-on-error | DOTTIE_DESIGN_SYSTEM §6.1 | via `theoClient.resolveFlag` |
-| `FlagRow` (`components/FindingCard.tsx`) | `FlagRow({ fl: Flag; onResolve?: (flagId: string, status: "open"\|"resolved") => void })` — **additive optional prop**; renders the Resolve/Re-open button + resolved styling only when `onResolve` given | DOTTIE_DESIGN_SYSTEM §2.4 (concur token) | consumes `Flag` |
+| `FlagRow` (`components/FindingCard.tsx`) | `FlagRow({ fl: Flag; onResolve?: (flagId: string, status: "open"\|"resolved") => void })` — **additive optional prop**; the Resolve/Re-open **button** renders only when `onResolve` given; the **resolved-row styling** (✓/strikethrough/dim) is **UNCONDITIONAL** for `status === "resolved"` (independent of `onResolve`) | DOTTIE_DESIGN_SYSTEM §2.4 (concur token) | consumes `Flag` |
 | `FlagsView` / `OverviewView` (`components/*`) | `FlagsView` += optional `onResolve`; `OverviewView` += optional `onResolveFlag`; both thread to `FlagRow` — no other prop change | DOTTIE_DESIGN_SYSTEM §6.1 | unchanged |
 | `TheoMain` (`components/TheoMain.tsx`) | **`TheoMainProps` unchanged**; passes `t.resolveFlag` to both surfaces | DOTTIE_DESIGN_SYSTEM §6.1 | unchanged (`t` prop) |
 
@@ -83,7 +83,7 @@ A token-styled action on the existing flag row — realises the §6.1 Open-flags
 - **G-3 — Deploy + eyeball.** Lands on `development` → dev SWA against the deployed handler.
 
 ## §DELTA — changed files (before → after evidence)
-All 7 files git-diffable base→proposed (GCR rows 6–12). CHANGED (all additive): `gateway.live.ts`/`theoClient.ts` (+`resolveFlag`), `useTheoState.ts` (+optimistic handler +expose), `FindingCard.tsx` (`FlagRow` += optional `onResolve` + resolved styling), `FlagsView.tsx`/`OverviewView.tsx` (+optional resolve prop threaded), `TheoMain.tsx` (+wire `t.resolveFlag`). No existing signature/DOM changed when the new prop is absent; no backend.
+All 7 files git-diffable base→proposed (GCR rows 6–12). CHANGED (all additive): `gateway.live.ts`/`theoClient.ts` (+`resolveFlag`), `useTheoState.ts` (+optimistic handler +expose), `FindingCard.tsx` (`FlagRow` += optional `onResolve` + resolved styling), `FlagsView.tsx`/`OverviewView.tsx` (+optional resolve prop threaded), `TheoMain.tsx` (+wire `t.resolveFlag`). No existing signature/prop-interface changed; the button is gated on `onResolve`, and the only unconditional DOM delta is the resolved-row styling for `status === "resolved"` rows (open rows unchanged from 3b.3); no backend.
 
 ## §CODEX — activation (Walter forwards)
 
@@ -95,7 +95,8 @@ end: a Resolve/Re-open button on each flag row calling the DEPLOYED dottie_flag_
 Kudu-VFS-deployed + GET-back-verified c1f6fb3f this turn). AUTHORIZED build; not a redesign. Review: (1) ADDITIVE + FE-only
 — gateway.live.resolveFlag (mirrors the deployed renameConversation POST idiom) -> theoClient -> useTheoState.resolveFlag
 (optimistic setFlags, resync via loadOverview on error) + FlagRow gains an OPTIONAL onResolve prop (with no onResolve the
-row is byte-identical to 3b.3) threaded from FlagsView/OverviewView via TheoMain (t.resolveFlag); no new component/view/
+button is suppressed but the resolved-row styling (✓/strikethrough/dim) is UNCONDITIONAL for status="resolved" rows; an
+open row is byte-identical to 3b.3) threaded from FlagsView/OverviewView via TheoMain (t.resolveFlag); no new component/view/
 route/schema, no prop-interface change beyond additive optional props, return object += resolveFlag. (2) §2.4 — the Resolve
 button + resolved ✓ use C.concur (resolved=supported/closed), never the gold accent. (3) reads the deployed handler (POST
 {flag_id,status} -> data.flag); owner-scoped by EasyAuth. (4) optimistic + resync-on-error (§GAP G-1). tsc -p
