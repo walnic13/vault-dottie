@@ -375,6 +375,12 @@ const ATTACH_NATIVE_BUDGET_BYTES = parseInt(process.env.DOTTIE_ATTACH_NATIVE_BUD
 // 100000 (not Theo's 200000): gpt-5 is a reasoning model that returns an EMPTY reply when the input is
 // very large (it spends its output budget reasoning), so the char budget is tuned below that failure zone.
 const ATTACH_EXTRACT_BUDGET_CHARS = parseInt(process.env.DOTTIE_ATTACH_EXTRACT_BUDGET_CHARS, 10) > 0 ? parseInt(process.env.DOTTIE_ATTACH_EXTRACT_BUDGET_CHARS, 10) : 100000;
+// Model per-image size guard (mirrors the Theo image-downscale fix): images whose long edge exceeds
+// IMAGE_MAX_EDGE, or whose bytes exceed IMAGE_RESIZE_THRESHOLD_BYTES (~3.75MB), are downscaled + re-encoded
+// before injection so a large phone photo no longer risks an upstream failure ("couldn't reach the
+// assistant"). See prepareImageForModel. Defaults: 1568px long edge, 3,932,160-byte threshold.
+const IMAGE_MAX_EDGE = parseInt(process.env.DOTTIE_IMAGE_MAX_EDGE, 10) > 0 ? parseInt(process.env.DOTTIE_IMAGE_MAX_EDGE, 10) : 1568;
+const IMAGE_RESIZE_THRESHOLD_BYTES = parseInt(process.env.DOTTIE_IMAGE_RESIZE_THRESHOLD_BYTES, 10) > 0 ? parseInt(process.env.DOTTIE_IMAGE_RESIZE_THRESHOLD_BYTES, 10) : 3932160;
 const ATTACH_STORAGE_ACCOUNT = process.env.DOTTIE_BLOB_ACCOUNT || "vaultgptdottiestore";
 const ATTACH_STORAGE_CONTAINER = process.env.DOTTIE_BLOB_CONTAINER || "dottie-content";
 const NATIVE_MEDIA_TYPES = {
@@ -425,6 +431,38 @@ async function downloadBlobText(token, blobKey) {
   return r.body;
 }
 
+// Prepare an image buffer for the model: downscale the long edge to <= IMAGE_MAX_EDGE + re-encode ONLY when
+// the image is oversized (dimensions or bytes), so a large photo fits the model's per-image limit. Small
+// images pass through unchanged (media_type preserved). jimp is LAZY-REQUIRED (pure JS — no native binary;
+// pinned to v0.x at deploy; loaded only when an image is actually resized). GIFs are not re-encoded (would
+// break animation) — passed through when within budget, else skipped. Returns { data(base64), mediaType }
+// or null on failure (caller degrades to a note; never throws). Mirrors the Theo prepareImageForModel.
+async function prepareImageForModel(buf, contentType, context) {
+  try {
+    const oversizeBytes = buf.length > IMAGE_RESIZE_THRESHOLD_BYTES;
+    if (contentType === "image/gif") {
+      return oversizeBytes ? null : { data: buf.toString("base64"), mediaType: contentType };
+    }
+    const Jimp = require("jimp");
+    const img = await Jimp.read(buf);
+    const longEdge = Math.max(img.bitmap.width, img.bitmap.height);
+    if (longEdge <= IMAGE_MAX_EDGE && !oversizeBytes) {
+      return { data: buf.toString("base64"), mediaType: contentType };
+    }
+    if (longEdge > IMAGE_MAX_EDGE) img.scaleToFit(IMAGE_MAX_EDGE, IMAGE_MAX_EDGE);
+    if (contentType === "image/png") {
+      const png = await img.getBufferAsync(Jimp.MIME_PNG);
+      if (png.length <= IMAGE_RESIZE_THRESHOLD_BYTES) return { data: png.toString("base64"), mediaType: "image/png" };
+    }
+    img.quality(82);
+    const jpg = await img.getBufferAsync(Jimp.MIME_JPEG);
+    return { data: jpg.toString("base64"), mediaType: "image/jpeg" };
+  } catch (e) {
+    context.error("dottie_message_stream: image prepare/resize failed (non-fatal)", e && e.message);
+    return null;
+  }
+}
+
 // gpt-5 Responses-API content PARTS for the owned attachment rows. image → input_image (data URI);
 // native PDF → input_file (base64 file_data); extract-class → input_text (stored extracted text).
 // Per-attachment failures degrade to a text note, never throw.
@@ -440,12 +478,27 @@ async function buildAttachmentParts(context, rows, budget) {
     try {
       if (native) {
         const buf = await downloadBlobBinary(storageToken, row.blob_path);
-        if (budget.nativeBytes + buf.length > ATTACH_NATIVE_BUDGET_BYTES) {
+        // Images: downscale large ones to fit the model's per-image limit (a full-size phone photo otherwise
+        // risks an upstream failure). PDFs inject as-is. Budget on the ACTUAL injected bytes (post-resize for
+        // images) so a resized photo doesn't over-count against later attachments.
+        let dataUri, injectBytes;
+        if (native === "image") {
+          const prepared = await prepareImageForModel(buf, row.content_type, context);
+          if (!prepared) {
+            parts.push({ type: "input_text", text: `[Attached image "${row.filename}" could not be prepared for the model (too large or unreadable) — ask the user to resize/compress it.]` });
+            continue;
+          }
+          dataUri = `data:${prepared.mediaType};base64,${prepared.data}`;
+          injectBytes = Math.ceil((prepared.data.length * 3) / 4); // base64 → bytes
+        } else {
+          dataUri = `data:${row.content_type};base64,${buf.toString("base64")}`; // native PDF
+          injectBytes = buf.length;
+        }
+        if (budget.nativeBytes + injectBytes > ATTACH_NATIVE_BUDGET_BYTES) {
           parts.push({ type: "input_text", text: `[Attached file "${row.filename}" omitted — exceeds the per-message attachment size budget.]` });
           continue;
         }
-        budget.nativeBytes += buf.length;
-        const dataUri = `data:${row.content_type};base64,${buf.toString("base64")}`;
+        budget.nativeBytes += injectBytes;
         if (native === "image") parts.push({ type: "input_image", image_url: dataUri });
         else parts.push({ type: "input_file", filename: row.filename, file_data: dataUri }); // native PDF
         parts.push({ type: "input_text", text: `(above is the attached file "${row.filename}")` });
