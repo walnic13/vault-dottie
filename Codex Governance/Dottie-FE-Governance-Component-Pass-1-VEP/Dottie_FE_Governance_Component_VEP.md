@@ -4,10 +4,12 @@ The second FE package of #4 (the Dottie design upgrade). Builds **the governance
 
 **Rev 2 — Codex Pass-2 REJECT remediation (T13).** Codex REJECTED rev 1 (`75e293e`): the pack/comments said a "malformed or half-streamed block falls back to plain markdown / never blanks the turn," but `splitChecks` suppressed a dangling opener *unconditionally*, so a **never-closed** block (truncated stream, or an opener at turn start) could be **permanently hidden** — contradicting the stated fallback boundary. Fixed by making the suppression **streaming-aware**: a still-open opener is suppressed **only while the turn is actively streaming** (mid-arrival — the component pops in on `[[/CHECK]]`); once content is **final**, an unclosed opener renders as **plain text** — never permanently hidden. This threads a `streaming` flag `ChatView → renderAssistant → splitAssistant → splitChecks` (adds `ChatView.tsx` to the package) and corrects the source comments + this pack to match the implemented behaviour.
 
+**Rev 3 — Codex Pass-2 REJECT remediation (T13, residual comment).** Codex REJECTED rev 2 (`a4cb293`): the comment at the `renderAssistant` `check` branch (`TheoMain.tsx`) still said "a malformed/half-streamed block falls back to plain markdown" — but after rev 2 that branch only ever receives a **fully-closed** block (`splitChecks` emits a `check` part only on a complete `[[CHECK]]…[[/CHECK]]` match); a still-open/never-closed block is handled upstream in `splitChecks` (suppressed while streaming, text branch when final) and never reaches the parse/fallback. Comment-only fix: the `check`-branch comment now states it always receives a fully-closed block, its fallback covers only the **completed-but-unparseable** case, and points to `splitChecks` for the still-open path. No runtime change (rev 2's behaviour was already correct — only the comment overstated it).
+
 ## Grounding Conformance Receipt
 Role: Claude Code
 Turn Type: Pass 1 — Frontend Verified Evidence Pack
-Grounding parent (source baseline): `75e293ed420379230d68488d09f026ad0e551fcf` (vault-dottie, `development` — rev-1 HEAD Codex reviewed; this rev-2 remediation lands on top)
+Grounding parent (source baseline): `a4cb293cec26714b1f035fbe5410f2f42329948a` (vault-dottie, `development` — rev-2 HEAD Codex reviewed; this rev-3 comment-only remediation lands on top)
 Grounding mode: Full Baseline Grounding
 Pass: Pass 1
 Sub-phase Track: N/A
@@ -23,7 +25,7 @@ Sub-phase Track: N/A
 | 7 | CHANGED — `src/theo/lib/artifacts.ts` (`AssistantPart` gains `check`; `splitAssistant(content, streaming)` + new `splitChecks(segment, streaming)` parse `[[CHECK]]…[[/CHECK]]`; dangling opener suppressed only while streaming) | `Edit` this turn (rev 2) | proposed `5b169ff910752683e7a03d31376692abb6df488a` |
 | 8 | NEW — `src/theo/lib/check.ts` (`CheckData`/`Verdict`/`CheckSupport`/`CheckClaim`/`CheckConfidence` types + forgiving `parseCheck`; header comment corrected rev 2) | `Edit` this turn (rev 2) | proposed `53fd892efab9541299efe2106c7ed3d3162fcb96` |
 | 9 | NEW — `src/theo/components/GovernanceCheck.tsx` (the §3 anatomy component) | `Write` (rev 1); unchanged in rev 2 | proposed `46a6ffa9a0904661019865590293d4bc5ec6508c` |
-| 10 | CHANGED — `src/theo/components/TheoMain.tsx` (`renderAssistant(content, streaming)` gains the `check` branch → `GovernanceCheck`, markdown fallback) | `Edit` this turn (rev 2) | proposed `842b7b97ee533166ecb88faeab95bb515005c77f` |
+| 10 | CHANGED — `src/theo/components/TheoMain.tsx` (`renderAssistant(content, streaming)` gains the `check` branch → `GovernanceCheck`, markdown fallback; rev-3 corrects the branch comment to say it always receives a fully-closed block) | `Read` + `Edit` this turn (rev 3, comment-only) | proposed `5774d7869deaee11f438809b2bc7d52725c8d1b2` |
 | 11 | CHANGED — `src/theo/components/ChatView.tsx` (`renderAssistant` prop type gains optional `streaming`; call site passes `loading && i === messages.length - 1`) | `Read` + `Edit` this turn (rev 2) | proposed `1e7b4898a8c44d9b3f96c6f2db213ef6560ef145` |
 
 No ChatGPT advisory cited. No backend / route / schema / migration touched (FE-only). The gold `DottieSpiral.tsx` (Logo-Mark VEP) and the pkg-1 dark palette are unchanged. `renderAssistant` is the single render seam — used directly for plain assistant turns (now with the streaming flag) and passed as `renderText` into `CitedText` (`ChatView.tsx:660`), so the `check` branch covers cited and non-cited answers alike.

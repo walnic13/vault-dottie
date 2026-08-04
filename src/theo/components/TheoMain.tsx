@@ -42,8 +42,11 @@ export function TheoMain({ t, mode, suppressNarrowHeader }: TheoMainProps) {
         return <ArtifactCard key={i} artifact={t.artifacts.find((a) => a.id === id)} onOpen={() => t.openArtifact(id)} />;
       }
       if (part.kind === "check") {
-        // A [[CHECK]] block renders as the governance component; a malformed/half-streamed block
-        // falls back to plain markdown (the raw JSON body) so the turn is never blanked.
+        // A check part is always a FULLY-CLOSED [[CHECK]]…[[/CHECK]] block (splitChecks emits it only
+        // on a complete match). It renders as the governance component; a completed-but-unparseable
+        // block falls back to plain markdown (the raw JSON body) so the turn is never blanked. A
+        // still-open/never-closed block never reaches here — splitChecks handles it (suppressed while
+        // streaming, rendered as text when final).
         const data = parseCheck(part.value);
         return data ? <GovernanceCheck key={i} data={data} /> : <Formatted key={i} text={part.value} />;
       }
