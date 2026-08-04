@@ -83,14 +83,24 @@ export function FindingCard({ f, onOpen, detail }: { f: Finding; onOpen?: (conve
   );
 }
 
-export function FlagRow({ fl }: { fl: Flag }) {
+// A flag row. When `onResolve` is given it renders a Resolve (open→resolved) / Re-open (resolved→open) button.
+export function FlagRow({ fl, onResolve }: { fl: Flag; onResolve?: (flagId: string, status: "open" | "resolved") => void }) {
+  const resolved = fl.status === "resolved";
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 10, background: C.card, border: `1px solid ${C.line2}`, borderRadius: 10, padding: "10px 13px" }}>
-      <span aria-hidden="true" style={{ color: severityColor(fl.severity), flexShrink: 0, marginTop: 1 }}>⚑</span>
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 10, background: C.card, border: `1px solid ${C.line2}`, borderRadius: 10, padding: "10px 13px", opacity: resolved ? 0.7 : 1 }}>
+      <span aria-hidden="true" style={{ color: resolved ? C.concur : severityColor(fl.severity), flexShrink: 0, marginTop: 1 }}>{resolved ? "✓" : "⚑"}</span>
       <div style={{ minWidth: 0, flex: 1 }}>
-        <div style={{ fontSize: 13, lineHeight: 1.45, color: C.ink2 }}>{fl.summary || fl.flag_type.replace(/_/g, " ")}</div>
+        <div style={{ fontSize: 13, lineHeight: 1.45, color: C.ink2, textDecoration: resolved ? "line-through" : "none" }}>{fl.summary || fl.flag_type.replace(/_/g, " ")}</div>
         <div style={{ ...MICRO, color: C.ink3, marginTop: 4 }}>{fl.flag_type.replace(/_/g, " ")} · {fl.severity}</div>
       </div>
+      {onResolve && (
+        <button onClick={() => onResolve(fl.id, resolved ? "open" : "resolved")}
+          title={resolved ? "Re-open this flag" : "Mark this flag resolved"}
+          style={{ ...MICRO, letterSpacing: ".08em", flexShrink: 0, cursor: "pointer", background: "transparent",
+            color: resolved ? C.ink3 : C.concur, border: `1px solid ${resolved ? C.line2 : C.concur}`, borderRadius: 999, padding: "3px 10px", fontFamily: MICRO.fontFamily }}>
+          {resolved ? "Re-open" : "Resolve"}
+        </button>
+      )}
       <span style={{ fontFamily: MONO, fontSize: 11, color: C.ink3, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{fmtDate(fl.created_at)}</span>
     </div>
   );

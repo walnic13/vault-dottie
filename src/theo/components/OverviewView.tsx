@@ -30,9 +30,10 @@ export interface OverviewViewProps {
   flags: Flag[];
   loading: boolean;
   onOpenConversation?: (conversationId: string) => void;
+  onResolveFlag?: (flagId: string, status: "open" | "resolved") => void;
 }
 
-export function OverviewView({ findings, flags, loading, onOpenConversation }: OverviewViewProps) {
+export function OverviewView({ findings, flags, loading, onOpenConversation, onResolveFlag }: OverviewViewProps) {
   const counts = { concur: 0, caution: 0, challenge: 0 };
   for (const f of findings) counts[f.verdict]++;
   const openFlags = flags.filter((fl) => fl.status === "open");
@@ -70,7 +71,7 @@ export function OverviewView({ findings, flags, loading, onOpenConversation }: O
         <Empty text={loading ? "Loading…" : "No open flags."} />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {openFlags.slice(0, 20).map((fl) => <FlagRow key={fl.id} fl={fl} />)}
+          {openFlags.slice(0, 20).map((fl) => <FlagRow key={fl.id} fl={fl} onResolve={onResolveFlag} />)}
         </div>
       )}
     </div>

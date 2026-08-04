@@ -364,6 +364,18 @@ export function useTheoState() {
     }
   }, []);
 
+  // pkg 3b.3-resolve — mark a flag resolved / re-open it (dottie_flag_resolve). Optimistic: flip the row in
+  // state immediately, then persist; on error resync from the server. No timestamp is baked into the client
+  // (resolved_at is display-only in the surfaces) — a follow-up loadOverview would carry the server value.
+  const resolveFlag = useCallback(async (flagId: string, status: "open" | "resolved") => {
+    setFlags((fs) => fs.map((f) => (f.id === flagId ? { ...f, status, resolved_at: status === "resolved" ? f.resolved_at : null } : f)));
+    try {
+      await theoClient.resolveFlag(flagId, status);
+    } catch {
+      void loadOverview(); // revert to server truth on failure
+    }
+  }, [loadOverview]);
+
   // B4c: (re)load one project's knowledge items into state (theo_list_project_knowledge). Best-effort.
   const refreshProjectKnowledge = useCallback(async (id: string) => {
     try {
@@ -1194,7 +1206,7 @@ export function useTheoState() {
 
     // setters / handlers
     go, toggleCollapse: () => setCollapsed((v) => !v), setSearch, setDraft, newChat, startInProject, openProject,
-    clearChatProject: () => setChatProject(null), send, stop, cancelQueued, ingestAppContext, selectRecent, loadRecents, loadProjects, loadGalleryArtifacts,
+    clearChatProject: () => setChatProject(null), send, stop, cancelQueued, ingestAppContext, selectRecent, resolveFlag, loadRecents, loadProjects, loadGalleryArtifacts,
     addFiles, addPastedText, removeAttachment,
     toggleNp: () => setNpOpen((v) => !v), setNp, createProject, patchInstructions, patchDescription, setKdraft, addKnowledge, addKnowledgeFile, removeKnowledge,
     renameProject, deleteProject, setProjectVisibility, visPending, renameConversation, deleteConversation, setConversationStarred, addConversationToProject,

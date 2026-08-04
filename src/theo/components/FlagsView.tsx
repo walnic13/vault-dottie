@@ -1,8 +1,8 @@
 // FlagsView — "Open flags", the dedicated governance-console surface (DOTTIE_DESIGN_SYSTEM §6.1): the flags Dottie
 // has raised (unsupported assumption, missing documentation, tag drift, review-chain gap), filterable by status.
 // Reads the same deployed dottie_flags store as the Overview (loaded via loadOverview with status=all); the flag
-// row is the shared ./FindingCard primitive. Severity colours are the semantic C tokens (§2.4). Read-only —
-// a resolve action needs a dottie_flag_resolve write handler (pkg 3b.3-backend / later), disclosed in the VEP.
+// row is the shared ./FindingCard primitive. Severity colours are the semantic C tokens (§2.4). The optional
+// `onResolve` (wired to the deployed dottie_flag_resolve handler) puts a Resolve/Re-open action on each row.
 import { useState } from "react";
 import { C, SANS } from "../theme";
 import type { Flag } from "../types";
@@ -13,9 +13,10 @@ type FStatus = "open" | "resolved" | "all";
 export interface FlagsViewProps {
   flags: Flag[];
   loading: boolean;
+  onResolve?: (flagId: string, status: "open" | "resolved") => void;
 }
 
-export function FlagsView({ flags, loading }: FlagsViewProps) {
+export function FlagsView({ flags, loading, onResolve }: FlagsViewProps) {
   const [status, setStatus] = useState<FStatus>("open");
   const counts = { open: 0, resolved: 0, all: flags.length };
   for (const f of flags) counts[f.status]++;
@@ -59,7 +60,7 @@ export function FlagsView({ flags, loading }: FlagsViewProps) {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {shown.map((fl) => <FlagRow key={fl.id} fl={fl} />)}
+            {shown.map((fl) => <FlagRow key={fl.id} fl={fl} onResolve={onResolve} />)}
           </div>
         )}
       </div>

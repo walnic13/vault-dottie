@@ -135,7 +135,7 @@ export function TheoMain({ t, mode, suppressNarrowHeader }: TheoMainProps) {
           )}
           {t.view === "overview" && (
             <div style={{ flex: 1, overflowY: "auto", padding: "22px 20px" }}>
-              <OverviewView findings={t.findings} flags={t.flags} loading={t.overviewLoading} onOpenConversation={t.selectRecent} />
+              <OverviewView findings={t.findings} flags={t.flags} loading={t.overviewLoading} onOpenConversation={t.selectRecent} onResolveFlag={t.resolveFlag} />
             </div>
           )}
           {t.view === "checks" && (
@@ -145,7 +145,7 @@ export function TheoMain({ t, mode, suppressNarrowHeader }: TheoMainProps) {
           )}
           {t.view === "flags" && (
             <div style={{ flex: 1, overflowY: "auto", padding: "22px 20px" }}>
-              <FlagsView flags={t.flags} loading={t.overviewLoading} />
+              <FlagsView flags={t.flags} loading={t.overviewLoading} onResolve={t.resolveFlag} />
             </div>
           )}
           {t.view === "audit" && (

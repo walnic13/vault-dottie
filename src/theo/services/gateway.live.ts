@@ -336,6 +336,23 @@ export async function listFlags(status?: "open" | "resolved" | "all", limit?: nu
   return Array.isArray(json?.data?.flags) ? json.data.flags : [];
 }
 
+// pkg 3b.3-resolve — mark a governance flag resolved / re-open it (dottie_flag_resolve; owner-scoped UPDATE).
+// Returns the updated flag row, or null in the unconfigured harness. Backs the Open-flags "Resolve" action.
+export async function resolveFlag(flagId: string, status: "open" | "resolved"): Promise<Flag | null> {
+  if (!apiBase && !tokenProvider) return null;
+  const headers = await authHeaders();
+  const res = await fetch(`${apiBase}/api/dottie_flag_resolve`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers,
+    body: JSON.stringify({ flag_id: flagId, status }),
+  });
+  let json: { data?: { flag?: Flag }; error?: { message?: string } } | null = null;
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
+  return json?.data?.flag ?? null;
+}
+
 // B4e — a project's conversations (theo_list_conversations?projectId; owner-scoped, B4d). Backs the
 // per-project chat list in the project home. Unconfigured harness → mock (empty).
 export async function listProjectConversations(projectId: string): Promise<ConversationSummary[]> {

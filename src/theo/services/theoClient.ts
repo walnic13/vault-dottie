@@ -14,7 +14,7 @@ import {
   sendMessage as gatewaySend, sendMessageStream as gatewaySendStream,
   sendReviewAgentStream as gatewaySendReviewAgentStream, configureGateway as gatewayConfigure,
   listConversations as gatewayList, getConversation as gatewayGet,
-  listFindings as gatewayListFindings, listFlags as gatewayListFlags,
+  listFindings as gatewayListFindings, listFlags as gatewayListFlags, resolveFlag as gatewayResolveFlag,
   listProjectConversations as gatewayListProjectConversations,
   listConversationAttachments as gatewayListConvAttachments,
   createAttachmentUpload as gatewayCreateUpload, uploadToBlob as gatewayUploadToBlob,
@@ -101,6 +101,9 @@ export const theoClient = {
   },
   listFlags(status?: "open" | "resolved" | "all", limit?: number): Promise<Flag[]> {
     return gatewayListFlags(status, limit);
+  },
+  resolveFlag(flagId: string, status: "open" | "resolved"): Promise<Flag | null> {
+    return gatewayResolveFlag(flagId, status);
   },
   getConversation(id: string): Promise<ConversationDetail> {
     return gatewayGet(id);
