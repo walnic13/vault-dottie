@@ -1,13 +1,15 @@
-// Seed data + static lists — ported from VA-T1 (L90–153). The only Dottie delta is the NAV filter
-// below (gate/hide entries whose backend isn't live yet); every other list is verbatim.
+// Seed data + static lists — ported from VA-T1 (L90–153). The Dottie deltas are the NAV surface (the
+// governance-console sections + the capability filter below) + the recolour handled elsewhere; every other
+// list is verbatim.
 import type { NavItem, Style, Project } from "./types";
 import { IcChat, IcOverview, IcProjects, IcArtifacts, IcCustomize } from "./components/icons";
 import { DOTTIE_CAPABILITIES } from "./swapBlock";
 
-// VA-T1 nav surface (verbatim). Dottie hides the entries whose `dottie_*` backend isn't live yet
-// (reconciliation §B/§F): Projects (hidden indefinitely) and Artifacts (until artifacts persistence
-// lands). Chats + Customize are always present. Each hidden entry's view branch in TheoMain becomes
-// unreachable; the un-gate is a one-line flip in DOTTIE_CAPABILITIES when the backend ships.
+// Dottie's nav surface (governance-console sections, pkg 3b): Overview (the 9/10 oversight dashboard) +
+// "Ask Dottie" (the adaptive chat, View key `chats`) + Customize are always present; Projects and Artifacts
+// are capability-gated. Live today: Overview (findings/flags handlers) + Artifacts (artifacts persistence).
+// Hidden: Projects (no Projects/SPW backend). Each hidden entry's view branch in TheoMain is unreachable; the
+// un-gate is a one-line flip in DOTTIE_CAPABILITIES when the backend ships.
 const ALL_NAV: NavItem[] = [
   { key: "overview", label: "Overview", Icon: IcOverview },
   { key: "chats", label: "Ask Dottie", Icon: IcChat },

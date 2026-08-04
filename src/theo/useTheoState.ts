@@ -22,7 +22,7 @@ const INSTRUCTIONS_SAVE_DEBOUNCE_MS = 800;
 // re-navigates to one by re-invoking the matching nav fn (cheap — conversations paint from cache,
 // projects are in state). In-memory only (no browser storage); the host owns window.history (VEP-2).
 type NavLoc =
-  | { k: "view"; view: View }   // a top-level nav view: projects / artifacts / customize
+  | { k: "view"; view: View }   // a top-level nav view: overview / projects / artifacts / customize
   | { k: "chat"; id: string }   // an open conversation
   | { k: "project"; id: string } // a project home
   | { k: "newchat" };           // a fresh empty chat
