@@ -1,7 +1,7 @@
 // Seed data + static lists — ported from VA-T1 (L90–153). The only Dottie delta is the NAV filter
 // below (gate/hide entries whose backend isn't live yet); every other list is verbatim.
 import type { NavItem, Style, Project } from "./types";
-import { IcChat, IcProjects, IcArtifacts, IcCustomize } from "./components/icons";
+import { IcChat, IcOverview, IcProjects, IcArtifacts, IcCustomize } from "./components/icons";
 import { DOTTIE_CAPABILITIES } from "./swapBlock";
 
 // VA-T1 nav surface (verbatim). Dottie hides the entries whose `dottie_*` backend isn't live yet
@@ -9,13 +9,15 @@ import { DOTTIE_CAPABILITIES } from "./swapBlock";
 // lands). Chats + Customize are always present. Each hidden entry's view branch in TheoMain becomes
 // unreachable; the un-gate is a one-line flip in DOTTIE_CAPABILITIES when the backend ships.
 const ALL_NAV: NavItem[] = [
-  { key: "chats", label: "Chats", Icon: IcChat },
+  { key: "overview", label: "Overview", Icon: IcOverview },
+  { key: "chats", label: "Ask Dottie", Icon: IcChat },
   { key: "projects", label: "Projects", Icon: IcProjects },
   { key: "artifacts", label: "Artifacts", Icon: IcArtifacts },
   { key: "customize", label: "Customize", Icon: IcCustomize },
 ];
 export const NAV: NavItem[] = ALL_NAV.filter(
   (n) =>
+    (n.key !== "overview" || DOTTIE_CAPABILITIES.overview) &&
     (n.key !== "projects" || DOTTIE_CAPABILITIES.projects) &&
     (n.key !== "artifacts" || DOTTIE_CAPABILITIES.artifactsPersistence),
 );

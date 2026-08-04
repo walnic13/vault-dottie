@@ -15,6 +15,7 @@ export const ASSISTANT_NAME = "Dottie";
 // filter), gateway.live.ts (attachments/voice predicates + short-circuits for unbacked list calls),
 // and ConvMenu.tsx (Add-to-project item). Authoritative gap register: spec/DOTTIE_THEO_RECONCILIATION.md.
 export const DOTTIE_CAPABILITIES = {
+  overview: true,              // pkg 3b — the 9/10 Overview console (dottie_findings/flags read handlers LIVE, deployed 2026-08-04)
   projects: false,             // §B/§E — hidden indefinitely (no Projects/SPW backend)
   people: true,                // §C — dottie_list_people LIVE (ListPeople package; deployed + golden curls green 2026-08-01)
   attachments: true,           // §D — dottie attachments LIVE (4 handlers + dottie-content blob; deployed + golden-curl round-trip green 2026-08-01)

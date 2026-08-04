@@ -7,12 +7,14 @@
 import type {
   AppContext, Artifact, ArtifactBlock, ArtifactSummary, ConversationAttachment, ConversationDetail, ConversationSummary, GatewayRequest, GatewayResponse,
   KDraft, Knowledge, NpDraft, Person, Project, ProjectMember, PublishedConversation, Settings,
+  Finding, Flag,
 } from "../types";
 import { parseArtifacts, remapToIds, upsert } from "../lib/artifacts";
 import {
   sendMessage as gatewaySend, sendMessageStream as gatewaySendStream,
   sendReviewAgentStream as gatewaySendReviewAgentStream, configureGateway as gatewayConfigure,
   listConversations as gatewayList, getConversation as gatewayGet,
+  listFindings as gatewayListFindings, listFlags as gatewayListFlags,
   listProjectConversations as gatewayListProjectConversations,
   listConversationAttachments as gatewayListConvAttachments,
   createAttachmentUpload as gatewayCreateUpload, uploadToBlob as gatewayUploadToBlob,
@@ -92,6 +94,13 @@ export const theoClient = {
   // ── Conversation history (Recents + reload; theo_list/get_conversation in 1B) ──
   listConversations(limit?: number): Promise<ConversationSummary[]> {
     return gatewayList(limit);
+  },
+  // pkg 3b — governance-console data (dottie_findings_list / dottie_flags_list; owner-scoped).
+  listFindings(limit?: number): Promise<Finding[]> {
+    return gatewayListFindings(limit);
+  },
+  listFlags(status?: "open" | "resolved" | "all", limit?: number): Promise<Flag[]> {
+    return gatewayListFlags(status, limit);
   },
   getConversation(id: string): Promise<ConversationDetail> {
     return gatewayGet(id);

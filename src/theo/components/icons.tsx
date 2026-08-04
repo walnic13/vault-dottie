@@ -10,6 +10,7 @@ export const IcCompose = ({ s = 18 }: { s?: number }) => (<svg {...SV} width={s}
 export const IcChat = ({ s = 18 }: { s?: number }) => (<svg {...SV} width={s} height={s}><path d="M21 11.5a8.5 8.5 0 0 1-11.8 7.8L3 21l1.7-6.2A8.5 8.5 0 1 1 21 11.5Z" /></svg>);
 export const IcProjects = ({ s = 18 }: { s?: number }) => (<svg {...SV} width={s} height={s}><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /></svg>);
 export const IcArtifacts = ({ s = 18 }: { s?: number }) => (<svg {...SV} width={s} height={s}><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18" /></svg>);
+export const IcOverview = ({ s = 18 }: { s?: number }) => (<svg {...SV} width={s} height={s}><path d="M12 3l7 3v5c0 4-3 7-7 8-4-1-7-4-7-8V6l7-3Z" /><path d="M9 12l2 2 4-4" /></svg>);
 // SPW 2c-iii-fe (VA-T12 B): the "Publish to project" / "Unpublish" menu glyph — an up-arrow out of a tray.
 export const IcShare = ({ s = 18 }: { s?: number }) => (<svg {...SV} width={s} height={s}><path d="M12 15V3" /><path d="M8 7l4-4 4 4" /><path d="M4 13v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6" /></svg>);
 export const IcStar = ({ s = 18, filled = false }: { s?: number; filled?: boolean }) => (<svg {...SV} width={s} height={s} fill={filled ? "currentColor" : "none"}><path d="M12 3.6l2.6 5.3 5.8.9-4.2 4.1 1 5.8L12 17.9l-5.2 2.8 1-5.8L3.6 9.8l5.8-.9z" /></svg>);

@@ -9,7 +9,7 @@ import { stripArtifactRefs } from "./lib/artifacts";
 import { buildSystemPrompt, greeting } from "./lib/prompt";
 import { MODEL } from "./swapBlock";
 import { STYLES } from "./data";
-import type { AgentToolCall, AppContext, Artifact, ArtifactSummary, Citation, ComposerAttachment, ConversationSummary, ConversationDetail, FileDownload, InlineImage, InlineVideo, KDraft, Message, NpDraft, OpenArtifact, Person, Project, ProjectMember, PublishedConversation, SentAttachment, Settings, StyleKey, View } from "./types";
+import type { AgentToolCall, AppContext, Artifact, ArtifactSummary, Citation, ComposerAttachment, ConversationSummary, ConversationDetail, FileDownload, InlineImage, InlineVideo, KDraft, Message, NpDraft, OpenArtifact, Person, Project, ProjectMember, PublishedConversation, SentAttachment, Settings, StyleKey, Finding, Flag, View } from "./types";
 
 // B8e: a paste longer than this becomes a "Pasted text" attachment (collapsed, expandable) instead
 // of flooding the composer — the Claude-style behaviour. Tunable; ~a long block, not a sentence.
@@ -83,6 +83,10 @@ export function useTheoState() {
   // B4h: the cross-chat Artifacts gallery (persisted summaries via theo_list_artifacts), distinct from
   // the in-memory `artifacts` working set that drives the open thread's cards + panel.
   const [galleryArtifacts, setGalleryArtifacts] = useState<ArtifactSummary[]>([]);
+  // pkg 3b — the 9/10 Overview console data (dottie_findings/flags read handlers), loaded on view open.
+  const [findings, setFindings] = useState<Finding[]>([]);
+  const [flags, setFlags] = useState<Flag[]>([]);
+  const [overviewLoading, setOverviewLoading] = useState(false);
   const [openArt, setOpenArt] = useState<OpenArtifact | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
@@ -347,6 +351,18 @@ export function useTheoState() {
     try { setGalleryArtifacts(await theoClient.listServerArtifacts()); } catch { /* keep current list */ }
   }, []);
 
+  // pkg 3b — (re)load the Overview console data (findings + open flags). Best-effort; keep current on error.
+  const loadOverview = useCallback(async () => {
+    setOverviewLoading(true);
+    try {
+      const [fnd, flg] = await Promise.all([theoClient.listFindings(), theoClient.listFlags("open")]);
+      setFindings(fnd);
+      setFlags(flg);
+    } catch { /* keep current */ } finally {
+      setOverviewLoading(false);
+    }
+  }, []);
+
   // B4c: (re)load one project's knowledge items into state (theo_list_project_knowledge). Best-effort.
   const refreshProjectKnowledge = useCallback(async (id: string) => {
     try {
@@ -417,7 +433,7 @@ export function useTheoState() {
   // destination, or goBack's re-navigation, seeds no dead Back step.
   function currentLoc(): NavLoc {
     if (view === "project" && detailId) return { k: "project", id: detailId };
-    if (view === "projects" || view === "artifacts" || view === "customize") return { k: "view", view };
+    if (view === "projects" || view === "artifacts" || view === "customize" || view === "overview") return { k: "view", view };
     return conversationId ? { k: "chat", id: conversationId } : { k: "newchat" };  // view === "chats"
   }
   function pushNavIfDestinationChanges(target: NavLoc) {
@@ -426,7 +442,7 @@ export function useTheoState() {
     if (navLocKey(from) === navLocKey(target)) return;
     setNavStack((s) => [...s, from]);
   }
-  function applyView(v: View) { setView(v); setDetailId(null); if (v === "artifacts") void loadGalleryArtifacts(); }  // B4h: refresh the gallery on open
+  function applyView(v: View) { setView(v); setDetailId(null); if (v === "artifacts") void loadGalleryArtifacts(); if (v === "overview") void loadOverview(); }  // B4h/3b: refresh gallery / overview on open
   function go(v: View) {
     const target: NavLoc = v === "chats" ? (conversationId ? { k: "chat", id: conversationId } : { k: "newchat" }) : { k: "view", view: v };
     pushNavIfDestinationChanges(target);
@@ -1162,7 +1178,7 @@ export function useTheoState() {
 
   return {
     // state
-    view, collapsed, search, projects, projectChats, artifacts, galleryArtifacts, detail, chatProject, art, openArt, messages, draft, attachments, attachmentsAvailable, loading, restoring, error, queued,
+    view, collapsed, search, projects, projectChats, artifacts, galleryArtifacts, findings, flags, overviewLoading, detail, chatProject, art, openArt, messages, draft, attachments, attachmentsAvailable, loading, restoring, error, queued,
     conversationId, currentConversation: recentsList.find((c) => c.id === conversationId) ?? null,
     // Nav-History seam (VEP-1): back-stack state + goBack (TheoSurface reports depth/title to the host; TheoMain renders the Back button).
     canGoBack, navDepth, navContextTitle, goBack,
