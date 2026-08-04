@@ -2,18 +2,21 @@
 // governance-console sections + the capability filter below) + the recolour handled elsewhere; every other
 // list is verbatim.
 import type { NavItem, Style, Project } from "./types";
-import { IcChat, IcOverview, IcChecks, IcProjects, IcArtifacts, IcCustomize } from "./components/icons";
+import { IcChat, IcOverview, IcChecks, IcFlag, IcAudit, IcLibrary, IcProjects, IcArtifacts, IcCustomize } from "./components/icons";
 import { DOTTIE_CAPABILITIES } from "./swapBlock";
 
-// Dottie's nav surface (governance-console sections, pkg 3b): Overview (the 9/10 oversight dashboard) +
-// "Checks on Theo" (the full check log, pkg 3b.2) + "Ask Dottie" (the adaptive chat, View key `chats`) +
-// Customize are present; Projects and Artifacts are capability-gated. Live today: Overview + Checks (both on
-// the findings/flags handlers, gated on DOTTIE_CAPABILITIES.overview) + Artifacts (artifacts persistence).
+// Dottie's nav surface (governance-console sections, pkg 3b): the read-only oversight sections — Overview (the
+// 9/10 dashboard), Checks on Theo (3b.2), Open flags / Audit trail / Library & Sources (3b.3) — plus "Ask Dottie"
+// (the adaptive chat, View key `chats`) and Customize. The five oversight sections all read the deployed findings/
+// flags handlers, so they share one gate, DOTTIE_CAPABILITIES.overview (live). Artifacts is capability-gated (live).
 // Hidden: Projects (no Projects/SPW backend). Each hidden entry's view branch in TheoMain is unreachable; the
 // un-gate is a one-line flip in DOTTIE_CAPABILITIES when the backend ships.
 const ALL_NAV: NavItem[] = [
   { key: "overview", label: "Overview", Icon: IcOverview },
   { key: "checks", label: "Checks on Theo", Icon: IcChecks },
+  { key: "flags", label: "Open flags", Icon: IcFlag },
+  { key: "audit", label: "Audit trail", Icon: IcAudit },
+  { key: "library", label: "Library & Sources", Icon: IcLibrary },
   { key: "chats", label: "Ask Dottie", Icon: IcChat },
   { key: "projects", label: "Projects", Icon: IcProjects },
   { key: "artifacts", label: "Artifacts", Icon: IcArtifacts },
@@ -21,8 +24,8 @@ const ALL_NAV: NavItem[] = [
 ];
 export const NAV: NavItem[] = ALL_NAV.filter(
   (n) =>
-    (n.key !== "overview" || DOTTIE_CAPABILITIES.overview) &&
-    (n.key !== "checks" || DOTTIE_CAPABILITIES.overview) &&
+    // the console read-only sections all ride the same live findings/flags handlers (DOTTIE_CAPABILITIES.overview)
+    (!["overview", "checks", "flags", "audit", "library"].includes(n.key) || DOTTIE_CAPABILITIES.overview) &&
     (n.key !== "projects" || DOTTIE_CAPABILITIES.projects) &&
     (n.key !== "artifacts" || DOTTIE_CAPABILITIES.artifactsPersistence),
 );

@@ -22,7 +22,7 @@ const INSTRUCTIONS_SAVE_DEBOUNCE_MS = 800;
 // re-navigates to one by re-invoking the matching nav fn (cheap — conversations paint from cache,
 // projects are in state). In-memory only (no browser storage); the host owns window.history (VEP-2).
 type NavLoc =
-  | { k: "view"; view: View }   // a top-level nav view: overview / checks / projects / artifacts / customize
+  | { k: "view"; view: View }   // a top-level nav view: overview / checks / flags / audit / library / projects / artifacts / customize
   | { k: "chat"; id: string }   // an open conversation
   | { k: "project"; id: string } // a project home
   | { k: "newchat" };           // a fresh empty chat
@@ -351,11 +351,12 @@ export function useTheoState() {
     try { setGalleryArtifacts(await theoClient.listServerArtifacts()); } catch { /* keep current list */ }
   }, []);
 
-  // pkg 3b — (re)load the Overview console data (findings + open flags). Best-effort; keep current on error.
+  // pkg 3b — (re)load the console data: findings + ALL flags (status=all, so the Open-flags surface can filter
+  // Open/Resolved/All; the Overview filters status==="open" client-side). Best-effort; keep current on error.
   const loadOverview = useCallback(async () => {
     setOverviewLoading(true);
     try {
-      const [fnd, flg] = await Promise.all([theoClient.listFindings(), theoClient.listFlags("open")]);
+      const [fnd, flg] = await Promise.all([theoClient.listFindings(), theoClient.listFlags("all")]);
       setFindings(fnd);
       setFlags(flg);
     } catch { /* keep current */ } finally {
@@ -433,7 +434,7 @@ export function useTheoState() {
   // destination, or goBack's re-navigation, seeds no dead Back step.
   function currentLoc(): NavLoc {
     if (view === "project" && detailId) return { k: "project", id: detailId };
-    if (view === "projects" || view === "artifacts" || view === "customize" || view === "overview" || view === "checks") return { k: "view", view };
+    if (view === "projects" || view === "artifacts" || view === "customize" || view === "overview" || view === "checks" || view === "flags" || view === "audit" || view === "library") return { k: "view", view };
     return conversationId ? { k: "chat", id: conversationId } : { k: "newchat" };  // view === "chats"
   }
   function pushNavIfDestinationChanges(target: NavLoc) {
@@ -442,7 +443,7 @@ export function useTheoState() {
     if (navLocKey(from) === navLocKey(target)) return;
     setNavStack((s) => [...s, from]);
   }
-  function applyView(v: View) { setView(v); setDetailId(null); if (v === "artifacts") void loadGalleryArtifacts(); if (v === "overview" || v === "checks") void loadOverview(); }  // B4h/3b: refresh gallery / console data on open
+  function applyView(v: View) { setView(v); setDetailId(null); if (v === "artifacts") void loadGalleryArtifacts(); if (v === "overview" || v === "checks" || v === "flags" || v === "audit" || v === "library") void loadOverview(); }  // B4h/3b: refresh gallery / console data on open
   function go(v: View) {
     const target: NavLoc = v === "chats" ? (conversationId ? { k: "chat", id: conversationId } : { k: "newchat" }) : { k: "view", view: v };
     pushNavIfDestinationChanges(target);

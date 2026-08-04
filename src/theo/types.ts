@@ -84,7 +84,7 @@ export type StyleKey = "normal" | "concise" | "explanatory" | "formal";
 export interface Style { key: StyleKey; label: string; desc: string; mod: string }
 
 export interface OpenArtifact { id: string; v: number }   // v < 0 ⇒ latest version
-export type View = "chats" | "overview" | "checks" | "projects" | "project" | "artifacts" | "customize";
+export type View = "chats" | "overview" | "checks" | "flags" | "audit" | "library" | "projects" | "project" | "artifacts" | "customize";
 
 // Dottie governance-findings store (DOTTIE_MEMORY_MODEL §2.4; the deployed dottie_findings/dottie_flags
 // read handlers). A Finding = a check/verdict Dottie made on a claim (written on a verdict [[CHECK]] turn);
