@@ -77,7 +77,7 @@ This reskin is an **AUTHORIZED-DELTA that realises the binding `DOTTIE_DESIGN_SY
 ## §CCT — Component Contract Table
 | Component (file) | Prop / input interface (TS) | Visual authority (VA-id) | Data / contract dependency |
 | --- | --- | --- | --- |
-| `theme.ts` `C` / `SANS` / `MONO` | exported token object + font-stack consts (unchanged shape) | DOTTIE_DESIGN_SYSTEM §2 (dark tokens + font stacks) | none — pure design tokens |
+| `theme.ts` `C` / `SANS` / `MONO` | exported token object — values recoloured + **one added key `panel2` (`#1A2029`, dark hover/active surface, consumed by `STYLE_BLOCK`)**; no key removed or renamed; `SANS`/`MONO` shape unchanged | DOTTIE_DESIGN_SYSTEM §2 (dark tokens + font stacks) | none — pure design tokens |
 | `TheoSurface.tsx` `STYLE_BLOCK` | none (global CSS string; props unchanged) | DOTTIE_DESIGN_SYSTEM §2 (scrollbar/hover/focus on dark) | none |
 | `Sidebar` / `ChatView` / `TheoMain` / `ProjectsView` / `ProjectDetail` / `Customize` / `ArtifactPanel` / `CitedText` / `DownloadCard` / `DevContextInjector` / `markdown` | **prop interfaces unchanged** — colour values only | DOTTIE_DESIGN_SYSTEM §2 (ground/panel/text/line/gold; dark-on-gold for accent fills) | unchanged (same gateway/state props) |
 
