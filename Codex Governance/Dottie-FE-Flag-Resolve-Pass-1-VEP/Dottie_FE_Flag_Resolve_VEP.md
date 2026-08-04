@@ -34,7 +34,7 @@ No ChatGPT advisory cited. No backend / route / schema / migration (reads the DE
 | governance/THEO_FRONTEND_GROUNDING_CONFORMANCE_STANDARD.md | §3 | "MUST open with a Grounding Conformance Receipt" | GCR (head) |
 | governance/THEO_FRONTEND_GROUNDING_CONFORMANCE_STANDARD.md | §5 | "Rule Anchor Table" | this table |
 | governance/CLAUDE_CODE_THEO_FRONTEND_GOVERNOR_STANDARD.md | §4 | "reproduce it faithfully" | §UI-RECON — a token-styled action button; no redesign |
-| governance/CLAUDE_CODE_THEO_FRONTEND_GOVERNOR_STANDARD.md | §4 | "do not redesign" | §UI-RECON — additive prop + button; existing rows unchanged when no `onResolve` |
+| governance/CLAUDE_CODE_THEO_FRONTEND_GOVERNOR_STANDARD.md | §4 | "do not redesign" | §UI-RECON — additive prop + button; **open** rows unchanged when no `onResolve`; resolved-row styling is unconditional on `status === "resolved"` (§F-P2/§CCT) |
 | governance/CLAUDE_CODE_THEO_FRONTEND_GOVERNOR_STANDARD.md | §3 | "Component Contract Table" | §CCT |
 | spec/DOTTIE_DESIGN_SYSTEM.md | §2.4 | "These carry meaning and must never be swapped for the accent." | the Resolve button + resolved ✓ use `C.concur` (resolved = supported/closed), not the gold accent |
 
