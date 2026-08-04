@@ -12,6 +12,8 @@ import { STYLES, STARTERS, REVIEW_STARTERS, REVIEW_APP_STARTERS } from "../data"
 import { IcBack, IcClose, IcShare } from "./icons";
 import { Formatted } from "../lib/markdown";
 import { splitAssistant } from "../lib/artifacts";
+import { parseCheck } from "../lib/check";
+import { GovernanceCheck } from "./GovernanceCheck";
 import { appContextLabel } from "../lib/appContext";
 import { ArtifactCard } from "./ArtifactCard";
 import { ChatView } from "./ChatView";
@@ -38,6 +40,12 @@ export function TheoMain({ t, mode, suppressNarrowHeader }: TheoMainProps) {
       if (part.kind === "artifact") {
         const id = part.value;
         return <ArtifactCard key={i} artifact={t.artifacts.find((a) => a.id === id)} onOpen={() => t.openArtifact(id)} />;
+      }
+      if (part.kind === "check") {
+        // A [[CHECK]] block renders as the governance component; a malformed/half-streamed block
+        // falls back to plain markdown (the raw JSON body) so the turn is never blanked.
+        const data = parseCheck(part.value);
+        return data ? <GovernanceCheck key={i} data={data} /> : <Formatted key={i} text={part.value} />;
       }
       return part.value.trim() ? <Formatted key={i} text={part.value} /> : null;
     });
