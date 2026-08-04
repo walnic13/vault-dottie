@@ -29,13 +29,13 @@ export function ProjectsView({ projects, npOpen, np, onNpChange, onToggleNp, onC
       <div style={{ maxWidth: 920, margin: "0 auto", padding: "26px 24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
           <p style={{ color: C.ink2, fontSize: 14, margin: 0 }}>Workspaces that bundle chats, knowledge and instructions.</p>
-          <button className="vo-new" onClick={onToggleNp} style={{ background: C.coral, color: "#fff", border: "none", borderRadius: 9, padding: "8px 14px", fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: SANS }}>{npOpen ? "Cancel" : "+ New project"}</button>
+          <button className="vo-new" onClick={onToggleNp} style={{ background: C.coral, color: C.bg, border: "none", borderRadius: 9, padding: "8px 14px", fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: SANS }}>{npOpen ? "Cancel" : "+ New project"}</button>
         </div>
         {npOpen && (<div style={{ background: C.card, border: `1px solid ${C.line2}`, borderRadius: 14, padding: 18, marginBottom: 18, display: "flex", flexDirection: "column", gap: 10 }}>
           <InputBox value={np.name} onChange={(v) => onNpChange({ ...np, name: v })} placeholder="Project name" />
           <InputBox value={np.desc} onChange={(v) => onNpChange({ ...np, desc: v })} placeholder="Short description" />
           <InputBox value={np.instructions} onChange={(v) => onNpChange({ ...np, instructions: v })} placeholder="Custom instructions for this project (optional)" rows={2} />
-          <div><button className="vo-new" onClick={onCreate} style={{ background: C.coral, color: "#fff", border: "none", borderRadius: 9, padding: "9px 18px", fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: SANS }}>Create project</button></div>
+          <div><button className="vo-new" onClick={onCreate} style={{ background: C.coral, color: C.bg, border: "none", borderRadius: 9, padding: "9px 18px", fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: SANS }}>Create project</button></div>
         </div>)}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 14 }}>
           {projects.map((p) => {

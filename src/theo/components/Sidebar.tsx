@@ -61,12 +61,12 @@ export function Sidebar(props: SidebarProps) {
         <button onClick={onToggleCollapse} title="Toggle sidebar" style={{ background: "none", border: "none", cursor: "pointer", color: C.ink3, padding: 4, display: "flex" }}><IcPanel s={18} /></button>
       </div>
       <div style={{ padding: collapsed ? "6px 9px" : "6px 12px" }}>
-        <button className="vo-new" onClick={onNewChat} title="New chat" style={{ width: "100%", maxWidth: fluid && !collapsed ? 246 : undefined, boxSizing: "border-box", display: "flex", alignItems: "center", gap: 9, cursor: "pointer", justifyContent: collapsed ? "center" : "flex-start", background: C.coral, color: "#fff", border: "none", borderRadius: 10, padding: collapsed ? "9px 0" : "9px 12px", fontSize: 13.5, fontWeight: 600, fontFamily: SANS }}>
+        <button className="vo-new" onClick={onNewChat} title="New chat" style={{ width: "100%", maxWidth: fluid && !collapsed ? 246 : undefined, boxSizing: "border-box", display: "flex", alignItems: "center", gap: 9, cursor: "pointer", justifyContent: collapsed ? "center" : "flex-start", background: C.coral, color: C.bg, border: "none", borderRadius: 10, padding: collapsed ? "9px 0" : "9px 12px", fontSize: 13.5, fontWeight: 600, fontFamily: SANS }}>
           <IcCompose s={17} />{!collapsed && "New chat"}
         </button>
       </div>
       {!collapsed && (<div style={{ padding: "4px 12px 8px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, maxWidth: fluid ? 246 : undefined, boxSizing: "border-box", background: "#fff", border: `1px solid ${C.line2}`, borderRadius: 9, padding: "7px 10px", color: C.ink3 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, maxWidth: fluid ? 246 : undefined, boxSizing: "border-box", background: C.card, border: `1px solid ${C.line2}`, borderRadius: 9, padding: "7px 10px", color: C.ink3 }}>
           <IcSearch s={15} /><input value={search} onChange={(e) => onSearch(e.target.value)} placeholder="Search" style={{ border: "none", background: "transparent", fontFamily: SANS, fontSize: 13, color: C.ink, width: "100%" }} />
         </div>
       </div>)}
@@ -106,7 +106,7 @@ export function Sidebar(props: SidebarProps) {
       </>)}
       {collapsed && <div style={{ flex: 1 }} />}
       <div style={{ borderTop: `1px solid ${C.line}`, padding: 10, display: "flex", alignItems: "center", gap: 10, justifyContent: collapsed ? "center" : "flex-start" }}>
-        <div style={{ width: 30, height: 30, borderRadius: "50%", background: C.coral, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: 13, flexShrink: 0 }}>V</div>
+        <div style={{ width: 30, height: 30, borderRadius: "50%", background: C.coral, color: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: 13, flexShrink: 0 }}>V</div>
         {!collapsed && (<div style={{ lineHeight: 1.2 }}><div style={{ fontSize: 13, fontWeight: 600 }}>{workspaceName}</div><div style={{ fontSize: 11.5, color: C.ink3 }}>Team plan · bridge</div></div>)}
       </div>
     </aside>

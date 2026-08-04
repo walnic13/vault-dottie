@@ -215,9 +215,9 @@ function AttachOption({ glyph, label, onClick }: { glyph: ReactNode; label: stri
 function AddToChatSheet({ open, onClose, onCamera, onPhotos, onFiles }: { open: boolean; onClose: () => void; onCamera: () => void; onPhotos: () => void; onFiles: () => void }) {
   if (!open) return null;
   return (
-    <div role="dialog" aria-modal="true" aria-label="Add to chat" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(40,38,31,0.35)", display: "flex", flexDirection: "column", justifyContent: "flex-end", zIndex: 60, animation: "vt-fade-in .15s ease" }}>
+    <div role="dialog" aria-modal="true" aria-label="Add to chat" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", flexDirection: "column", justifyContent: "flex-end", zIndex: 60, animation: "vt-fade-in .15s ease" }}>
       <style>{SHEET_KEYFRAMES}</style>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: C.bg, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: "10px 16px calc(20px + env(safe-area-inset-bottom))", boxShadow: "0 -6px 28px rgba(40,38,31,0.18)", animation: "vt-sheet-up .22s cubic-bezier(.22,.61,.36,1)", fontFamily: SANS }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: C.bg, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: "10px 16px calc(20px + env(safe-area-inset-bottom))", boxShadow: "0 -6px 28px rgba(0,0,0,0.18)", animation: "vt-sheet-up .22s cubic-bezier(.22,.61,.36,1)", fontFamily: SANS }}>
         <div style={{ width: 36, height: 5, borderRadius: 3, background: C.line2, margin: "0 auto 12px" }} aria-hidden />
         <div style={{ position: "relative", height: 32, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
           <button onClick={onClose} aria-label="Close" title="Close" style={{ position: "absolute", left: 0, top: 0, width: 32, height: 32, border: "none", background: "transparent", color: C.ink2, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><IcClose s={20} /></button>
@@ -292,7 +292,7 @@ function Chip(props: {
         onClick={expandable ? () => setOpen((o) => !o) : undefined}
         title={expandable ? (open ? "Hide preview" : "Show preview") : name}
         style={{
-          display: "flex", alignItems: "center", gap: 8, background: "#fff",
+          display: "flex", alignItems: "center", gap: 8, background: C.card,
           border: `1px solid ${failed ? C.coral : C.line2}`, borderRadius: 10, padding: "7px 10px",
           fontFamily: SANS, fontSize: 12.5, color: failed ? C.coralDk : C.ink2,
           cursor: expandable ? "pointer" : "default", maxWidth: 320,
@@ -447,7 +447,7 @@ function AuthorByline({ person, createdBy, owner, self }: { person: Person | nul
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
       {person?.photo
-        ? <img src={person.photo} alt="" width={26} height={26} style={{ borderRadius: 999, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(40,38,31,.08)" }} />
+        ? <img src={person.photo} alt="" width={26} height={26} style={{ borderRadius: 999, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(0,0,0,.08)" }} />
         : <span style={{ width: 26, height: 26, borderRadius: 999, background: "#7A6A55", color: "#fff", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, letterSpacing: ".02em" }}>{initialsOf(name)}</span>}
       <span style={{ fontSize: 13, fontWeight: 650, color: C.ink }}>{name}</span>
       {tag ? <span style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".03em", textTransform: "uppercase", padding: "1.5px 6px", borderRadius: 5, background: tagCoral ? C.coralSoft : C.bubble, color: tagCoral ? C.coralDk : C.ink3 }}>{tag}</span> : null}
@@ -610,7 +610,7 @@ export function ChatView(props: ChatViewProps) {
               )
               : (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", maxWidth: 520 }}>
-                  {starters.map((s) => <button key={s} className="vo-chip" onClick={() => onSend(s)} style={{ background: "#fff", border: `1px solid ${C.line2}`, borderRadius: 999, padding: "8px 15px", fontSize: 13, color: C.ink2, cursor: "pointer", fontFamily: SANS }}>{s}</button>)}
+                  {starters.map((s) => <button key={s} className="vo-chip" onClick={() => onSend(s)} style={{ background: C.card, border: `1px solid ${C.line2}`, borderRadius: 999, padding: "8px 15px", fontSize: 13, color: C.ink2, cursor: "pointer", fontFamily: SANS }}>{s}</button>)}
                 </div>
               )}
           </div>
@@ -760,7 +760,7 @@ export function ChatView(props: ChatViewProps) {
             type="button"
             onClick={scrollToLatest}
             aria-label="Scroll to latest"
-            style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", bottom: "calc(100% + 10px)", zIndex: 20, width: 40, height: 40, borderRadius: "50%", background: C.card, border: `1px solid ${C.line2}`, color: C.ink2, boxShadow: "0 4px 20px rgba(40,38,31,0.10)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", bottom: "calc(100% + 10px)", zIndex: 20, width: 40, height: 40, borderRadius: "50%", background: C.card, border: `1px solid ${C.line2}`, color: C.ink2, boxShadow: "0 4px 20px rgba(0,0,0,0.10)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
             {newBelow && <span style={{ position: "absolute", top: -2, right: -2, width: 10, height: 10, borderRadius: "50%", background: C.coral, border: `2px solid ${C.card}` }} />}
@@ -774,7 +774,7 @@ export function ChatView(props: ChatViewProps) {
             </div>
           )}
           {error && <div style={{ color: C.coralDk, fontSize: 13, marginBottom: 8, textAlign: "center" }}>{error}</div>}
-          <div style={{ background: "#fff", border: `1px solid ${C.line2}`, borderRadius: 18, padding: "12px 14px", boxShadow: "0 2px 14px rgba(40,38,31,0.05)" }}>
+          <div style={{ background: C.card, border: `1px solid ${C.line2}`, borderRadius: 18, padding: "12px 14px", boxShadow: "0 2px 14px rgba(0,0,0,0.05)" }}>
             {queuedText && (
               // Message-queue: the pending next message, shown while the current reply streams. Auto-sends
               // when the turn ends; ✕ cancels it before then.
@@ -821,10 +821,10 @@ export function ChatView(props: ChatViewProps) {
                   <button
                     className="vo-send" onClick={() => onStop()}
                     aria-label="Stop generating" title="Stop"
-                    style={{ width: 40, height: 40, borderRadius: "50%", border: "none", background: C.coral, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, transition: "background .15s" }}
+                    style={{ width: 40, height: 40, borderRadius: "50%", border: "none", background: C.coral, color: C.bg, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, transition: "background .15s" }}
                   >◼</button>
                 ) : (
-                  <button className="vo-send" disabled={!canSend} onClick={() => onSend()} aria-label="Send" style={{ width: 40, height: 40, borderRadius: "50%", border: "none", background: canSend ? C.coral : C.line2, color: "#fff", cursor: canSend ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", transition: "background .15s" }}>
+                  <button className="vo-send" disabled={!canSend} onClick={() => onSend()} aria-label="Send" style={{ width: 40, height: 40, borderRadius: "50%", border: "none", background: canSend ? C.coral : C.line2, color: canSend ? C.bg : C.ink3, cursor: canSend ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", transition: "background .15s" }}>
                     <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" /></svg>
                   </button>
                 )}
@@ -842,7 +842,7 @@ export function ChatView(props: ChatViewProps) {
           aria-hidden
           style={{ position: "absolute", inset: 0, zIndex: 30, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(217,119,87,0.06)", border: `2px dashed ${C.coral}`, borderRadius: 12, pointerEvents: "none" }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: `1px solid ${C.coral}`, borderRadius: 12, padding: "14px 20px", boxShadow: "0 4px 20px rgba(40,38,31,0.10)", color: C.ink }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, background: C.card, border: `1px solid ${C.coral}`, borderRadius: 12, padding: "14px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.10)", color: C.ink }}>
             <Paperclip size={18} />
             <span style={{ fontFamily: SANS, fontSize: 14, fontWeight: 600 }}>Drop files to attach</span>
           </div>

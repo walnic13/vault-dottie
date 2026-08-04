@@ -59,7 +59,7 @@ export function DownloadCard({ download }: { download: FileDownload }) {
       <a href={download.downloadUrl} download={download.filename} target="_blank" rel="noopener noreferrer"
         aria-label={`Download ${download.filename}`}
         style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, background: C.coral,
-          color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600,
+          color: C.bg, border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600,
           cursor: "pointer", fontFamily: SANS, textDecoration: "none" }}>
         <IcDownload s={15} /> Download
       </a>

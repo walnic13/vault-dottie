@@ -29,7 +29,7 @@ export function Customize({ styles, styleKey, onSelectStyle, custom, onCustomCha
         <div style={{ fontSize: 13, color: C.ink2, marginBottom: 10 }}>Standing context for the team — entity conventions, tone, what to always flag.</div>
         <InputBox value={custom} onChange={onCustomChange} placeholder="e.g. Always use British spelling. Treat all client and fund names as confidential. Flag any cross-border withholding trigger." rows={4} />
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 14 }}>
-          <button onClick={onSave} className="vo-new" style={{ background: C.coral, color: "#fff", border: "none", borderRadius: 9, padding: "9px 18px", fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: SANS }}>Save</button>
+          <button onClick={onSave} className="vo-new" style={{ background: C.coral, color: C.bg, border: "none", borderRadius: 9, padding: "9px 18px", fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: SANS }}>Save</button>
           {saved && <span style={{ fontSize: 13, color: C.coralDk }}>Saved — active in your next message.</span>}
         </div>
       </div>

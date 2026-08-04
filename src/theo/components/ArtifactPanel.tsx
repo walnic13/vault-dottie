@@ -25,7 +25,7 @@ export function ArtifactPanel({ artifact, openVersion, onSelectVersion, onCopy, 
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {artifact.versions.length > 1 && (
-            <select value={vi} onChange={(e) => onSelectVersion(Number(e.target.value))} style={{ fontFamily: SANS, fontSize: 12.5, border: `1px solid ${C.line2}`, borderRadius: 8, padding: "4px 6px", color: C.ink2, background: "#fff" }}>
+            <select value={vi} onChange={(e) => onSelectVersion(Number(e.target.value))} style={{ fontFamily: SANS, fontSize: 12.5, border: `1px solid ${C.line2}`, borderRadius: 8, padding: "4px 6px", color: C.ink2, background: C.card }}>
               {artifact.versions.map((_, i) => <option key={i} value={i}>v{i + 1}</option>)}
             </select>
           )}
@@ -35,7 +35,7 @@ export function ArtifactPanel({ artifact, openVersion, onSelectVersion, onCopy, 
       </div>
       <div className="vo-scroll" style={{ flex: 1, overflowY: "auto" }}>
         {artifact.type === "html" ? (
-          <iframe title={artifact.title} sandbox="allow-scripts" srcDoc={cur.content} style={{ width: "100%", height: "100%", border: "none", background: "#fff" }} />
+          <iframe title={artifact.title} sandbox="allow-scripts" srcDoc={cur.content} style={{ width: "100%", height: "100%", border: "none", background: C.card }} />
         ) : artifact.type === "code" ? (
           <pre style={{ margin: 0, padding: 20, fontFamily: MONO, fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word", color: C.ink }}>{cur.content}</pre>
         ) : (

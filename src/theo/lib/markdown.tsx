@@ -11,7 +11,7 @@ import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { C, MONO } from "../theme";
 
-const inlineCode: CSSProperties = { background: "#fff", border: `1px solid ${C.line}`, borderRadius: 5, padding: "1px 5px", fontSize: "0.9em", fontFamily: MONO };
+const inlineCode: CSSProperties = { background: C.card, border: `1px solid ${C.line}`, borderRadius: 5, padding: "1px 5px", fontSize: "0.9em", fontFamily: MONO };
 const codeBlockBox: CSSProperties = { margin: "10px 0", padding: "12px 14px", background: C.bubble, border: `1px solid ${C.line2}`, borderRadius: 10, overflowX: "auto", fontFamily: MONO, fontSize: 13, lineHeight: 1.5 };
 const cell: CSSProperties = { border: `1px solid ${C.line2}`, padding: "6px 10px", textAlign: "left", verticalAlign: "top" };
 

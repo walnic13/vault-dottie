@@ -107,7 +107,7 @@ function CitationMarker({ index, citation }: { index: number; citation: Citation
             position: "absolute", ...vertical, left: "50%",
             transform: `translateX(calc(-50% + ${shiftX}px))`, width: 300, zIndex: 40,
             background: C.card, border: `1px solid ${C.line2}`, borderRadius: 12,
-            boxShadow: "0 8px 28px rgba(40,38,31,0.14)", padding: 12, textAlign: "left",
+            boxShadow: "0 8px 28px rgba(0,0,0,0.14)", padding: 12, textAlign: "left",
             whiteSpace: "normal", cursor: "default",
           }}>
           <span style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
