@@ -68,7 +68,7 @@ N/A for this package — no backend/route/schema/contract touched. The **contrac
 Primary Reference = the **deployed** `lib/artifacts.ts` `[[ARTIFACT]]` protocol + `renderAssistant` at the grounding parent (the parse/split/render idiom this package extends) and the binding `DOTTIE_DESIGN_SYSTEM` §3/§4 anatomy. `GovernanceCheck` is a net-new component authored to the §3 spec (no prior component to mirror byte-for-byte); it reuses the VA-T1 inline-style + `C`/`MONO`/`SANS` token idiom verbatim and the `DownloadCard`/`ArtifactCard` structural conventions (inline-style card, token colours, mono provenance).
 
 ## §F-P5 — Component Contract Table
-See §CCT. The one net-new public interface is `GovernanceCheck({ data: CheckData })`; the `CheckData` shape is the FE↔backend contract (full TS in §CCT).
+See §CCT. The one **net-new** public interface is `GovernanceCheck({ data: CheckData })`; the `CheckData` shape is the FE↔backend contract (full TS in §CCT). The one **modified** interface is `ChatViewProps.renderAssistant`, additively widened to `(content: string, streaming?: boolean) => ReactNode` (optional trailing param, back-compatible — existing one-arg callers unaffected). `TheoMainProps` and all other prop interfaces are unchanged; `AssistantPart.kind` additively gains `"check"`.
 
 ## §F-P6 — Repository & active-surface grounding
 - `tsc --noEmit -p tsconfig.app.json` → **exit 0** (re-verified rev 3, this turn). New types (`CheckData` et al.), the `AssistantPart` `check` union member, the `flatMap` return typing, and the optional `streaming` params on `splitAssistant`/`renderAssistant`/the `ChatView` prop all resolve; no `any`.
