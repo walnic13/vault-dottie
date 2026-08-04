@@ -36,7 +36,7 @@ export interface ChatViewProps {
   assistantName: string;
   greeting: string;
   starters: string[];
-  renderAssistant: (content: string) => ReactNode;
+  renderAssistant: (content: string, streaming?: boolean) => ReactNode;
   // VA-T8 voice: dictation (composer mic) + read-aloud (per assistant reply). Shown only when the
   // live backend is wired (voiceAvailable); state keyed by message index for read-aloud.
   voiceAvailable: boolean;
@@ -657,7 +657,7 @@ export function ChatView(props: ChatViewProps) {
                       the reasoning); shown for ordinary extended-thinking turns as before. */}
                   {m.thinking && !(m.tools && m.tools.length) ? <ThinkingPanel text={m.thinking} live={loading && i === messages.length - 1 && !m.content} /> : null}
                   {m.content
-                    ? (m.runs?.some((r) => r.citations.length) ? <CitedText runs={m.runs} renderText={renderAssistant} /> : renderAssistant(m.content))
+                    ? (m.runs?.some((r) => r.citations.length) ? <CitedText runs={m.runs} renderText={renderAssistant} /> : renderAssistant(m.content, loading && i === messages.length - 1))
                     : (loading && i === messages.length - 1 ? <StatusLine /> : null)}
                   {/* VA-T9: a tool-produced downloadable file → download card, directly after the reply
                       body and BEFORE the read-aloud control (DR-T11 event: vault_export). */}

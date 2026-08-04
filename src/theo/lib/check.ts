@@ -2,8 +2,9 @@
 // (DOTTIE_DESIGN_SYSTEM §3 anatomy / §4 intensities). Dottie emits this JSON for a substantive
 // or adjudication answer; the renderer (GovernanceCheck) draws the component from it. A light
 // lookup carries no block. parseCheck is intentionally forgiving: any shape it cannot trust
-// becomes null, and the renderer falls back to plain markdown — a half-streamed or malformed
-// block never blanks the turn (R-COMPONENT stays a floor, not a crash surface).
+// becomes null, and the renderer falls back to plain markdown for a completed-but-unparseable
+// block (R-COMPONENT stays a floor, not a crash surface). (A still-open opener mid-stream is
+// suppressed by splitChecks and shown as text once final — see lib/artifacts.ts.)
 
 // The three semantic verdicts (§2.4). Absent/null verdict = the "Grounded" intensity ("My read");
 // a present verdict = the "Grounded + verdict" adjudication intensity.

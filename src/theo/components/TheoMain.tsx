@@ -35,8 +35,8 @@ export interface TheoMainProps {
 }
 
 export function TheoMain({ t, mode, suppressNarrowHeader }: TheoMainProps) {
-  function renderAssistant(content: string): ReactNode {
-    return splitAssistant(content).map((part, i) => {
+  function renderAssistant(content: string, streaming = false): ReactNode {
+    return splitAssistant(content, streaming).map((part, i) => {
       if (part.kind === "artifact") {
         const id = part.value;
         return <ArtifactCard key={i} artifact={t.artifacts.find((a) => a.id === id)} onOpen={() => t.openArtifact(id)} />;
