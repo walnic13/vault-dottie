@@ -284,25 +284,28 @@ export function useTheoState() {
     if (didRestoreRef.current) return;
     if (!recentsLoaded) return;                           // wait for the first Recents settle (loaded, possibly empty)
     didRestoreRef.current = true;                         // decide once, at the first recents-settle
-    // already in a chat / composing, or nothing to restore → drop the gate now (show current/greeting)
-    if (conversationId !== null || messages.length > 0 || draft.trim() !== "" || attachments.length > 0 || recentsList.length === 0) {
+    // already in a chat / composing → keep the current view (drop the gate)
+    if (conversationId !== null || messages.length > 0 || draft.trim() !== "" || attachments.length > 0) {
       setRestoring(false);
       return;
     }
-    // Staleness cap (Walter 2026-07-28): the >4h "start fresh on the greeting" reset is MOBILE-ONLY.
-    // On DESKTOP the workspace never expires — always restore the last chat regardless of how long has
-    // passed, so the user comes back to exactly where they left off (Walter: on desktop the space
-    // "should never update/refresh"). On NARROW (mobile) keep the 4h cap: a gap beyond the window
-    // (max of last_opened_at / updated_at) lands on the fresh Theo greeting instead of a stale chat.
-    const RESTORE_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 hours (mobile only)
-    const isNarrow = typeof window !== "undefined" && window.matchMedia("(max-width: 767.98px)").matches;
-    const lastTouched = Math.max(Date.parse(recentsList[0].last_opened_at || "") || 0, Date.parse(recentsList[0].updated_at || "") || 0);
-    if (isNarrow && (!lastTouched || Date.now() - lastTouched > RESTORE_MAX_AGE_MS)) {
-      setRestoring(false); // mobile + stale → drop the gate, show the greeting (no restore)
+    // pkg 3b landing (Walter 2026-08-05): time-defined hybrid. Cold-open restores the last chat ONLY when it
+    // is FRESH — last-touched within the 4h staleness window (the same "not visited in 4 hours" window Theo
+    // uses). A STALE chat (>4h) or NO recent chat lands on the Overview console (Dottie's home) instead of a
+    // greeting. Applies on desktop + mobile — supersedes the transplanted desktop-never-expire FOR DOTTIE's
+    // landing, per Walter's 2026-08-05 direction (Dottie is a console; her home is the Overview, not a chat).
+    const STALE_MS = 4 * 60 * 60 * 1000; // 4 hours
+    const lastTouched = recentsList.length
+      ? Math.max(Date.parse(recentsList[0].last_opened_at || "") || 0, Date.parse(recentsList[0].updated_at || "") || 0)
+      : 0;
+    const fresh = lastTouched > 0 && Date.now() - lastTouched <= STALE_MS;
+    if (!fresh) {
+      applyView("overview");   // stale or no recent chat → the console home (also loads the dashboard data)
+      setRestoring(false);
       return;
     }
-    // restore the last-touched chat, THEN drop the gate → the splash lands directly on that chat (no
-    // greeting flash). `finally` so a failed restore still clears the gate rather than hanging on splash.
+    // fresh → restore the last-touched chat, THEN drop the gate (splash lands on the chat, no greeting flash).
+    // `finally` so a failed restore still clears the gate rather than hanging on splash.
     void selectRecent(recentsList[0].id).finally(() => setRestoring(false));
   }, [recentsLoaded, recentsList, conversationId, messages.length, draft, attachments.length]);
 
