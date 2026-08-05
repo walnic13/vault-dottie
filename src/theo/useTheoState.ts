@@ -117,7 +117,8 @@ export function useTheoState() {
   const [recentsList, setRecentsList] = useState<ConversationSummary[]>([]);
   // Cold-open restore gate: `recentsLoaded` marks the first Recents settle (loaded, possibly empty);
   // `restoring` holds the UI on a quiet neutral cover from mount until the restore decision resolves,
-  // so the app opens → last chat (or greeting) instead of flashing the new-chat greeting first.
+  // so the app opens → the fresh last chat (or the Overview console when there is no fresh chat, pkg 3b)
+  // instead of flashing a greeting first.
   const [recentsLoaded, setRecentsLoaded] = useState(false);
   const [restoring, setRestoring] = useState(true);
   // B4e: the open project's chats, KEYED by projectId so a slow/stale async load can neither show
@@ -247,7 +248,8 @@ export function useTheoState() {
   // in the standalone harness). useCallback-stable so TheoSurface's mount effect runs it once.
   const loadRecents = useCallback(async () => {
     // Instant paint from the CONFIRMED-principal cache (the mount flow binds the principal before this
-    // runs). Seed recents + resolve the restore gate on the cached last chat, then revalidate below.
+    // runs). Seed recents from cache so the restore gate can resolve (fresh last chat → restore it, else
+    // the Overview console — see the gate effect below), then revalidate the list below.
     if (isPrincipalBound()) {
       const seed = getCachedRecents();
       if (seed && seed.length) { setRecentsList(seed); setRecentsLoaded(true); }
@@ -275,8 +277,9 @@ export function useTheoState() {
   // ONCE (didRestoreRef, set at the first recents-settle) so it never fires again on a later state
   // change (a New chat, a manual open, a cleared draft). Suppressed if the user is already in a chat
   // OR composing — `selectRecent`→`clearComposer()` clears attachments, and the typed `draft` would
-  // otherwise be carried into the restored (wrong) conversation. Empty-user (no recents) → stays on
-  // the greeting/new-chat home. The recents ordering is server-sourced then re-sorted client-side by
+  // otherwise be carried into the restored (wrong) conversation. Empty-user (no recents) OR a stale last
+  // chat (>4h) → lands on the Overview console (Dottie's home, pkg 3b), not a greeting. The recents
+  // ordering is server-sourced then re-sorted client-side by
   // last-touched in loadRecents; it is also instant-painted from the per-principal Theo Snapshot
   // Storage Exception cache (theoSnapshot) once the principal is confirmed, and always revalidated.
   const didRestoreRef = useRef(false);

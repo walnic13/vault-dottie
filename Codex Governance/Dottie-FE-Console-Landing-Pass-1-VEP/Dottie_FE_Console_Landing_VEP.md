@@ -16,7 +16,7 @@ Sub-phase Track: N/A
 | 2 | FE Grounding Conformance — `governance/THEO_FRONTEND_GROUNDING_CONFORMANCE_STANDARD.md` (§3 GCR + Rule Anchor) | grounded; unchanged @ HEAD | `4f2f42e799be5db31e1e35e523d656ff4c1c057e` |
 | 3 | FE Governor — `governance/CLAUDE_CODE_THEO_FRONTEND_GOVERNOR_STANDARD.md` (§3 CCT; §4 reproduce faithfully / do not redesign) | grounded; unchanged @ HEAD | `3afec7ea4b13650ce2bf28bf32073179a35e7b24` |
 | 4 | Codex FE Review — `governance/CODEX_THEO_FRONTEND_REVIEW_STANDARD.md` (Pass-2 reviewer; APPROVED/REJECTED only) | grounded; unchanged @ HEAD | `25cc488091d619d8f6642b10552df0d019a87933` |
-| 5 | CHANGED — `src/theo/useTheoState.ts` (the cold-open restore effect: fresh<4h → restore last chat; stale>4h / no recent chat → `applyView("overview")`) | `Read` + `Edit` this turn | base @HEAD `f0cacff307564ea5b206b2727e66268aaddee08f` → proposed `ae513878d5cb2e34ed6b96dad3da0b7dd420397c` |
+| 5 | CHANGED — `src/theo/useTheoState.ts` (the cold-open restore effect: fresh<4h → restore last chat; stale>4h / no recent chat → `applyView("overview")`) | `Read` + `Edit` this turn | base @HEAD `f0cacff307564ea5b206b2727e66268aaddee08f` → proposed `9c4740e2c8be3a7d2ce22409849d8c2f6a81b49f` |
 
 No ChatGPT advisory cited. No backend / route / schema / migration. Everything else — every view, the chat, the pkg-2 renderer, the console surfaces — is unchanged.
 
