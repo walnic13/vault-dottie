@@ -10,14 +10,16 @@ Grounding Mode: Full Baseline Grounding
 Pass: Pass 1
 Sub-phase Track: N/A
 
-| # | Document (name + absolute path) | Read tool invocation this turn | Currency anchor (blob SHA @ HEAD / proposed) |
+Currency labelling: this is a CODE-BEARING package — at the review HEAD the changed files' blobs ARE the proposed blobs. So for changed rows the base blob is cited at the PARENT commit `5b6e944` and the proposed blob is the review-HEAD blob (anchored to the blob SHA, not the commit). Unchanged grounding docs are cited at HEAD.
+
+| # | Document (name + absolute path) | Read tool invocation this turn | Currency anchor (unchanged: blob @ HEAD; changed: base @ parent 5b6e944 → proposed @ review HEAD) |
 | - | ------------------------------- | ------------------------------ | -------------------------------------------- |
 | 1 | VISUAL AUTHORITY — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/spec/DOTTIE_DESIGN_SYSTEM.md` (§2 identity — the gold mark / signature) | `Read`(§17–54) this turn | `744523cf905df1186d954b86519b1cdeddac539c` |
 | 2 | FE Grounding Conformance — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/governance/THEO_FRONTEND_GROUNDING_CONFORMANCE_STANDARD.md` (§3 GCR + Rule Anchor) | grounded; unchanged @ HEAD | `4f2f42e799be5db31e1e35e523d656ff4c1c057e` |
 | 3 | FE Governor — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/governance/CLAUDE_CODE_THEO_FRONTEND_GOVERNOR_STANDARD.md` (reproduce faithfully / no redesign) | grounded; unchanged @ HEAD | `3afec7ea4b13650ce2bf28bf32073179a35e7b24` |
 | 4 | Codex FE Review — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/governance/CODEX_THEO_FRONTEND_REVIEW_STANDARD.md` (Pass-2; APPROVED/REJECTED only) | grounded; unchanged @ HEAD | `25cc488091d619d8f6642b10552df0d019a87933` |
-| 5 | PRIMARY REFERENCE / CHANGED — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/components/DottieSpiral.tsx` (the signature deconstruct→bloom→rebuild mark; + `loop`/`decorative`) | `Read`(full) + `Edit` this turn | base @HEAD `2dd0df3dc82b9cd2d484d229dbb6e15e459d4617` → proposed `569963f3e27057e864a47259e90650b2dec8e419` |
-| 6 | CHANGED — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/components/ChatView.tsx` (greeting mark: static `DottieMark variant="building"` → animated `DottieSpiral` one-shot; **+ delta reissue: the restore-hold comment swept to match**) | `Read`(§405–605) + `Edit` this turn | base @HEAD `1e7b4898a8c44d9b3f96c6f2db213ef6560ef145` → proposed `a73ac6ee43108057f738119ae77b17615fe5ebc5` |
+| 5 | PRIMARY REFERENCE / CHANGED — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/components/DottieSpiral.tsx` (the signature deconstruct→bloom→rebuild mark; + `loop`/`decorative`) | `Read`(full) + `Edit` prior turn | base @ parent `5b6e944`: `2dd0df3dc82b9cd2d484d229dbb6e15e459d4617` → proposed @ review HEAD `569963f3e27057e864a47259e90650b2dec8e419` |
+| 6 | CHANGED — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/components/ChatView.tsx` (greeting mark: static `DottieMark variant="building"` → animated `DottieSpiral` one-shot; **+ delta reissue #2: the restore-hold comment corrected — it claimed a COLD decision lifts to the greeting w/ the animated mark, but useTheoState pkg 3b/§6.1 sends a STALE/no-recent open to the Overview console, never the greeting; T13 fix**) | `Read`(§404–421) + `Edit` this turn | base @ parent `5b6e944`: `1e7b4898a8c44d9b3f96c6f2db213ef6560ef145` → proposed @ review HEAD `7114decfd56b3228662c90e0c34a1c0c0b340e44` |
 
 No ChatGPT advisory cited. No backend / route / schema / migration.
 
@@ -52,7 +54,7 @@ Two ACTIVE files. `DottieSpiral.tsx`: two optional props (`loop`, `decorative`) 
 - **G-3 — Deploy + eyeball.** Lands on `development` → brave-dune; verified mounted in Origin. PROCEED.
 
 ## §DELTA — changed files (before → after evidence)
-Two files (GCR rows 5–6). `DottieSpiral.tsx` (`2dd0df3d`→`569963f3`): + `loop`/`decorative` props gating the loop timer + aria; animation unchanged. `ChatView.tsx` (`1e7b4898`→`a73ac6ee`): greeting mark element swapped to `DottieSpiral`, **and (delta reissue, T13 fix) the restore-hold comment swept — it previously read "the greeting, whose `variant="building"` mark then animates" and now reads the `DottieSpiral` one-shot (loop={false}) deconstruct→bloom→reform, matching the runtime.** No other bytes changed.
+Two files (GCR rows 5–6). `DottieSpiral.tsx` (`2dd0df3d`→`569963f3`): + `loop`/`decorative` props gating the loop timer + aria; animation unchanged. `ChatView.tsx` (`1e7b4898`→`7114decf`): greeting mark element swapped to `DottieSpiral`, **and (delta reissue #2, T13 fix) the restore-hold comment corrected. It previously claimed a COLD cold-open decision "lifts to the greeting, whose `DottieSpiral` mark then animates" — but the runtime (useTheoState pkg 3b / §6.1, lines 296–307: `applyView("overview")`) sends a STALE (>4h) or no-recent open to the Overview console, never the greeting. The comment now reads: the hold lifts to whatever the gate resolves — a FRESH last chat (≤4h) restored, else the Overview console — never a greeting; the greeting's animated one-shot is a separate fresh-new-chat moment.** No other bytes changed.
 
 ## §CODEX — activation (Walter forwards)
 

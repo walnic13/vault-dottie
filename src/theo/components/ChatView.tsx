@@ -407,11 +407,12 @@ function BirthdayBanner() {
 
 // Cold-open restore hold: a QUIET neutral cover (the app surface `C.bg` + a small STATIC Vault mark)
 // held over the whole surface only until the restore decision resolves, so there is no new-chat
-// greeting flash before a restore lands. Deliberately NOT a branded splash (Walter 2026-07-28 — "the
-// app should just open ... without any interference"): no warm-sand backdrop, no large spiral. On a
-// COLD decision (a >4h gap on mobile) it lifts to the greeting, whose `DottieSpiral` mark then animates
-// once (loop={false}) — the branded deconstruct→dot-bloom→reform moment; on a WARM/desktop decision it
-// lifts to the restored last chat.
+// greeting flash before the landing resolves. Deliberately NOT a branded splash (Walter 2026-07-28 —
+// "the app should just open ... without any interference"): no warm-sand backdrop, no large spiral. The
+// hold lifts to whatever the gate resolves (useTheoState pkg 3b, §6.1): a FRESH last chat (≤4h) is
+// restored; a STALE (>4h) or absent recent lands on the Overview console (Dottie's home) — never a
+// greeting. (The greeting's animated `DottieSpiral` one-shot is a separate fresh-new-chat moment, not
+// the cold-open target.)
 function RestoringSplash() {
   if (typeof document === "undefined") return null;
   // PORTALED to document.body + position:fixed so the quiet hold covers the ENTIRE surface (over the
