@@ -84,7 +84,40 @@ export type StyleKey = "normal" | "concise" | "explanatory" | "formal";
 export interface Style { key: StyleKey; label: string; desc: string; mod: string }
 
 export interface OpenArtifact { id: string; v: number }   // v < 0 ⇒ latest version
-export type View = "chats" | "projects" | "project" | "artifacts" | "customize";
+export type View = "chats" | "overview" | "checks" | "flags" | "audit" | "library" | "projects" | "project" | "artifacts" | "customize";
+
+// Dottie governance-findings store (DOTTIE_MEMORY_MODEL §2.4; the deployed dottie_findings/dottie_flags
+// read handlers). A Finding = a check/verdict Dottie made on a claim (written on a verdict [[CHECK]] turn);
+// a Flag = an open governance flag derived from one. These back the 9/10 Overview console (§6.1).
+export type Verdict = "concur" | "caution" | "challenge";
+export interface Finding {
+  id: string;
+  target_ref: string;
+  target_kind: "theo_answer" | "workpaper" | "context_item" | "conversation";
+  verdict: Verdict;
+  confidence_level: number | null;
+  confidence_label: string | null;
+  claim_source: string | null;
+  claim_text: string | null;
+  lead: string | null;
+  conclusion: string | null;
+  authorities: string[];
+  flags: string[];
+  docs_expected: string[];
+  conversation_id: string | null;
+  created_at: string;
+}
+export interface Flag {
+  id: string;
+  finding_id: string | null;
+  flag_type: string;
+  severity: "low" | "medium" | "high";
+  target_ref: string | null;
+  summary: string | null;
+  status: "open" | "resolved";
+  created_at: string;
+  resolved_at: string | null;
+}
 // Nav-History seam (VEP-1): the nav state Theo reports to the Origin host (onNavState) so the host can
 // drive its browser-history sentinel + mobile Back/title (VEP-2). depth = internal back-steps available
 // (the host keys its per-level sentinel on this); title = the open chat's title when it is inside a

@@ -8,13 +8,15 @@
 export const ASSISTANT_NAME = "Dottie";
 
 // ── Dottie capability gates ──────────────────────────────────────────────
-// Which transplanted Theo features Dottie's backend actually serves yet. The FE is a byte-verbatim
-// Theo transplant, so every control is present; a feature stays `false` until its `dottie_*` backend
-// lands (flip to `true` in the SAME governed package that ships that backend). Projects stays `false`
+// Which Dottie capabilities are live: the transplanted Theo features her backend serves yet, PLUS the
+// Dottie-native governance-console sections (Overview, pkg 3b). The FE is a byte-verbatim Theo transplant,
+// so every transplanted control is present; a feature stays `false` until its `dottie_*` backend lands
+// (flip to `true` in the SAME governed package that ships that backend). Projects stays `false`
 // indefinitely (Walter 2026-08-01: hidden for now). Single source of truth, consumed by data.ts (NAV
 // filter), gateway.live.ts (attachments/voice predicates + short-circuits for unbacked list calls),
 // and ConvMenu.tsx (Add-to-project item). Authoritative gap register: spec/DOTTIE_THEO_RECONCILIATION.md.
 export const DOTTIE_CAPABILITIES = {
+  overview: true,              // pkg 3b — the 9/10 Overview console (dottie_findings/flags read handlers LIVE, deployed 2026-08-04)
   projects: false,             // §B/§E — hidden indefinitely (no Projects/SPW backend)
   people: true,                // §C — dottie_list_people LIVE (ListPeople package; deployed + golden curls green 2026-08-01)
   attachments: true,           // §D — dottie attachments LIVE (4 handlers + dottie-content blob; deployed + golden-curl round-trip green 2026-08-01)

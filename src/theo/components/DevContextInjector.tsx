@@ -19,14 +19,14 @@ export function DevContextInjector({ onInject }: { onInject: (ctx: AppContext) =
   return (
     <div style={{ position: "fixed", bottom: 12, right: 12, zIndex: 50, fontFamily: SANS }}>
       {open && (
-        <div style={{ background: "#fff", border: `1px solid ${C.line2}`, borderRadius: 10, padding: 10, marginBottom: 8, boxShadow: "0 4px 18px rgba(40,38,31,.12)" }}>
+        <div style={{ background: C.card, border: `1px solid ${C.line2}`, borderRadius: 10, padding: 10, marginBottom: 8, boxShadow: "0 4px 18px rgba(0,0,0,.12)" }}>
           <div style={{ fontSize: 11, color: C.ink3, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.4 }}>Dev · inject app-context</div>
           {SAMPLES.map((s) => (
             <button key={s.label} onClick={() => onInject(s.ctx)} style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", padding: "5px 6px", fontSize: 12.5, color: C.ink, cursor: "pointer", fontFamily: SANS, borderRadius: 6 }}>{s.label}</button>
           ))}
         </div>
       )}
-      <button onClick={() => setOpen((v) => !v)} title="Dev: inject app-context" style={{ background: C.ink, color: "#fff", border: "none", borderRadius: 999, padding: "6px 12px", fontSize: 12, cursor: "pointer", fontFamily: SANS }}>DEV ctx</button>
+      <button onClick={() => setOpen((v) => !v)} title="Dev: inject app-context" style={{ background: C.coral, color: C.bg, border: "none", borderRadius: 999, padding: "6px 12px", fontSize: 12, cursor: "pointer", fontFamily: SANS }}>DEV ctx</button>
     </div>
   );
 }

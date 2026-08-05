@@ -12,6 +12,8 @@ import { STYLES, STARTERS, REVIEW_STARTERS, REVIEW_APP_STARTERS } from "../data"
 import { IcBack, IcClose, IcShare } from "./icons";
 import { Formatted } from "../lib/markdown";
 import { splitAssistant } from "../lib/artifacts";
+import { parseCheck } from "../lib/check";
+import { GovernanceCheck } from "./GovernanceCheck";
 import { appContextLabel } from "../lib/appContext";
 import { ArtifactCard } from "./ArtifactCard";
 import { ChatView } from "./ChatView";
@@ -19,6 +21,11 @@ import { ChatMenu } from "./ChatMenu";
 import { ProjectsView } from "./ProjectsView";
 import { ProjectDetail } from "./ProjectDetail";
 import { ArtifactsView } from "./ArtifactsView";
+import { OverviewView } from "./OverviewView";
+import { ChecksView } from "./ChecksView";
+import { FlagsView } from "./FlagsView";
+import { AuditView } from "./AuditView";
+import { LibraryView } from "./LibraryView";
 import { Customize } from "./Customize";
 import { ArtifactPanel } from "./ArtifactPanel";
 import type { useTheoState } from "../useTheoState";
@@ -33,11 +40,20 @@ export interface TheoMainProps {
 }
 
 export function TheoMain({ t, mode, suppressNarrowHeader }: TheoMainProps) {
-  function renderAssistant(content: string): ReactNode {
-    return splitAssistant(content).map((part, i) => {
+  function renderAssistant(content: string, streaming = false): ReactNode {
+    return splitAssistant(content, streaming).map((part, i) => {
       if (part.kind === "artifact") {
         const id = part.value;
         return <ArtifactCard key={i} artifact={t.artifacts.find((a) => a.id === id)} onOpen={() => t.openArtifact(id)} />;
+      }
+      if (part.kind === "check") {
+        // A check part is always a FULLY-CLOSED [[CHECK]]…[[/CHECK]] block (splitChecks emits it only
+        // on a complete match). It renders as the governance component; a completed-but-unparseable
+        // block falls back to plain markdown (the raw JSON body) so the turn is never blanked. A
+        // still-open/never-closed block never reaches here — splitChecks handles it (suppressed while
+        // streaming, rendered as text when final).
+        const data = parseCheck(part.value);
+        return data ? <GovernanceCheck key={i} data={data} /> : <Formatted key={i} text={part.value} />;
       }
       return part.value.trim() ? <Formatted key={i} text={part.value} /> : null;
     });
@@ -84,7 +100,7 @@ export function TheoMain({ t, mode, suppressNarrowHeader }: TheoMainProps) {
           {mode !== "panel" && <div style={{ fontSize: 12.5, color: C.ink3 }}>{ASSISTANT_NAME} in {PRODUCT_NAME}</div>}
         </>) : (<div style={{ fontSize: 16, fontWeight: 600, display: "flex", alignItems: "center", gap: 9 }}>
           {t.view === "project" && <button onClick={() => t.go("projects")} style={{ background: "none", border: "none", cursor: "pointer", color: C.ink2, display: "flex", padding: 0 }}><IcBack s={20} /></button>}
-          {t.view === "projects" && "Projects"}{t.view === "artifacts" && "Artifacts"}{t.view === "customize" && "Customize"}{t.view === "project" && t.detail?.name}
+          {t.view === "overview" && "Overview"}{t.view === "checks" && "Checks on Theo"}{t.view === "flags" && "Open flags"}{t.view === "audit" && "Audit trail"}{t.view === "library" && "Library & Sources"}{t.view === "projects" && "Projects"}{t.view === "artifacts" && "Artifacts"}{t.view === "customize" && "Customize"}{t.view === "project" && t.detail?.name}
         </div>)}
       </header>
 
@@ -116,6 +132,31 @@ export function TheoMain({ t, mode, suppressNarrowHeader }: TheoMainProps) {
           )}
           {t.view === "artifacts" && (
             <ArtifactsView artifacts={t.galleryArtifacts} onOpenArtifact={t.openGalleryArtifact} />
+          )}
+          {t.view === "overview" && (
+            <div style={{ flex: 1, overflowY: "auto", padding: "22px 20px" }}>
+              <OverviewView findings={t.findings} flags={t.flags} loading={t.overviewLoading} onOpenConversation={t.selectRecent} onResolveFlag={t.resolveFlag} />
+            </div>
+          )}
+          {t.view === "checks" && (
+            <div style={{ flex: 1, overflowY: "auto", padding: "22px 20px" }}>
+              <ChecksView findings={t.findings} loading={t.overviewLoading} onOpenConversation={t.selectRecent} />
+            </div>
+          )}
+          {t.view === "flags" && (
+            <div style={{ flex: 1, overflowY: "auto", padding: "22px 20px" }}>
+              <FlagsView flags={t.flags} loading={t.overviewLoading} onResolve={t.resolveFlag} />
+            </div>
+          )}
+          {t.view === "audit" && (
+            <div style={{ flex: 1, overflowY: "auto", padding: "22px 20px" }}>
+              <AuditView findings={t.findings} flags={t.flags} loading={t.overviewLoading} />
+            </div>
+          )}
+          {t.view === "library" && (
+            <div style={{ flex: 1, overflowY: "auto", padding: "22px 20px" }}>
+              <LibraryView findings={t.findings} loading={t.overviewLoading} />
+            </div>
           )}
           {t.view === "customize" && (
             <Customize styles={STYLES} styleKey={t.styleKey} onSelectStyle={t.selectStyle} custom={t.custom} onCustomChange={t.setCustom} onSave={t.save} saved={t.saved} productName={PRODUCT_NAME} />

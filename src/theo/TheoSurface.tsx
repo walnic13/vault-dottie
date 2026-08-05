@@ -23,13 +23,13 @@ const STYLE_BLOCK = `
   textarea::placeholder, input::placeholder { color: ${C.ink3}; }
   .vo-scroll::-webkit-scrollbar { width: 10px; }
   .vo-scroll::-webkit-scrollbar-thumb { background: ${C.line2}; border-radius: 8px; border: 3px solid transparent; background-clip: padding-box; }
-  .vo-row:hover { background: rgba(0,0,0,0.04); }
-  .vo-nav:hover { background: rgba(0,0,0,0.04); }
+  .vo-row:hover { background: ${C.panel2}; }
+  .vo-nav:hover { background: ${C.panel2}; }
   .vo-send:hover:not(:disabled) { background: ${C.coralDk}; }
   .vo-new:hover { background: ${C.coralDk}; }
   .vo-chip:hover { background: ${C.coralSoft}; border-color: ${C.coral}; }
-  .vo-card:hover { border-color: ${C.coral}; box-shadow: 0 4px 18px rgba(40,38,31,.07); }
-  .vo-ghost:hover { background: rgba(0,0,0,0.04); }
+  .vo-card:hover { border-color: ${C.coral}; box-shadow: 0 6px 22px rgba(0,0,0,.5); }
+  .vo-ghost:hover { background: ${C.panel2}; }
   .vo-actions { opacity: 0; transition: opacity .12s; }
   .vo-row:hover .vo-actions, .vo-card:hover .vo-actions, .vo-actions:focus-within { opacity: 1; }
   button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid ${C.coral}; outline-offset: 2px; }

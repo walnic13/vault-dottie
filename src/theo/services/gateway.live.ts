@@ -12,6 +12,7 @@
 import type {
   Artifact, ArtifactSummary, AttachmentUpload, ConversationAttachment, ConversationDetail, ConversationSummary, FileDownload, InlineImage, InlineImageItem, InlineVideo, GatewayRequest, GatewayResponse,
   KDraft, Knowledge, NpDraft, Person, Project, ProjectMember, PublishedConversation,
+  Finding, Flag,
 } from "../types";
 import {
   sendMessage as mockSend, listConversations as mockList, getConversation as mockGet,
@@ -304,6 +305,52 @@ export async function listConversations(limit?: number): Promise<ConversationSum
     throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
   }
   return Array.isArray(json?.data?.conversations) ? json.data.conversations : [];
+}
+
+// pkg 3a.2/3b — the caller's governance findings (dottie_findings_list; owner-scoped, newest-first). Backs the
+// 9/10 Overview + Checks-on-Theo. Unconfigured harness → empty (no console data in the standalone mock).
+export async function listFindings(limit?: number): Promise<Finding[]> {
+  if (!apiBase && !tokenProvider) return [];
+  const headers = await authHeaders();
+  const query = limit != null ? `?limit=${encodeURIComponent(String(limit))}` : "";
+  const res = await fetch(`${apiBase}/api/dottie_findings_list${query}`, { method: "GET", credentials: "same-origin", headers });
+  let json: { data?: { findings?: Finding[] }; error?: { message?: string } } | null = null;
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
+  return Array.isArray(json?.data?.findings) ? json.data.findings : [];
+}
+
+// pkg 3a.2/3b — the caller's governance flags (dottie_flags_list; owner-scoped, newest-first; default open).
+// Backs the 9/10 Overview open-flags + the Open-flags surface. Unconfigured harness → empty.
+export async function listFlags(status?: "open" | "resolved" | "all", limit?: number): Promise<Flag[]> {
+  if (!apiBase && !tokenProvider) return [];
+  const headers = await authHeaders();
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  if (limit != null) params.set("limit", String(limit));
+  const query = params.toString() ? `?${params.toString()}` : "";
+  const res = await fetch(`${apiBase}/api/dottie_flags_list${query}`, { method: "GET", credentials: "same-origin", headers });
+  let json: { data?: { flags?: Flag[] }; error?: { message?: string } } | null = null;
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
+  return Array.isArray(json?.data?.flags) ? json.data.flags : [];
+}
+
+// pkg 3b.3-resolve — mark a governance flag resolved / re-open it (dottie_flag_resolve; owner-scoped UPDATE).
+// Returns the updated flag row, or null in the unconfigured harness. Backs the Open-flags "Resolve" action.
+export async function resolveFlag(flagId: string, status: "open" | "resolved"): Promise<Flag | null> {
+  if (!apiBase && !tokenProvider) return null;
+  const headers = await authHeaders();
+  const res = await fetch(`${apiBase}/api/dottie_flag_resolve`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers,
+    body: JSON.stringify({ flag_id: flagId, status }),
+  });
+  let json: { data?: { flag?: Flag }; error?: { message?: string } } | null = null;
+  try { json = await res.json(); } catch { throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`); }
+  if (!res.ok) throw new Error(json?.error?.message || `Dottie gateway error (HTTP ${res.status}).`);
+  return json?.data?.flag ?? null;
 }
 
 // B4e — a project's conversations (theo_list_conversations?projectId; owner-scoped, B4d). Backs the

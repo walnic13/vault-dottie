@@ -113,7 +113,7 @@ export function ProjectDetail({ project, chats, kdraft, onKdraftChange, onAddKno
                   display: "inline-flex", alignItems: "center", gap: 7, cursor: visibilityBusy ? "default" : "pointer", fontFamily: SANS, fontSize: 12.5, fontWeight: 600,
                   borderRadius: 999, padding: "5px 12px", opacity: visibilityBusy ? 0.6 : 1,
                   border: `1px solid ${project.visibility === "group" ? C.coral : C.line2}`,
-                  background: project.visibility === "group" ? C.coralSoft : "#fff",
+                  background: project.visibility === "group" ? C.coralSoft : C.card,
                   color: project.visibility === "group" ? C.coralDk : C.ink2,
                 }}
               >
@@ -172,7 +172,7 @@ export function ProjectDetail({ project, chats, kdraft, onKdraftChange, onAddKno
                   onChange={(e) => { const oid = e.target.value; if (oid) onShareMember(project.id, oid); }}
                   disabled={invitable.length === 0}
                   aria-label="Invite a teammate to this project"
-                  style={{ fontFamily: SANS, fontSize: 12.5, color: C.ink2, border: `1px solid ${C.line2}`, borderRadius: 8, padding: "6px 10px", background: "#fff", maxWidth: 320 }}
+                  style={{ fontFamily: SANS, fontSize: 12.5, color: C.ink2, border: `1px solid ${C.line2}`, borderRadius: 8, padding: "6px 10px", background: C.card, maxWidth: 320 }}
                 >
                   <option value="">{invitable.length === 0 ? "No teammates to invite" : "Invite a teammate…"}</option>
                   {invitable.map((p) => (
@@ -189,7 +189,7 @@ export function ProjectDetail({ project, chats, kdraft, onKdraftChange, onAddKno
           <div style={{ fontWeight: 600, fontSize: 15 }}>Chats in this project</div>
           <button
             className="vo-new" onClick={onStartChat}
-            style={{ display: "inline-flex", alignItems: "center", gap: 7, background: C.coral, color: "#fff", border: "none", borderRadius: 9, padding: "8px 14px", fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: SANS }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 7, background: C.coral, color: C.bg, border: "none", borderRadius: 9, padding: "8px 14px", fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: SANS }}
           >
             <IcCompose s={16} /> New chat
           </button>
@@ -284,7 +284,7 @@ export function ProjectDetail({ project, chats, kdraft, onKdraftChange, onAddKno
                   className="vo-chip"
                   disabled={!canAddKnowledge || kBusy}
                   onClick={async () => { if (!canAddKnowledge || kBusy) return; setKBusy(true); try { await onAddKnowledge(); } finally { setKBusy(false); } }}
-                  style={{ background: "#fff", border: `1px solid ${C.line2}`, borderRadius: 9, padding: "8px 14px", fontSize: 13, color: C.ink, cursor: (!canAddKnowledge || kBusy) ? "default" : "pointer", opacity: (!canAddKnowledge || kBusy) ? 0.5 : 1, fontFamily: SANS }}
+                  style={{ background: C.card, border: `1px solid ${C.line2}`, borderRadius: 9, padding: "8px 14px", fontSize: 13, color: C.ink, cursor: (!canAddKnowledge || kBusy) ? "default" : "pointer", opacity: (!canAddKnowledge || kBusy) ? 0.5 : 1, fontFamily: SANS }}
                 >
                   {kBusy ? "Adding…" : "+ Add knowledge"}
                 </button>
@@ -296,7 +296,7 @@ export function ProjectDetail({ project, chats, kdraft, onKdraftChange, onAddKno
                   onChange={async (e) => { const f = e.target.files?.[0]; e.currentTarget.value = ""; if (!f || kFileBusy) return; setKFileBusy(true); try { await onAddKnowledgeFile(f); } finally { setKFileBusy(false); } }} />
                 <div>
                   <button className="vo-chip" disabled={kFileBusy} onClick={() => fileInputRef.current?.click()}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "#fff", border: `1px solid ${C.line2}`, borderRadius: 9, padding: "8px 14px", fontSize: 13, color: C.ink, cursor: kFileBusy ? "default" : "pointer", opacity: kFileBusy ? 0.6 : 1, fontFamily: SANS }}>
+                    style={{ display: "inline-flex", alignItems: "center", gap: 7, background: C.card, border: `1px solid ${C.line2}`, borderRadius: 9, padding: "8px 14px", fontSize: 13, color: C.ink, cursor: kFileBusy ? "default" : "pointer", opacity: kFileBusy ? 0.6 : 1, fontFamily: SANS }}>
                     <IcDoc s={15} /> {kFileBusy ? "Uploading…" : "Upload a file"}
                   </button>
                 </div>

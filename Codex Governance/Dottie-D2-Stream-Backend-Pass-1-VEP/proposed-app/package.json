@@ -5,6 +5,7 @@
   "main": "src/functions/*.js",
   "dependencies": {
     "@azure/functions": "^4.5.0",
-    "pg": "^8.11.0"
+    "pg": "^8.11.0",
+    "jimp": "0.22.12"
   }
 }

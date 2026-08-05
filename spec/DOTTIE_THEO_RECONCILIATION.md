@@ -52,8 +52,9 @@ The FE calls the `dottie_*` routes below; the handlers are deployed to func-dott
 | Capability | Status | Disposition |
 | --- | --- | --- |
 | Web search (internet grounding) | ✅ LIVE (gpt-5 Responses-API `web_search`, server-side, cited) | done (citation *fidelity* → CitedText is the next FE package) |
-| Image fetch (`find_image`) | ❌ not wired | BUILD/REUSE func-theo-tools `theo_find_image` (SerpAPI; built for reuse) via a gpt-5 function-call |
-| Video fetch (`find_video`) | ❌ not wired | REUSE func-theo-tools `theo_find_video` |
+| Image fetch (`find_image`) | ✅ LIVE (Media-Tools package, deployed 2026-08-02) | gpt-5 Responses-API function tool + bounded tool loop in `dottie_message_stream`, reusing deployed func-theo-tools `theo_find_image` via a **client-credentials** call (Dottie has no user token to forward — app-identity ALLOWED DELTA vs Theo's user-delegated forward). Emits `event: vault_image` (proxy blob-SAS URLs + gallery) the transplanted FE already renders. Golden green: `tool_result{ok:true}` (G-AUTH), gallery + caption, no URL pasted. |
+| Video fetch (`find_video`) | ✅ LIVE (Media-Tools package, deployed 2026-08-02) | same loop; reuses deployed func-theo-tools `theo_find_video`; emits `event: vault_video` (`youtube-nocookie` embed + thumbnail). Golden green. |
+| TODO tools (`create_todo`/`list_todos`/`update_todo`/`complete_todo`) | ✅ LIVE (TODO-Tools-Registration package, deployed 2026-08-03) | gpt-5 Responses-API function tools + a branch in the `dottie_message_stream` tool loop; reuse the deployed func-theo-tools `theo_*_todo` handlers (the shared, agent-neutral `theo_todos` store). Auth = **forwarded USER bearer** (as-the-user → `created_by` is the human; NOT client-credentials — the correct model for attributed writes, unlike the media tools). `agent`="dottie"; results relayed as text (no SSE frame). Golden green: Dottie creates a TODO → **Theo sees it** (cross-agent shared store, `created_by`=human) + media regression unaffected. |
 | `sigma_review_agent_stream` | ⛔ N/A | Sigma-specific |
 
 ## I. FE render parity — ✅ LIVE (Markdown-Lists package, deployed 2026-08-02)
@@ -63,9 +64,9 @@ The FE calls the `dottie_*` routes below; the handlers are deployed to func-dott
 
 ## Summary
 - **Live:** 4 core-chat endpoints + web-search grounding + conversation-management (rename/delete/star — ConvMgmt) + people roster (`dottie_list_people`) + attachments (create/finalize/delete/list + `dottie-content` blob) + **artifacts persistence (upsert/list/get + versions + `dottie-content` blob — Artifacts packages, FE un-gated)**. FE gate/hide package deployed (Projects nav hidden; voice controls gated) so nothing errors on click; the Artifacts nav is now un-hidden (`artifactsPersistence = true`).
-- **Missing & errors today:** voice (2), image/video tools.
+- **Missing & errors today:** voice (2). *(image/video tools LANDED 2026-08-02 — Media-Tools package.)*
 - **DECIDED:** Projects (14) + publish/SPW → HIDE in the UI (revisit later). Everything else → BUILD every missing `dottie_*` backend now, replicating from Theo (Walter 2026-08-01).
 
-**Honest status: core chat + grounding + conversation-management + people roster + attachments + artifacts persistence are LIVE; only voice + image/video are still to build.** Closing the rest is a sequenced set of governed backend packages (each `dottie_*` mirroring the Theo original), tracked here. The FE controls for still-missing features stay **gated/hidden** until their backend lands, so nothing errors.
+**Honest status: core chat + grounding + conversation-management + people roster + attachments + artifacts persistence + image/video tools are LIVE; only voice is still to build.** Closing the rest is a sequenced set of governed backend packages (each `dottie_*` mirroring the Theo original), tracked here. The FE controls for still-missing features stay **gated/hidden** until their backend lands, so nothing errors.
 
 _Reconciled 2026-08-01 by direct FE-gateway grep vs deployed func-dottie functions; conv-management moved to LIVE 2026-08-01 after the ConvMgmt package deploy + golden curls. §I FE render-parity (Markdown list markers) added 2026-08-02 after the Markdown-Lists FE package deploy + bundle verification._

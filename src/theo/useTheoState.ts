@@ -9,7 +9,7 @@ import { stripArtifactRefs } from "./lib/artifacts";
 import { buildSystemPrompt, greeting } from "./lib/prompt";
 import { MODEL } from "./swapBlock";
 import { STYLES } from "./data";
-import type { AgentToolCall, AppContext, Artifact, ArtifactSummary, Citation, ComposerAttachment, ConversationSummary, ConversationDetail, FileDownload, InlineImage, InlineVideo, KDraft, Message, NpDraft, OpenArtifact, Person, Project, ProjectMember, PublishedConversation, SentAttachment, Settings, StyleKey, View } from "./types";
+import type { AgentToolCall, AppContext, Artifact, ArtifactSummary, Citation, ComposerAttachment, ConversationSummary, ConversationDetail, FileDownload, InlineImage, InlineVideo, KDraft, Message, NpDraft, OpenArtifact, Person, Project, ProjectMember, PublishedConversation, SentAttachment, Settings, StyleKey, Finding, Flag, View } from "./types";
 
 // B8e: a paste longer than this becomes a "Pasted text" attachment (collapsed, expandable) instead
 // of flooding the composer — the Claude-style behaviour. Tunable; ~a long block, not a sentence.
@@ -22,7 +22,7 @@ const INSTRUCTIONS_SAVE_DEBOUNCE_MS = 800;
 // re-navigates to one by re-invoking the matching nav fn (cheap — conversations paint from cache,
 // projects are in state). In-memory only (no browser storage); the host owns window.history (VEP-2).
 type NavLoc =
-  | { k: "view"; view: View }   // a top-level nav view: projects / artifacts / customize
+  | { k: "view"; view: View }   // a top-level nav view: overview / checks / flags / audit / library / projects / artifacts / customize
   | { k: "chat"; id: string }   // an open conversation
   | { k: "project"; id: string } // a project home
   | { k: "newchat" };           // a fresh empty chat
@@ -83,6 +83,10 @@ export function useTheoState() {
   // B4h: the cross-chat Artifacts gallery (persisted summaries via theo_list_artifacts), distinct from
   // the in-memory `artifacts` working set that drives the open thread's cards + panel.
   const [galleryArtifacts, setGalleryArtifacts] = useState<ArtifactSummary[]>([]);
+  // pkg 3b — the 9/10 Overview console data (dottie_findings/flags read handlers), loaded on view open.
+  const [findings, setFindings] = useState<Finding[]>([]);
+  const [flags, setFlags] = useState<Flag[]>([]);
+  const [overviewLoading, setOverviewLoading] = useState(false);
   const [openArt, setOpenArt] = useState<OpenArtifact | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
@@ -113,7 +117,8 @@ export function useTheoState() {
   const [recentsList, setRecentsList] = useState<ConversationSummary[]>([]);
   // Cold-open restore gate: `recentsLoaded` marks the first Recents settle (loaded, possibly empty);
   // `restoring` holds the UI on a quiet neutral cover from mount until the restore decision resolves,
-  // so the app opens → last chat (or greeting) instead of flashing the new-chat greeting first.
+  // so the app opens → the fresh last chat (or the Overview console when there is no fresh chat, pkg 3b)
+  // instead of flashing a greeting first.
   const [recentsLoaded, setRecentsLoaded] = useState(false);
   const [restoring, setRestoring] = useState(true);
   // B4e: the open project's chats, KEYED by projectId so a slow/stale async load can neither show
@@ -243,7 +248,8 @@ export function useTheoState() {
   // in the standalone harness). useCallback-stable so TheoSurface's mount effect runs it once.
   const loadRecents = useCallback(async () => {
     // Instant paint from the CONFIRMED-principal cache (the mount flow binds the principal before this
-    // runs). Seed recents + resolve the restore gate on the cached last chat, then revalidate below.
+    // runs). Seed recents from cache so the restore gate can resolve (fresh last chat → restore it, else
+    // the Overview console — see the gate effect below), then revalidate the list below.
     if (isPrincipalBound()) {
       const seed = getCachedRecents();
       if (seed && seed.length) { setRecentsList(seed); setRecentsLoaded(true); }
@@ -254,7 +260,8 @@ export function useTheoState() {
       // `last_opened_at` and `updated_at`. A new chat that has been messaged (fresh `updated_at`) but
       // never explicitly reopened has a NULL `last_opened_at`, so the server's `… NULLS LAST` ordering
       // sorts it behind older opened chats; re-sorting here keeps `recentsList[0]` the conversation the
-      // user most recently interacted with, so restore-on-reopen lands there.
+      // user most recently interacted with, so the cold-open gate targets it (and restores it when it is
+      // fresh, i.e. last-touched within 4h; otherwise Dottie lands on the Overview — see the gate effect).
       const touched = (c: ConversationSummary) => Math.max(Date.parse(c.last_opened_at || "") || 0, Date.parse(c.updated_at || "") || 0);
       list.sort((a, b) => touched(b) - touched(a));
       setRecentsList(list);
@@ -264,41 +271,45 @@ export function useTheoState() {
     }
   }, []);
 
-  // Restore-on-reopen: on the first settle after Recents load, open the LAST-OPENED conversation
-  // (`recentsList[0]` — `loadRecents` re-sorts by last-touched = max(`last_opened_at`, `updated_at`),
-  // so [0] is the chat the user most recently interacted with, not just the most recently explicitly-
-  // opened) so a cold PWA reload lands back on the chat the user was in, not a blank new chat. Decides
-  // ONCE (didRestoreRef, set at the first recents-settle) so it never fires again on a later state
-  // change (a New chat, a manual open, a cleared draft). Suppressed if the user is already in a chat
-  // OR composing — `selectRecent`→`clearComposer()` clears attachments, and the typed `draft` would
-  // otherwise be carried into the restored (wrong) conversation. Empty-user (no recents) → stays on
-  // the greeting/new-chat home. The recents ordering is server-sourced then re-sorted client-side by
-  // last-touched in loadRecents; it is also instant-painted from the per-principal Theo Snapshot
-  // Storage Exception cache (theoSnapshot) once the principal is confirmed, and always revalidated.
+  // Cold-open landing (pkg 3b, time-defined hybrid): on the first settle after Recents load, decide where
+  // Dottie opens. `recentsList[0]` is the last-touched chat (`loadRecents` re-sorts by max(`last_opened_at`,
+  // `updated_at`), so [0] is the chat the user most recently interacted with). If that chat is FRESH —
+  // last-touched within the 4h staleness window — a cold PWA reload restores it (lands back on the chat the
+  // user was in). If it is STALE (>4h) or there is NO recent chat, Dottie lands on the Overview console (her
+  // home, §6.1), not a chat or a greeting. Decides ONCE (didRestoreRef, set at the first recents-settle) so
+  // it never fires again on a later state change (a New chat, a manual open, a cleared draft). Suppressed if
+  // the user is already in a chat OR composing — `selectRecent`→`clearComposer()` clears attachments, and the
+  // typed `draft` would otherwise be carried into the restored (wrong) conversation. The recents ordering is
+  // server-sourced then re-sorted client-side by last-touched in loadRecents; it is also instant-painted from
+  // the per-principal Theo Snapshot Storage Exception cache (theoSnapshot, which accelerates only the restore
+  // path) once the principal is confirmed, and always revalidated.
   const didRestoreRef = useRef(false);
   useEffect(() => {
     if (didRestoreRef.current) return;
     if (!recentsLoaded) return;                           // wait for the first Recents settle (loaded, possibly empty)
     didRestoreRef.current = true;                         // decide once, at the first recents-settle
-    // already in a chat / composing, or nothing to restore → drop the gate now (show current/greeting)
-    if (conversationId !== null || messages.length > 0 || draft.trim() !== "" || attachments.length > 0 || recentsList.length === 0) {
+    // already in a chat / composing → keep the current view (drop the gate)
+    if (conversationId !== null || messages.length > 0 || draft.trim() !== "" || attachments.length > 0) {
       setRestoring(false);
       return;
     }
-    // Staleness cap (Walter 2026-07-28): the >4h "start fresh on the greeting" reset is MOBILE-ONLY.
-    // On DESKTOP the workspace never expires — always restore the last chat regardless of how long has
-    // passed, so the user comes back to exactly where they left off (Walter: on desktop the space
-    // "should never update/refresh"). On NARROW (mobile) keep the 4h cap: a gap beyond the window
-    // (max of last_opened_at / updated_at) lands on the fresh Theo greeting instead of a stale chat.
-    const RESTORE_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 hours (mobile only)
-    const isNarrow = typeof window !== "undefined" && window.matchMedia("(max-width: 767.98px)").matches;
-    const lastTouched = Math.max(Date.parse(recentsList[0].last_opened_at || "") || 0, Date.parse(recentsList[0].updated_at || "") || 0);
-    if (isNarrow && (!lastTouched || Date.now() - lastTouched > RESTORE_MAX_AGE_MS)) {
-      setRestoring(false); // mobile + stale → drop the gate, show the greeting (no restore)
+    // pkg 3b landing (Walter 2026-08-05): time-defined hybrid. Cold-open restores the last chat ONLY when it
+    // is FRESH — last-touched within the 4h staleness window (the same "not visited in 4 hours" window Theo
+    // uses). A STALE chat (>4h) or NO recent chat lands on the Overview console (Dottie's home) instead of a
+    // greeting. Applies on desktop + mobile — supersedes the transplanted desktop-never-expire FOR DOTTIE's
+    // landing, per Walter's 2026-08-05 direction (Dottie is a console; her home is the Overview, not a chat).
+    const STALE_MS = 4 * 60 * 60 * 1000; // 4 hours
+    const lastTouched = recentsList.length
+      ? Math.max(Date.parse(recentsList[0].last_opened_at || "") || 0, Date.parse(recentsList[0].updated_at || "") || 0)
+      : 0;
+    const fresh = lastTouched > 0 && Date.now() - lastTouched <= STALE_MS;
+    if (!fresh) {
+      applyView("overview");   // stale or no recent chat → the console home (also loads the dashboard data)
+      setRestoring(false);
       return;
     }
-    // restore the last-touched chat, THEN drop the gate → the splash lands directly on that chat (no
-    // greeting flash). `finally` so a failed restore still clears the gate rather than hanging on splash.
+    // fresh → restore the last-touched chat, THEN drop the gate (splash lands on the chat, no greeting flash).
+    // `finally` so a failed restore still clears the gate rather than hanging on splash.
     void selectRecent(recentsList[0].id).finally(() => setRestoring(false));
   }, [recentsLoaded, recentsList, conversationId, messages.length, draft, attachments.length]);
 
@@ -346,6 +357,31 @@ export function useTheoState() {
   const loadGalleryArtifacts = useCallback(async () => {
     try { setGalleryArtifacts(await theoClient.listServerArtifacts()); } catch { /* keep current list */ }
   }, []);
+
+  // pkg 3b — (re)load the console data: findings + ALL flags (status=all, so the Open-flags surface can filter
+  // Open/Resolved/All; the Overview filters status==="open" client-side). Best-effort; keep current on error.
+  const loadOverview = useCallback(async () => {
+    setOverviewLoading(true);
+    try {
+      const [fnd, flg] = await Promise.all([theoClient.listFindings(), theoClient.listFlags("all")]);
+      setFindings(fnd);
+      setFlags(flg);
+    } catch { /* keep current */ } finally {
+      setOverviewLoading(false);
+    }
+  }, []);
+
+  // pkg 3b.3-resolve — mark a flag resolved / re-open it (dottie_flag_resolve). Optimistic: flip the row in
+  // state immediately, then persist; on error resync from the server. No timestamp is baked into the client
+  // (resolved_at is display-only in the surfaces) — a follow-up loadOverview would carry the server value.
+  const resolveFlag = useCallback(async (flagId: string, status: "open" | "resolved") => {
+    setFlags((fs) => fs.map((f) => (f.id === flagId ? { ...f, status, resolved_at: status === "resolved" ? f.resolved_at : null } : f)));
+    try {
+      await theoClient.resolveFlag(flagId, status);
+    } catch {
+      void loadOverview(); // revert to server truth on failure
+    }
+  }, [loadOverview]);
 
   // B4c: (re)load one project's knowledge items into state (theo_list_project_knowledge). Best-effort.
   const refreshProjectKnowledge = useCallback(async (id: string) => {
@@ -417,7 +453,7 @@ export function useTheoState() {
   // destination, or goBack's re-navigation, seeds no dead Back step.
   function currentLoc(): NavLoc {
     if (view === "project" && detailId) return { k: "project", id: detailId };
-    if (view === "projects" || view === "artifacts" || view === "customize") return { k: "view", view };
+    if (view === "projects" || view === "artifacts" || view === "customize" || view === "overview" || view === "checks" || view === "flags" || view === "audit" || view === "library") return { k: "view", view };
     return conversationId ? { k: "chat", id: conversationId } : { k: "newchat" };  // view === "chats"
   }
   function pushNavIfDestinationChanges(target: NavLoc) {
@@ -426,7 +462,7 @@ export function useTheoState() {
     if (navLocKey(from) === navLocKey(target)) return;
     setNavStack((s) => [...s, from]);
   }
-  function applyView(v: View) { setView(v); setDetailId(null); if (v === "artifacts") void loadGalleryArtifacts(); }  // B4h: refresh the gallery on open
+  function applyView(v: View) { setView(v); setDetailId(null); if (v === "artifacts") void loadGalleryArtifacts(); if (v === "overview" || v === "checks" || v === "flags" || v === "audit" || v === "library") void loadOverview(); }  // B4h/3b: refresh gallery / console data on open
   function go(v: View) {
     const target: NavLoc = v === "chats" ? (conversationId ? { k: "chat", id: conversationId } : { k: "newchat" }) : { k: "view", view: v };
     pushNavIfDestinationChanges(target);
@@ -1162,7 +1198,7 @@ export function useTheoState() {
 
   return {
     // state
-    view, collapsed, search, projects, projectChats, artifacts, galleryArtifacts, detail, chatProject, art, openArt, messages, draft, attachments, attachmentsAvailable, loading, restoring, error, queued,
+    view, collapsed, search, projects, projectChats, artifacts, galleryArtifacts, findings, flags, overviewLoading, detail, chatProject, art, openArt, messages, draft, attachments, attachmentsAvailable, loading, restoring, error, queued,
     conversationId, currentConversation: recentsList.find((c) => c.id === conversationId) ?? null,
     // Nav-History seam (VEP-1): back-stack state + goBack (TheoSurface reports depth/title to the host; TheoMain renders the Back button).
     canGoBack, navDepth, navContextTitle, goBack,
@@ -1177,7 +1213,7 @@ export function useTheoState() {
 
     // setters / handlers
     go, toggleCollapse: () => setCollapsed((v) => !v), setSearch, setDraft, newChat, startInProject, openProject,
-    clearChatProject: () => setChatProject(null), send, stop, cancelQueued, ingestAppContext, selectRecent, loadRecents, loadProjects, loadGalleryArtifacts,
+    clearChatProject: () => setChatProject(null), send, stop, cancelQueued, ingestAppContext, selectRecent, resolveFlag, loadRecents, loadProjects, loadGalleryArtifacts,
     addFiles, addPastedText, removeAttachment,
     toggleNp: () => setNpOpen((v) => !v), setNp, createProject, patchInstructions, patchDescription, setKdraft, addKnowledge, addKnowledgeFile, removeKnowledge,
     renameProject, deleteProject, setProjectVisibility, visPending, renameConversation, deleteConversation, setConversationStarred, addConversationToProject,
