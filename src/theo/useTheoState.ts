@@ -260,7 +260,8 @@ export function useTheoState() {
       // `last_opened_at` and `updated_at`. A new chat that has been messaged (fresh `updated_at`) but
       // never explicitly reopened has a NULL `last_opened_at`, so the server's `… NULLS LAST` ordering
       // sorts it behind older opened chats; re-sorting here keeps `recentsList[0]` the conversation the
-      // user most recently interacted with, so restore-on-reopen lands there.
+      // user most recently interacted with, so the cold-open gate targets it (and restores it when it is
+      // fresh, i.e. last-touched within 4h; otherwise Dottie lands on the Overview — see the gate effect).
       const touched = (c: ConversationSummary) => Math.max(Date.parse(c.last_opened_at || "") || 0, Date.parse(c.updated_at || "") || 0);
       list.sort((a, b) => touched(b) - touched(a));
       setRecentsList(list);
@@ -270,18 +271,18 @@ export function useTheoState() {
     }
   }, []);
 
-  // Restore-on-reopen: on the first settle after Recents load, open the LAST-OPENED conversation
-  // (`recentsList[0]` — `loadRecents` re-sorts by last-touched = max(`last_opened_at`, `updated_at`),
-  // so [0] is the chat the user most recently interacted with, not just the most recently explicitly-
-  // opened) so a cold PWA reload lands back on the chat the user was in, not a blank new chat. Decides
-  // ONCE (didRestoreRef, set at the first recents-settle) so it never fires again on a later state
-  // change (a New chat, a manual open, a cleared draft). Suppressed if the user is already in a chat
-  // OR composing — `selectRecent`→`clearComposer()` clears attachments, and the typed `draft` would
-  // otherwise be carried into the restored (wrong) conversation. Empty-user (no recents) OR a stale last
-  // chat (>4h) → lands on the Overview console (Dottie's home, pkg 3b), not a greeting. The recents
-  // ordering is server-sourced then re-sorted client-side by
-  // last-touched in loadRecents; it is also instant-painted from the per-principal Theo Snapshot
-  // Storage Exception cache (theoSnapshot) once the principal is confirmed, and always revalidated.
+  // Cold-open landing (pkg 3b, time-defined hybrid): on the first settle after Recents load, decide where
+  // Dottie opens. `recentsList[0]` is the last-touched chat (`loadRecents` re-sorts by max(`last_opened_at`,
+  // `updated_at`), so [0] is the chat the user most recently interacted with). If that chat is FRESH —
+  // last-touched within the 4h staleness window — a cold PWA reload restores it (lands back on the chat the
+  // user was in). If it is STALE (>4h) or there is NO recent chat, Dottie lands on the Overview console (her
+  // home, §6.1), not a chat or a greeting. Decides ONCE (didRestoreRef, set at the first recents-settle) so
+  // it never fires again on a later state change (a New chat, a manual open, a cleared draft). Suppressed if
+  // the user is already in a chat OR composing — `selectRecent`→`clearComposer()` clears attachments, and the
+  // typed `draft` would otherwise be carried into the restored (wrong) conversation. The recents ordering is
+  // server-sourced then re-sorted client-side by last-touched in loadRecents; it is also instant-painted from
+  // the per-principal Theo Snapshot Storage Exception cache (theoSnapshot, which accelerates only the restore
+  // path) once the principal is confirmed, and always revalidated.
   const didRestoreRef = useRef(false);
   useEffect(() => {
     if (didRestoreRef.current) return;
