@@ -597,7 +597,7 @@ export function ChatView(props: ChatViewProps) {
       <div ref={scroller} onScroll={onScroll} className="vo-scroll" style={{ flex: 1, overflowY: "auto" }}>
         {messages.length === 0 ? (
           <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px", textAlign: "center" }}>
-            <DottieMark size={64} variant="building" />
+            <DottieSpiral size={64} loop={false} decorative />
             <h1 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 32, margin: "18px 0 6px", letterSpacing: -0.2 }}>{greeting}</h1>
             <p style={{ color: C.ink2, fontSize: 15, margin: "0 0 22px" }}>{reviewMode ? `I've loaded ${reviewFund ?? "this fund"}'s workpapers — pick where to start, or ask me anything about this review.` : sigmaMode ? "I'm your K-1 review assistant. Open a fund from the worklist to start a review — I'll walk you through the exceptions, explain the controls, and help you sign off. Or ask me how reviews work." : chatProject ? `Working in ${chatProject.name}.` : "How can I help with your work today?"}</p>
             {(!reviewMode && !sigmaMode)

@@ -69,7 +69,11 @@ export function DottieMark({ size = 40 }: { size?: number; variant?: "static" | 
 
 // Active "thinking" mark (replaces SpiralAssemble). Deconstruct outer→seed → dot heartbeat + huge slow
 // bloom + drift back to a glowing dot → rebuild → loop. Reduced-motion holds the finished gold mark.
-export function DottieSpiral({ size = 22 }: { size?: number }) {
+// `loop` (default true) = the perpetual thinking animation; `loop=false` runs the sequence ONCE and
+// holds the reformed gold mark (the fresh-chat greeting flourish — full logo → deconstruct to the dot →
+// heartbeat + bloom → pause → the logo shows and stays). `decorative` drops the status role/label when
+// the mark is a brand flourish rather than a live thinking indicator (the greeting text conveys meaning).
+export function DottieSpiral({ size = 22, loop = true, decorative = false }: { size?: number; loop?: boolean; decorative?: boolean }) {
   const ref = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     const host = ref.current;
@@ -122,18 +126,17 @@ export function DottieSpiral({ size = 22 }: { size?: number }) {
       timers.push(window.setTimeout(startBloom, gone)); // dot sequence starts as the spiral reaches it
       const rb = gone + BLOOM_MS; // rebuild after the full dot sequence
       ws.forEach((w, i) => { timers.push(window.setTimeout(() => { w.style.opacity = String(base[i]); }, rb + i * STEP)); });
-      timers.push(window.setTimeout(run, rb + n * STEP + PAUSE));
+      if (loop) timers.push(window.setTimeout(run, rb + n * STEP + PAUSE)); // loop=false ⇒ hold the reformed logo
     };
     run();
     return () => { timers.forEach((t) => window.clearTimeout(t)); if (raf) cancelAnimationFrame(raf); };
-  }, []);
+  }, [loop]);
   const dot = `<circle class="dot" cx="${O.x}" cy="${O.y}" r="${DOT_R}" fill="#EBC97D"/>`;
   const svg = `<svg width="${size}" height="${size}" viewBox="${VB}" preserveAspectRatio="xMidYMid meet">${ANIM_MARKUP}${dot}</svg>`;
   return (
     <span
       ref={ref}
-      role="status"
-      aria-label="Thinking"
+      {...(decorative ? { "aria-hidden": true } : { role: "status", "aria-label": "Thinking" })}
       style={{ display: "inline-block", width: size, height: size, lineHeight: 0 }}
       dangerouslySetInnerHTML={{ __html: svg }}
     />
