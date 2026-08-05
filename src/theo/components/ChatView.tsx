@@ -409,8 +409,8 @@ function BirthdayBanner() {
 // held over the whole surface only until the restore decision resolves, so there is no new-chat
 // greeting flash before a restore lands. Deliberately NOT a branded splash (Walter 2026-07-28 — "the
 // app should just open ... without any interference"): no warm-sand backdrop, no large spiral. On a
-// COLD decision (a >4h gap on mobile) it lifts to the greeting, whose `variant="building"` mark then
-// animates — that is where the one branded building-logo moment lives; on a WARM/desktop decision it
+// COLD decision (a >4h gap on mobile) it lifts to the greeting, whose `DottieSpiral` mark then animates
+// once (loop={false}) — the branded deconstruct→dot-bloom→reform moment; on a WARM/desktop decision it
 // lifts to the restored last chat.
 function RestoringSplash() {
   if (typeof document === "undefined") return null;

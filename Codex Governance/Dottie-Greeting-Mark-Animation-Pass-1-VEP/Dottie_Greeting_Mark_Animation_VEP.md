@@ -17,7 +17,7 @@ Sub-phase Track: N/A
 | 3 | FE Governor — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/governance/CLAUDE_CODE_THEO_FRONTEND_GOVERNOR_STANDARD.md` (reproduce faithfully / no redesign) | grounded; unchanged @ HEAD | `3afec7ea4b13650ce2bf28bf32073179a35e7b24` |
 | 4 | Codex FE Review — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/governance/CODEX_THEO_FRONTEND_REVIEW_STANDARD.md` (Pass-2; APPROVED/REJECTED only) | grounded; unchanged @ HEAD | `25cc488091d619d8f6642b10552df0d019a87933` |
 | 5 | PRIMARY REFERENCE / CHANGED — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/components/DottieSpiral.tsx` (the signature deconstruct→bloom→rebuild mark; + `loop`/`decorative`) | `Read`(full) + `Edit` this turn | base @HEAD `2dd0df3dc82b9cd2d484d229dbb6e15e459d4617` → proposed `569963f3e27057e864a47259e90650b2dec8e419` |
-| 6 | CHANGED — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/components/ChatView.tsx` (greeting mark: static `DottieMark variant="building"` → animated `DottieSpiral` one-shot) | `Read`(§585–605) + `Edit` this turn | base @HEAD `1e7b4898a8c44d9b3f96c6f2db213ef6560ef145` → proposed `8f01daa0adcb4d1e7205948ae251076b6cd2f5f3` |
+| 6 | CHANGED — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/components/ChatView.tsx` (greeting mark: static `DottieMark variant="building"` → animated `DottieSpiral` one-shot; **+ delta reissue: the restore-hold comment swept to match**) | `Read`(§405–605) + `Edit` this turn | base @HEAD `1e7b4898a8c44d9b3f96c6f2db213ef6560ef145` → proposed `a73ac6ee43108057f738119ae77b17615fe5ebc5` |
 
 No ChatGPT advisory cited. No backend / route / schema / migration.
 
@@ -52,7 +52,7 @@ Two ACTIVE files. `DottieSpiral.tsx`: two optional props (`loop`, `decorative`) 
 - **G-3 — Deploy + eyeball.** Lands on `development` → brave-dune; verified mounted in Origin. PROCEED.
 
 ## §DELTA — changed files (before → after evidence)
-Two files (GCR rows 5–6). `DottieSpiral.tsx` (`2dd0df3d`→`569963f3`): + `loop`/`decorative` props gating the loop timer + aria; animation unchanged. `ChatView.tsx` (`1e7b4898`→`8f01daa0`): greeting mark element swapped to `DottieSpiral`. No other bytes changed.
+Two files (GCR rows 5–6). `DottieSpiral.tsx` (`2dd0df3d`→`569963f3`): + `loop`/`decorative` props gating the loop timer + aria; animation unchanged. `ChatView.tsx` (`1e7b4898`→`a73ac6ee`): greeting mark element swapped to `DottieSpiral`, **and (delta reissue, T13 fix) the restore-hold comment swept — it previously read "the greeting, whose `variant="building"` mark then animates" and now reads the `DottieSpiral` one-shot (loop={false}) deconstruct→bloom→reform, matching the runtime.** No other bytes changed.
 
 ## §CODEX — activation (Walter forwards)
 
