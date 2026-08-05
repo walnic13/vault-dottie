@@ -1,10 +1,10 @@
 import type { ConversationSummary, ConversationDetail, Person } from '../types';
 
-// Theo Snapshot Storage Exception (Governor item 3, Walter-authorized 2026-07-29): a per-principal
+// Dottie Snapshot Storage Exception (Governor item 3, Walter-authorized 2026-08-05): a per-principal
 // localStorage instant-paint seed for the three cold-launch round-trips — recents, the last-opened
 // conversation's first page, and the self-identity row. Always revalidated by the governed loaders
-// (theo_list_conversations / theo_get_conversation / listPeople), so it is a seed, never an
-// authoritative read (Exception §3b — not a snapshot lane). NEVER tokens/secrets/deep history.
+// (dottie_list_conversations / dottie_get_conversation / dottie_list_people via listPeople), so it is a
+// seed, never an authoritative read (Exception §3b — not a snapshot lane). NEVER tokens/secrets/deep history.
 //
 // SECURITY BOUNDARY (Exception §2, binding): the cache is read/written ONLY under the CONFIRMED
 // current principal's namespace vault-dottie:v1:<oid>:*. The principal is confirmed by decoding the
@@ -17,7 +17,9 @@ import type { ConversationSummary, ConversationDetail, Person } from '../types';
 // VO-AH-Dottie isolation: Dottie's OWN localStorage namespace, distinct from Theo's `vault-theo:v1:`.
 // Theo and Dottie both mount as federated remotes into the SAME Origin page origin, so they share one
 // localStorage; a copied prefix made Dottie's cold-open cache read Theo's recents/last-conversation.
-// Keying under `vault-dottie:v1:` isolates reads, writes, AND the bindPrincipal foreign-purge.
+// Keying every read/write/purge under `vault-dottie:v1:` is what isolates the two agents: Dottie only
+// ever touches its own namespace and NEVER reads, writes, or purges Theo's `vault-theo:v1:` keys (the
+// bindPrincipal foreign-purge below spans ONLY Dottie's own namespace — foreign PRINCIPAL, not foreign app).
 const PREFIX = 'vault-dottie:v1:';
 
 let principal: string | null = null; // set ONLY by bindPrincipal, after the token oid is confirmed
