@@ -6,7 +6,6 @@
 // assistant reply gains a read-aloud control (idle "Read aloud" / playing equalizer). Backends:
 // theo_transcribe_audio + theo_synthesize_speech (API §2.11). Inline-style, no browser storage.
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import type { ChangeEvent, ClipboardEvent, DragEvent, ReactNode } from "react";
 import { C, SANS, SERIF } from "../theme";
 import { IcMic, IcSpeaker, IcClose, IcShare } from "./icons";
@@ -414,20 +413,21 @@ function BirthdayBanner() {
 // greeting. (The greeting's animated `DottieSpiral` one-shot is a separate fresh-new-chat moment, not
 // the cold-open target.)
 function RestoringSplash() {
-  if (typeof document === "undefined") return null;
-  // PORTALED to document.body + position:fixed so the quiet hold covers the ENTIRE surface (over the
-  // mobile top bar / behind the safe-area strip) rather than being clipped to the ChatView box. The
-  // background is the app surface (`C.bg`) and the mark is a small static Vault mark sized to match the
-  // greeting's mark, so lifting the hold does not flash a different colour or jump the logo size.
-  return createPortal(
+  // CONTAINED to THIS surface: position:absolute within ChatView's relative root, so the quiet hold
+  // covers only this instance's chat area (the greeting) — NOT the whole viewport. It previously
+  // portaled to document.body with position:fixed at max z-index, which blanketed the ENTIRE screen;
+  // when a compact right-panel-tab instance cold-opened, that flashed the whole app (over the 9/10 +
+  // the other panel tab) for a moment. Containing it fixes that while still hiding the greeting flash.
+  // The background is the app surface (`C.bg`) and the mark is a small static Vault mark sized to match
+  // the greeting's mark, so lifting the hold does not flash a different colour or jump the logo size.
+  return (
     <div
       role="status"
       aria-label="Loading"
-      style={{ position: "fixed", inset: 0, zIndex: 2147483000, background: C.bg, display: "flex", alignItems: "center", justifyContent: "center" }}
+      style={{ position: "absolute", inset: 0, zIndex: 40, background: C.bg, display: "flex", alignItems: "center", justifyContent: "center" }}
     >
       <DottieMark size={64} variant="static" />
-    </div>,
-    document.body
+    </div>
   );
 }
 
