@@ -78,9 +78,13 @@ export interface TheoSurfaceProps {
   // Both optional — a host that does not wire them (or the standalone harness) is unaffected.
   onNavState?: (s: NavState) => void;
   backNonce?: number;
+  // Sidebar-collapse seam (VO-AH Dottie): fired when the internal Sidebar collapse toggles, reporting
+  // `collapsed` so the Origin host can shrink the 1/10 panel to icon-strip width (mirrors onNavState).
+  // Optional — a host that does not wire it (or standalone) is unaffected.
+  onSidebarCollapsed?: (collapsed: boolean) => void;
 }
 
-export default function TheoSurface({ appContext, navSlot, mainSlot, getAccessToken, suppressNarrowHeader, newChatNonce, onNavigate, onNavState, backNonce }: TheoSurfaceProps) {
+export default function TheoSurface({ appContext, navSlot, mainSlot, getAccessToken, suppressNarrowHeader, newChatNonce, onNavigate, onNavState, backNonce, onSidebarCollapsed }: TheoSurfaceProps) {
   const t = useTheoState();
   const { ingestAppContext, loadRecents, loadProjects, loadGalleryArtifacts, loadPeople } = t;
 
@@ -128,6 +132,14 @@ export default function TheoSurface({ appContext, navSlot, mainSlot, getAccessTo
   useEffect(() => {
     onNavStateRef.current?.({ depth: t.navDepth, title: t.navContextTitle });
   }, [t.navDepth, t.navContextTitle]);
+
+  // Sidebar-collapse seam (VO-AH Dottie): report the internal Sidebar collapse to the host so it can
+  // shrink the 1/10 panel to icon-strip width when collapsed. Same ref-held idiom as onNavState.
+  const onSidebarCollapsedRef = useRef(onSidebarCollapsed);
+  useEffect(() => { onSidebarCollapsedRef.current = onSidebarCollapsed; });
+  useEffect(() => {
+    onSidebarCollapsedRef.current?.(t.collapsed);
+  }, [t.collapsed]);
 
   // Nav-History seam (VEP-1): host-driven Back. When the host bumps `backNonce` (its mobile Back / a
   // consumed hardware-Back), pop one internal nav level via goBack(). Same nonce-diff idiom as
