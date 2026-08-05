@@ -7,6 +7,14 @@
       "/*.{png,jpg,jpeg,gif,svg,ico,webp,css,js,mjs,woff,woff2,ttf,eot,map,json,txt,xml}"
     ]
   },
+  "routes": [
+    {
+      "route": "/assets/remoteEntry.js",
+      "headers": {
+        "Cache-Control": "no-cache"
+      }
+    }
+  ],
   "globalHeaders": {
     "Access-Control-Allow-Origin": "*"
   }
