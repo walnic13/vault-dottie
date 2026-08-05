@@ -7,14 +7,18 @@ import type { ConversationSummary, ConversationDetail, Person } from '../types';
 // authoritative read (Exception §3b — not a snapshot lane). NEVER tokens/secrets/deep history.
 //
 // SECURITY BOUNDARY (Exception §2, binding): the cache is read/written ONLY under the CONFIRMED
-// current principal's namespace vault-theo:v1:<oid>:*. The principal is confirmed by decoding the
+// current principal's namespace vault-dottie:v1:<oid>:*. The principal is confirmed by decoding the
 // Entra `oid` claim of the live, server-issued access token; bindPrincipal() then purges every OTHER
 // principal's namespace. Until bindPrincipal has run, ALL reads/writes are DISABLED (return null /
 // no-op) — so no prior-principal state can ever be read or rendered before the current principal is
 // confirmed. There is deliberately NO un-namespaced pointer that could seed a namespace before
 // confirmation (a prior "last-oid" design was a cross-principal leak; removed). All access try/guarded.
 
-const PREFIX = 'vault-theo:v1:';
+// VO-AH-Dottie isolation: Dottie's OWN localStorage namespace, distinct from Theo's `vault-theo:v1:`.
+// Theo and Dottie both mount as federated remotes into the SAME Origin page origin, so they share one
+// localStorage; a copied prefix made Dottie's cold-open cache read Theo's recents/last-conversation.
+// Keying under `vault-dottie:v1:` isolates reads, writes, AND the bindPrincipal foreign-purge.
+const PREFIX = 'vault-dottie:v1:';
 
 let principal: string | null = null; // set ONLY by bindPrincipal, after the token oid is confirmed
 

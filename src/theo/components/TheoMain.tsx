@@ -62,7 +62,7 @@ export function TheoMain({ t, mode, suppressNarrowHeader }: TheoMainProps) {
   const appLabel = appContextLabel(t.appContext);
 
   return (
-    <div data-theo-main-mode={mode} data-theo-suppress-narrow-header={suppressNarrowHeader ? "1" : undefined} style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, height: "100%" }}>
+    <div data-theo-main-mode={mode} data-theo-suppress-narrow-header={suppressNarrowHeader ? "1" : undefined} style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, height: "100%", background: C.bg }}>
       <header style={{ height: 54, flexShrink: 0, borderBottom: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 18px" }}>
         {t.view === "chats" ? (<>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
