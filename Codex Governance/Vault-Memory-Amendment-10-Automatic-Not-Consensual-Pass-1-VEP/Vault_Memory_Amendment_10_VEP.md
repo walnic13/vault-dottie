@@ -19,7 +19,7 @@ Currency labelling: CODE/DOC-BEARING — at the review HEAD the changed files' b
 | 3 | Codex FE Review — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/governance/CODEX_THEO_FRONTEND_REVIEW_STANDARD.md` (Pass-2; APPROVED/REJECTED only) | grounded; unchanged @ HEAD | `25cc488091d619d8f6642b10552df0d019a87933` |
 | 4 | CHANGED — AUTHORITY — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-theo/governance/VAULT_MEMORY_ARCHITECTURE.md` (adds Amendment 10; appends the correction pointer to Amendment 9; corrects the two derived "consensual" mentions §120/§138) | `Read`(§31–36, 120, 138) + `Edit` this turn | base @ parent `42723bf` `3afda098df614b11adc8a7cdcf28d0f9a3f47011` → proposed @ review HEAD `38086aa5307421a3708ceca863aa7b9f95398fbd` |
 | 5 | CHANGED — AUTHORITY MIRROR — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/governance/VAULT_MEMORY_ARCHITECTURE.md` (identical mirror of row 4 — same base + proposed blob) | `Edit` this turn | base @ parent `10eab7d` `3afda098df614b11adc8a7cdcf28d0f9a3f47011` → proposed @ review HEAD `38086aa5307421a3708ceca863aa7b9f95398fbd` |
-| 6 | CHANGED — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/spec/DOTTIE_MEMORY_MODEL.md` (INV-2, §2.1 header + automatic clause + plate-defer, §7 step 1, §8 O-DOTTIE-L1-CONSENT → resolved) | `Read`(full) + `Edit` this turn | base @ parent `10eab7d` `6bcdb25b92d532536922b2057d4b854f9613d0ce` → proposed @ review HEAD `bb8b128079d9eb37158dcbf42b5221a2fecdf31b` |
+| 6 | CHANGED — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/spec/DOTTIE_MEMORY_MODEL.md` (INV-2, §2.1 header + automatic clause + plate-defer, §3 (the plate-defer propagated — Codex re-issue), §7 step 1, §8 O-DOTTIE-L1-CONSENT → resolved) | `Read`(full, incl. §3) + `Edit` this turn | base @ parent `10eab7d` `6bcdb25b92d532536922b2057d4b854f9613d0ce` → proposed @ review HEAD `80dd66f83f6f4870dddb764d1bd98b067fa83359` |
 
 No ChatGPT advisory cited. No source / backend / route / schema / migration — governance docs only.
 
@@ -48,7 +48,7 @@ Sweep confirms every substantive "consensual" qualifier on Dottie-L1 is now corr
 - **G-3 — Incognito mode future.** The escape hatch is named but out of scope. Disclosed. PROCEED.
 
 ## §DELTA — changed files
-Three docs. `vault-theo` + `vault-dottie` `VAULT_MEMORY_ARCHITECTURE.md` (`3afda098`→`38086aa5`, identical): + Amendment 10; Amendment 9 correction pointer; §120/§138 "consensual"→"automatic — Amendment 10". `DOTTIE_MEMORY_MODEL.md` (`6bcdb25b`→`bb8b1280`): INV-2 + §2.1 (header/automatic/plate-defer) + §7 step 1 + §8 corrected to automatic. No other bytes.
+Three docs. `vault-theo` + `vault-dottie` `VAULT_MEMORY_ARCHITECTURE.md` (`3afda098`→`38086aa5`, identical): + Amendment 10; Amendment 9 correction pointer; §120/§138 "consensual"→"automatic — Amendment 10". `DOTTIE_MEMORY_MODEL.md` (`6bcdb25b`→`80dd66f8`): INV-2 + §2.1 (header/automatic/plate-defer) + **§3 (plate-defer propagated — Codex re-issue: §3 no longer states the lens lives "as plate on dottie_user_memory"; it now reads "will live … when built; not present today")** + §7 step 1 + §8 corrected to automatic. No other bytes.
 
 ## §CODEX — activation (Walter forwards)
 

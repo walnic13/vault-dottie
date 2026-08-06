@@ -47,8 +47,8 @@ The concrete data behind the console. New `dottie_*` tables (design, not yet bui
 
 Per authority §7.5 + Amendment 3, **Six Plates is an opt-in LENS, not a foundational schema.** The plates: **Body · Inner Life · Close Others · Wider Belonging · Work & Craft · Material World**, each with a per-user mode (active / settled / delegated / developing) governing attention.
 
-Incorporation into Dottie:
-- The lens lives **only in Dottie-L1** (§2.1), opt-in, as `plate` on `dottie_user_memory` (default Work & Craft).
+Incorporation into Dottie (**the plate column is DEFERRED — Walter 2026-08-06, §2.1 / §7 step 1; the description below is the target when the lens is built, not today's state**):
+- The lens **will live only in Dottie-L1** (§2.1), opt-in, as a `plate` column on `dottie_user_memory` **when built** (default Work & Craft). It is **not present today** — Dottie-L1 is plate-free until the lens is actually consumed.
 - It shapes only **personal** interactions (a second opinion tempered by the person's context if they've opted in) — never governance output. **L3/L4 never read plate state** (INV-5).
 - Work-awareness is default for everyone (current work/professional context lives in the substrate regardless); life-integration is the opt-in overlay — same posture as Theo (authority Amendment 3). Dottie must be **Six-Plates-literate but not Six-Plates-dependent**.
 
