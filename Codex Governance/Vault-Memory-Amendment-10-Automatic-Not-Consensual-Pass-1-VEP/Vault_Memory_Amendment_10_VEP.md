@@ -53,19 +53,21 @@ Three docs. `vault-theo` + `vault-dottie` `VAULT_MEMORY_ARCHITECTURE.md` (`3afda
 ## §CODEX — activation (Walter forwards)
 
 ```
-Codex is activated for Pass-2 review of Vault Memory Amendment 10 (governance correction), vault-dottie,
+Codex is activated for Pass-2 review of Vault Memory Amendment 10 (governance correction) RE-ISSUE, vault-dottie,
 "Codex Governance/Vault-Memory-Amendment-10-Automatic-Not-Consensual-Pass-1-VEP/Vault_Memory_Amendment_10_VEP.md" @ commit
-<HEAD> (vault-dottie) + <HEAD> (vault-theo). Open Pass-2 with a governance-bound GCR + Rule Anchor Table; hard-gate; emit only
-APPROVED or REJECTED. Docs-only. Walter-directed correction (2026-08-06): the "consensual" framing of Dottie-L1 was an error;
-neither Theo nor Dottie has consent-gated personal memory — both distil automatically, no opt-in-to-exist. Records Amendment 10
-in VAULT_MEMORY_ARCHITECTURE (both identical copies: vault-theo authority + vault-dottie mirror, same base 3afda098 -> same
-proposed 38086aa5): adds Amendment 10; appends a correction pointer to Amendment 9 (preserved as its dated record, append-only);
-corrects the two derived "consensual" mentions to "automatic — Amendment 10". Downstream DOTTIE_MEMORY_MODEL (6bcdb25b ->
-bb8b1280): INV-2 / §2.1 (header + automatic clause + plate-defer) / §7 step 1 / §8 O-DOTTIE-L1-CONSENT resolved -> automatic.
-The SEPARATENESS invariant is retained (Dottie-L1 never crosses Theo's L1; Rule 1 inviolable) — only the opt-in qualifier is
-removed. The separate Six-Plates life-integration opt-in (Amendment 3) is explicitly untouched. A future incognito mode is the
-escape hatch, out of scope now. Unblocks the automatic Dottie-L1 build (distiller + injection + CRUD) and defers the plate
-column. Mechanical lint PASS. Emit APPROVED or REJECTED only.
+<HEAD> (vault-dottie) + 915fb5d (vault-theo). Open Pass-2 with a governance-bound GCR + Rule Anchor Table; hard-gate; emit only
+APPROVED or REJECTED. Docs-only. Re-issue fixing the downstream-consistency REJECT: DOTTIE_MEMORY_MODEL §3 still said the
+Six-Plates lens lives "as plate on dottie_user_memory", contradicting the §2.1/§7 plate deferral. §3 now reads "will live … when
+built; not present today" (DOTTIE_MEMORY_MODEL 6bcdb25b -> 80dd66f8); a full sweep confirms every plate mention consistently
+reflects the deferral. Unchanged from the prior pass: Walter-directed correction (2026-08-06) — the "consensual" framing of
+Dottie-L1 was an error; neither Theo nor Dottie has consent-gated personal memory (both distil automatically, no
+opt-in-to-exist). Amendment 10 in VAULT_MEMORY_ARCHITECTURE (both identical copies: vault-theo authority + vault-dottie mirror,
+base 3afda098 -> proposed 38086aa5): adds Amendment 10; appends a correction pointer to Amendment 9 (preserved append-only);
+corrects the two derived "consensual" mentions. INV-2 / §2.1 / §7 step 1 / §8 O-DOTTIE-L1-CONSENT resolved -> automatic. The
+SEPARATENESS invariant is retained (Dottie-L1 never crosses Theo's L1; Rule 1 inviolable) — only the opt-in qualifier is removed.
+The separate Six-Plates life-integration opt-in (Amendment 3) is explicitly untouched. A future incognito mode is the escape
+hatch, out of scope now. Unblocks the automatic Dottie-L1 build (distiller + injection + CRUD) and defers the plate column.
+Mechanical lint PASS. Emit APPROVED or REJECTED only.
 ```
 
 *End of Vault Memory Amendment 10 Pass-1 VEP.*
