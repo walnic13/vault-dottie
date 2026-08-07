@@ -89,7 +89,20 @@ export function TheoMain({ t, mode, suppressNarrowHeader }: TheoMainProps) {
                 DEVIATION from VA-T1, authorized by VA-T4. */}
             {mode !== "panel" && <span style={{ fontSize: 13.5, fontWeight: 600, color: C.ink2 }}>{MODEL_LABEL} <span style={{ color: C.ink3, fontSize: 11 }}>▾</span></span>}
             {t.styleKey !== "normal" && <span style={{ fontSize: 12, color: C.coralDk, background: C.coralSoft, borderRadius: 999, padding: "3px 10px" }}>{t.activeStyle.label}</span>}
-            {appLabel && <span style={{ fontSize: 12, color: C.ink2, background: C.coralTint, borderRadius: 999, padding: "3px 10px" }}>{appLabel}</span>}
+            {/* §6D(3) Agent-mode chip: when the host has published an app context, the agent shows its
+                current mode and toggles it on click — app-aware ("Reviewing: <fund>" / the app label,
+                coral) ⇄ general ("General", neutral). App-aware grounds answers in the 9/10 app; general
+                ignores it. Hidden when no app context is published (unchanged plain agent). */}
+            {t.appContextAvailable && (
+              <button
+                onClick={() => t.setAgentMode(t.agentMode === "app-aware" ? "general" : "app-aware")}
+                title={t.agentMode === "app-aware" ? "Using this app's context — switch to general chat" : `Switch to assisting with ${appLabel ?? "this app"}`}
+                style={{ fontSize: 12, color: t.agentMode === "app-aware" ? C.ink2 : C.ink3, background: t.agentMode === "app-aware" ? C.coralTint : C.line, border: "none", borderRadius: 999, padding: "3px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+              >
+                {t.agentMode === "app-aware" ? (appLabel ?? "App assistant") : "General"}
+                <span style={{ color: C.ink3, fontSize: 10 }}>⇄</span>
+              </button>
+            )}
             {t.chatProject && <span style={{ fontSize: 12, color: C.ink2, background: C.coralTint, borderRadius: 999, padding: "3px 10px", display: "flex", alignItems: "center", gap: 6 }}>{t.chatProject.name}<span onClick={t.clearChatProject} style={{ cursor: "pointer", display: "flex" }}><IcClose s={12} /></span></span>}
             {/* SPW 2c-iii-fe (VA-T12 B): a published chat shows a "Shared in {project}" chip so the shared
                 state is visible in the header (the publish/unpublish toggle lives in the title menu). */}
