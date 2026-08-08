@@ -11,7 +11,7 @@ import type {
 } from "../types";
 import { parseArtifacts, remapToIds, upsert } from "../lib/artifacts";
 import {
-  sendMessage as gatewaySend, sendMessageStream as gatewaySendStream,
+  sendMessage as gatewaySend, sendMessageStream as gatewaySendStream, adjudicate as gatewayAdjudicate,
   sendReviewAgentStream as gatewaySendReviewAgentStream, configureGateway as gatewayConfigure,
   listConversations as gatewayList, getConversation as gatewayGet,
   listFindings as gatewayListFindings, listFlags as gatewayListFlags, resolveFlag as gatewayResolveFlag,
@@ -54,6 +54,15 @@ export const theoClient = {
   // ── Chat (the one network-bound call; mocked in 1A) ──────────────────────
   sendMessage(req: GatewayRequest): Promise<GatewayResponse> {
     return gatewaySend(req);
+  },
+  // §GL6 Vault Governance Loop: adjudicate one gate item (dottie_adjudicate). Returns the [[CHECK]]-bearing
+  // message (for the chat render path) + the parsed verdict (CheckData) for the Return-to-Theo verdict set.
+  adjudicate(
+    reviewId: string,
+    claim: { kind: string; control_id: string; theo_assessment?: Record<string, unknown>; preparer_response?: string | null },
+    opts?: { signal?: AbortSignal },
+  ): Promise<{ message: string; verdict: unknown | null; control_id: string }> {
+    return gatewayAdjudicate(reviewId, claim, opts);
   },
   // ── B9 streaming chat (theo_message_stream sidecar) — same request shape; the reply arrives as
   // SSE deltas via the handlers (live text + thinking + citations + the final conversation id). ──

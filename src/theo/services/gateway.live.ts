@@ -208,6 +208,43 @@ export async function sendMessage(req: GatewayRequest, opts?: { signal?: AbortSi
   return { content, conversation_id };
 }
 
+// §GL6 governance check (Vault Governance Loop): adjudicate ONE gate item — POST /api/dottie_adjudicate on
+// func-dottie (same app as dottie_message; apiBase). Returns the assistant `message` (which CONTAINS a
+// [[CHECK]] block — rendered by the existing renderAssistant path when injected as an assistant turn) +
+// the parsed `verdict` payload (the deployed CheckData) for the Return-to-Theo verdict set.
+export async function adjudicate(
+  reviewId: string,
+  claim: { kind: string; control_id: string; theo_assessment?: Record<string, unknown>; preparer_response?: string | null },
+  opts?: { signal?: AbortSignal },
+): Promise<{ message: string; verdict: unknown | null; control_id: string }> {
+  const headers = await authHeaders();
+  const res = await fetch(`${apiBase}/api/dottie_adjudicate`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers,
+    signal: opts?.signal,
+    body: JSON.stringify({ review_id: reviewId, claim }),
+  });
+  let json: { data?: { message?: string; verdict_payload?: unknown; control_id?: string }; error?: { message?: string } } | null = null;
+  try {
+    json = await res.json();
+  } catch {
+    throw new Error(`Dottie gateway returned a non-JSON response (HTTP ${res.status}).`);
+  }
+  if (!res.ok) {
+    throw new Error(json?.error?.message || `Dottie adjudication error (HTTP ${res.status}).`);
+  }
+  const message = typeof json?.data?.message === "string" ? json.data.message : "";
+  if (!message) {
+    throw new Error("Dottie adjudication returned no verdict.");
+  }
+  return {
+    message,
+    verdict: json?.data?.verdict_payload ?? null,
+    control_id: typeof json?.data?.control_id === "string" ? json.data.control_id : claim.control_id,
+  };
+}
+
 // ── B8e attachment upload handshake (B8b/B8c endpoints) ───────────────────────────────────
 // 1) create → owner-scoped write SAS; 2) PUT bytes straight to Blob (SAS is the auth — no Bearer,
 // cross-origin to blob.core.windows.net, requires the storage account's CORS to allow PUT from the

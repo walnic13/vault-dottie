@@ -249,6 +249,57 @@ export function useTheoState(launchAppContext?: AppContext) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeReviewProjectId, messages.length, chatProject?.id]);
 
+  // ── Vault Governance Loop (reviewer side; Loop §GL5/§GL7) ─────────────────────────────────────
+  // The shell threads a GovernanceNote from Theo into app_context.governance_claim with a per-hand-off
+  // governance_nonce (App Host §6D(4)). App-aware mode only (reviewAc = effectiveAppContext.app_context;
+  // general mode blanks it, so no check runs). On a NEW nonce we adjudicate each note item via
+  // dottie_adjudicate (②), inject each returned [[CHECK]] message as an assistant turn (existing render
+  // path), and assemble the GovernanceVerdictSet for the Return-to-Theo leg (§GL4). Advisory throughout.
+  const govClaim = reviewAc && typeof reviewAc.governance_claim === "object" && reviewAc.governance_claim
+    ? (reviewAc.governance_claim as Record<string, unknown>) : null;
+  const govNonce = reviewAc && typeof reviewAc.governance_nonce === "number" ? (reviewAc.governance_nonce as number) : null;
+  const [governanceVerdictSet, setGovernanceVerdictSet] = useState<Record<string, unknown> | null>(null);
+  const [governanceBusy, setGovernanceBusy] = useState(false);
+  const govNonceRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (govNonce == null || govNonceRef.current === govNonce) return;
+    if (!govClaim || govClaim.kind !== "governance_note") return;
+    const target = govClaim.target && typeof govClaim.target === "object" ? (govClaim.target as Record<string, unknown>) : {};
+    const rid = typeof target.review_id === "string" ? target.review_id : currentRid;
+    if (!rid) return;
+    govNonceRef.current = govNonce; // fire once per hand-off (mirrors reviewArmRef)
+    const items = Array.isArray(govClaim.items) ? (govClaim.items as Array<Record<string, unknown>>) : [];
+    let cancelled = false;
+    void (async () => {
+      setGovernanceBusy(true);
+      setGovernanceVerdictSet(null);
+      const verdicts: Array<Record<string, unknown>> = [];
+      for (const it of items) {
+        const ref = it && typeof it.ref === "object" ? (it.ref as Record<string, unknown>) : {};
+        const controlId = typeof ref.control_id === "string" ? ref.control_id : "";
+        const gate = typeof it.gate === "string" ? it.gate : "";
+        if (!controlId) continue;
+        try {
+          const r = await theoClient.adjudicate(rid, { kind: "exception_clearance", control_id: controlId });
+          if (cancelled) return;
+          setMessages((m) => [...m, { role: "assistant", content: r.message }]);
+          verdicts.push({ item: { control_id: controlId }, gate, check: r.verdict });
+        } catch (e) {
+          if (cancelled) return;
+          setMessages((m) => [...m, { role: "assistant", content: `Dottie could not adjudicate control ${controlId}: ${String((e as Error)?.message ?? e)}` }]);
+        }
+      }
+      if (cancelled) return;
+      const rejected = verdicts.filter((v) => (v.check as { verdict?: string } | null)?.verdict === "challenge").length;
+      const caution = verdicts.filter((v) => (v.check as { verdict?: string } | null)?.verdict === "caution").length;
+      const approved = verdicts.length - rejected - caution;
+      setGovernanceVerdictSet({ kind: "governance_verdict_set", target, verdicts, summary: { approved, caution, rejected }, cleared: rejected === 0 && caution === 0 && verdicts.length > 0 });
+      setGovernanceBusy(false);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [govNonce]);
+
   // recents: global outside review mode; scoped to the review's project once resolved; EMPTY (fail
   // closed) while a review is armed but its project is still resolving — never global under a review.
   const recents = recentsList.filter((c) => c.title.toLowerCase().includes(search.toLowerCase()) && (!currentRid ? true : (activeReviewProjectId ? c.project_id === activeReviewProjectId : false)));
@@ -1230,6 +1281,9 @@ export function useTheoState(launchAppContext?: AppContext) {
     styleKey, custom, saved, copied, npOpen, np, kdraft, recents, activeStyle, appContext,
     reviewMode: hasReviewContext(effectiveAppContext), // §6D(3): review-assistant landing/chip only in app-aware mode
     sigmaMode: effectiveAppContext.app_key === "sigma", // #5 v2 / §6D(3): Sigma persona only in app-aware mode
+    // §GL Vault Governance Loop: the assembled verdict set (null until a governance note is adjudicated)
+    // + whether a check run is in flight. The header's Return-to-Theo affordance is gated on the set.
+    governanceVerdictSet, governanceBusy,
     // §6D(3) Agent mode: the (launch-latched) effective mode + whether a switch is offered (host published
     // a context) + the switcher (chip). General ⇒ the agent ignores the app context.
     agentMode, appContextAvailable: appContext.app_key != null,

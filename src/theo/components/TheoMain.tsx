@@ -37,9 +37,13 @@ export interface TheoMainProps {
   // narrow viewports (≤767.98px) so the Origin host provides the single mobile top bar (no stacked
   // double header). CSS-only, applied via the STYLE_BLOCK media rule in TheoSurface. Wide unchanged.
   suppressNarrowHeader?: boolean;
+  // §GL Vault Governance Loop (return leg): when Dottie has an assembled verdict set, the header shows a
+  // "Return to Theo" affordance that hands it back via this callback (App Host §6D(4), target_agent:'theo').
+  // Optional; absent (standalone/unhosted) ⇒ the affordance is hidden.
+  onRequestAgentHandoff?: (handoff: { target_agent: string; claim: Record<string, unknown> }) => void;
 }
 
-export function TheoMain({ t, mode, suppressNarrowHeader }: TheoMainProps) {
+export function TheoMain({ t, mode, suppressNarrowHeader, onRequestAgentHandoff }: TheoMainProps) {
   function renderAssistant(content: string, streaming = false): ReactNode {
     return splitAssistant(content, streaming).map((part, i) => {
       if (part.kind === "artifact") {
@@ -101,6 +105,22 @@ export function TheoMain({ t, mode, suppressNarrowHeader }: TheoMainProps) {
               >
                 {t.agentMode === "app-aware" ? (appLabel ?? "App assistant") : "General"}
                 <span style={{ color: C.ink3, fontSize: 10 }}>⇄</span>
+              </button>
+            )}
+            {/* §GL Vault Governance Loop (return leg): once Dottie has adjudicated a governance note, a
+                "Return to Theo" affordance hands the verdict set back to Theo (App Host §6D(4)). Shown only
+                when a host callback is wired AND a verdict set exists; the cleared/changes hint reads off
+                the set's summary. `governanceBusy` disables it mid-run. */}
+            {onRequestAgentHandoff && t.governanceVerdictSet && (
+              <button
+                disabled={t.governanceBusy}
+                onClick={() => onRequestAgentHandoff({ target_agent: "theo", claim: t.governanceVerdictSet as Record<string, unknown> })}
+                title="Send Dottie's verdicts back to Theo"
+                style={{ fontSize: 12, fontWeight: 600, color: C.ink2, background: C.coralTint, border: "none", borderRadius: 999, padding: "3px 10px", cursor: t.governanceBusy ? "default" : "pointer", opacity: t.governanceBusy ? 0.6 : 1, display: "flex", alignItems: "center", gap: 6 }}
+              >
+                ⇧ Return to Theo
+                {(t.governanceVerdictSet as { cleared?: boolean }).cleared === false && <span style={{ color: C.ink3, fontSize: 10 }}>· changes</span>}
+                {(t.governanceVerdictSet as { cleared?: boolean }).cleared === true && <span style={{ color: C.ink3, fontSize: 10 }}>· cleared</span>}
               </button>
             )}
             {t.chatProject && <span style={{ fontSize: 12, color: C.ink2, background: C.coralTint, borderRadius: 999, padding: "3px 10px", display: "flex", alignItems: "center", gap: 6 }}>{t.chatProject.name}<span onClick={t.clearChatProject} style={{ cursor: "pointer", display: "flex" }}><IcClose s={12} /></span></span>}
