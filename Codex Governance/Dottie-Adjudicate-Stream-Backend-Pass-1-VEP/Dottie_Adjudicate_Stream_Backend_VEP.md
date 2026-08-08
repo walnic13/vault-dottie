@@ -1,17 +1,20 @@
 # Dottie `dottie_adjudicate_stream` — streaming governance adjudication ("watch Dottie work") — Pass 1 Backend VEP (CODE-BEARING)
 
-> Reviewer: **Codex** (backend). THEO backend governor + Golden Handler regime. **Code-bearing** — a NEW v4 streaming function + a byte-verbatim bundled engine, shipped in `proposed-app/` for the **func-dottie-stream** SSE sidecar. Realizes Walter's 2026-08-08 redesign: replace the buffered per-exception burst with **ONE streaming call** that loads the review's workbooks ONCE, adjudicates **all** exceptions in a single gpt-5 tool-loop against the in-memory `ctx`, and **streams** the reasoning ("thinking") + tool activity + a `[[CHECK]]` verdict per exception — so the FE can render a Claude-Code-style watch-it-work surface with a Stop control. **Read/compute-only — writes nothing to Sigma; advisory** (the reviewer counter-sign remains the integrity gate). **COMPOSITE** of three deployed handlers (§2). Supersedes the buffered `dottie_adjudicate` (②) for the multi-exception path.
+> Reviewer: **Codex** (backend). THEO backend governor + Golden Handler regime. **Code-bearing** — a NEW v4 streaming function + a byte-verbatim bundled engine, shipped in `proposed-app/` for the **func-dottie-stream** SSE sidecar. Realizes Walter's 2026-08-08 redesign: replace the buffered per-exception **burst of separate HTTP calls** with **ONE streaming call** that loads the review's workbooks ONCE into a shared in-memory `ctx`, then adjudicates **all** exceptions — each via a **bounded per-exception gpt-5 tool-loop** reusing that `ctx` (fresh, bounded context per exception ⇒ no context-window overflow) — and **streams** the reasoning ("thinking") + tool activity + a `[[CHECK]]` verdict per exception — so the FE can render a Claude-Code-style watch-it-work surface with a Stop control. **Read/compute-only — writes nothing to Sigma; advisory** (the reviewer counter-sign remains the integrity gate). **COMPOSITE** of three deployed handlers (§2). Supersedes the buffered `dottie_adjudicate` (②) for the multi-exception path.
 
 ## Grounding Conformance Receipt
 
 ```
 Role: Claude Code
-Turn Type: Pass 1 — Backend Verified Evidence Pack (code-bearing; composite streaming handler)
+Turn Type: Pass 1 — Codex-rejection correction / delta-evidence pack (code-bearing; composite streaming handler)
 Grounding Mode: Full Baseline Grounding
 Pass: Pass 1
 Sub-phase Track: N/A
-Turn issued against HEAD: vault-dottie development 47ebd37 (+ authority: vault-origin Governance Loop contract 3dcd976, Codex-APPROVED)
+Turn issued against HEAD: vault-dottie development 652c43c (prior rejected) → this re-issue (+ authority: vault-origin Governance Loop contract 3dcd976, Codex-APPROVED)
 ```
+Delta basis (rejection-correction): prior submission @ `652c43c` Codex Pass-2 **REJECTED** on two grounds, both corrected here — **no change to `dottie_adjudicate_stream.js` (`f0c7f5cd`) itself**:
+1. **VEP accuracy (§1/§RECON overstated "ONE gpt-5 Responses tool-loop").** The code makes ONE streaming call and loads/parses the workbooks ONCE into a shared `ctx`, but then runs a **bounded per-exception gpt-5 tool-loop** (`adjudicateOne`, its own `openTurnWithRetry`) reusing that `ctx`. Corrected the wording throughout to say exactly that. The per-exception loop is deliberate: it keeps each exception a **fresh, bounded gpt-5 context** (which is what prevents the context-window overflow), while the "load once" win is the single workbook download/parse + shared `ctx`, not a single model loop.
+2. **Deploy-artifact completeness.** The reviewed `proposed-app/` lacked `host.json` and the existing `dottie_message_stream.js`, so a whole-sidecar redeploy of it would have dropped Dottie's chat streaming. Corrected: `proposed-app/` is now the **complete sidecar image** — `host.json` (`1bff626`, byte-verbatim from the deployed D2 artifact) + `package.json` (superset deps) + `src/functions/{dottie_message_stream.js (`51807a16`, byte-verbatim — PRESERVED), dottie_adjudicate_stream.js (new)}` + `src/engine/*`.
 
 | # | Document / file (absolute path) | Read this turn | Currency (blob) |
 | - | ------------------------------- | -------------- | --------------- |
@@ -27,6 +30,7 @@ Turn issued against HEAD: vault-dottie development 47ebd37 (+ authority: vault-o
 | 10 | FE RENDERER CONTRACT (DEPLOYED) — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/lib/check.ts` (`CheckData`/`parseCheck`) | grounded | `53fd892efab9541299efe2106c7ed3d3162fcb96` |
 | 11 | BUNDLED ENGINE (byte-verbatim from DEPLOYED func-sigma `wwwroot/engine`) — `.../proposed-app/src/engine/tool-loop.js` / `sheet-tools.js` / `registry.js` | `Read`/hash-matched this turn | `ec50418…` / `81eb2c4b…` / `3ef9394…` (tool-loop + sheet-tools = deployed byte-for-byte) |
 | 12 | NEW function (this package) — `.../proposed-app/src/functions/dottie_adjudicate_stream.js` (+ `proposed-app/package.json`) | authored this turn | `f0c7f5cd9ffbab1bc6a0a14173fcdf00ee208668` (+ package.json `0a8b9e4bcb2739a5be8d6c7ac1699bb62fc930a7`) |
+| 13 | COMPLETE-ARTIFACT — `.../proposed-app/host.json` + `.../proposed-app/src/functions/dottie_message_stream.js` (the EXISTING sidecar function, PRESERVED byte-verbatim so a whole-app redeploy does not drop it) | copied byte-verbatim from the deployed D2 artifact this turn | host.json `1bff626059f67ac68675316d074aa93cae858faa`; dottie_message_stream `51807a160c63a46cb6a47d44eba1f6529f3ec492` |
 
 ## Rule Anchor Table
 
@@ -41,7 +45,7 @@ Turn issued against HEAD: vault-dottie development 47ebd37 (+ authority: vault-o
 | c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/Codex Governance/Dottie-Adjudicate-Stream-Backend-Pass-1-VEP/proposed-app/src/engine/tool-loop.js | dispatch | "Route a tool_use block to its deterministic implementation." | tool calls dispatch to the bundled engine `dispatch(name,input,ctx)` against the shared in-memory `ctx` |
 
 ## §1 — Feature identification / sourcing
-NEW streaming endpoint `POST /api/dottie_adjudicate_stream` on **func-dottie-stream** (v4 SSE sidecar). Input `{ review_id }` (the client sends only the id; the handler fetches the review + `files` via `sigma_get_review` and loads the workbooks itself). It adjudicates every open exception (`checks.filter(status !== 'pass')`) in ONE run and streams: `event: delta{kind:'text'|'thinking'}`, `event: tool`/`tool_result`, `event: exception`, `event: verdict{control_id, check:CheckData}`, `event: done{summary,cleared}` (+ `event: error`). Read/compute-only; writes nothing; no schema/migration; advisory.
+NEW streaming endpoint `POST /api/dottie_adjudicate_stream` on **func-dottie-stream** (v4 SSE sidecar). Input `{ review_id }` (the client sends only the id; the handler fetches the review + `files` via `sigma_get_review` and loads the workbooks itself). It adjudicates every open exception (`checks.filter(status !== 'pass')`) in ONE streaming run — workbooks loaded/parsed ONCE into a shared `ctx`, then a bounded per-exception gpt-5 tool-loop (`adjudicateOne`) reusing that `ctx` — and streams: `event: delta{kind:'text'|'thinking'}`, `event: tool`/`tool_result`, `event: exception`, `event: verdict{control_id, check:CheckData}`, `event: done{summary,cleared}` (+ `event: error`). Read/compute-only; writes nothing; no schema/migration; advisory.
 
 ## §2 — Primary Reference (COMPOSITE)
 Per Golden Handler §2, a composite handler mirrors more than one deployed handler; each is inlined byte-verbatim in `primary-reference/`:
@@ -83,12 +87,14 @@ Negative asserts: no token → 401 (platform EasyAuth); `{}` (missing review_id)
 - **G-2 — gpt-5 reasoning streaming has no prior precedent.** No deployed handler streams gpt-5 reasoning; `dottie_message_stream` forwards only text. This handler sets `reasoning:{effort:"medium",summary:"auto"}` and forwards `response.reasoning_summary_text.delta` (matched defensively: any `type` containing `reasoning` ending `.delta`, `delta` string or `delta.text`) as `event: delta{kind:"thinking"}`. If Azure names the frame differently, the defensive match still catches it; worst case thinking is silent (verdicts unaffected). Confirmed live in the Pass-3 dev re-verify. Disclosed. PROCEED.
 - **G-3 — Advisory; writes nothing.** No Sigma/DMS mutation; `cleared`/verdicts drive only UI. Reviewer counter-sign remains the gate. PROCEED.
 - **G-4 — Deploy = func-dottie-stream (Pass-3).** On APPROVED, Claude Code adds `src/functions/dottie_adjudicate_stream.js` + `src/engine/*` + `xlsx` to the live `vaultgpt-func-dottie-stream` app and zip/run-from-package redeploys; ensures `SIGMA_API_BASE_URL`/`DMS_API_BASE_URL` app settings (default to the known hosts if unset) + the existing `AZURE_OPENAI_*`/`AAD_*` env. Then runs §5.3.
+- **G-6 — complete deployable artifact (Codex re-issue).** `proposed-app/` is the COMPLETE func-dottie-stream sidecar image: `host.json` + `package.json` (deps `@azure/functions`+`pg`+`jimp`+`xlsx` — superset covering BOTH functions) + `src/functions/{dottie_message_stream.js (PRESERVED byte-verbatim, `51807a16`), dottie_adjudicate_stream.js (new)}` + `src/engine/*`. A whole-app zip redeploy therefore preserves the existing chat-stream function. (`node_modules` is installed at deploy from `package.json`, not shipped in the governance package.) Disclosed. PROCEED.
+- **G-7 — "one call" ≠ "one model loop" (Codex re-issue).** Corrected §1/§RECON: ONE streaming HTTP call + ONE workbook load/parse (shared `ctx`); a bounded per-exception gpt-5 tool-loop (`adjudicateOne`) reusing that `ctx`. The per-exception boundedness is the fix for the earlier context-window overflow; the load-once win is the single download/parse. Disclosed. PROCEED.
 - **G-5 — engine byte-provenance.** `tool-loop.js` (`ec50418`) + `sheet-tools.js` (`81eb2c4b`) are byte-identical to the DEPLOYED func-sigma engine (hash-matched this turn); `registry.js` fetched from the same live `wwwroot/engine`. Bundling (not re-authoring) keeps the deterministic engine single-sourced. Disclosed. PROCEED.
 
 ## §RECON — reconciliation with the Governance Loop contract (§GL6/§GL7)
 | Contract clause | This handler | Classification |
 | --- | --- | --- |
-| §GL7 "Dottie runs `dottie_adjudicate` per item" | Runs ALL exceptions in ONE streaming call (load once); the per-item buffered `dottie_adjudicate` (②) remains deployed but is superseded for the multi-exception path. Same OUTCOME: one `CheckData` verdict per exception. | REALIZED-VARIANT (Walter 2026-08-08 load-once redesign) |
+| §GL7 "Dottie runs `dottie_adjudicate` per item" | ONE streaming call + ONE workbook load (shared `ctx`); still a per-exception gpt-5 tool-loop (`adjudicateOne`) — but co-located in one call reusing the shared `ctx`, not N separate HTTP calls each re-loading. The buffered `dottie_adjudicate` (②) remains deployed but is superseded for the multi-exception path. Same OUTCOME: one `CheckData` verdict per exception. | REALIZED-VARIANT (Walter 2026-08-08 load-once redesign) |
 | §GL6 "Engine: … against func-dottie `dottie_adjudicate` (②) which re-derives via func-sigma" | Re-derives via the BUNDLED deterministic engine over the in-memory `ctx` (workbooks loaded once, OBO). Avoids the per-tool-call workbook re-load that defeats "load once". Still as-the-user (OBO to vault-dms for the bytes). | REALIZED-VARIANT (disclosed; same determinism + as-user) |
 | §GL4 verdict item = deployed `CheckData` | UNCHANGED — each `event: verdict.check` is the deployed `CheckData`, parsed by the deployed `parseCheck`/`GovernanceCheck`. | MATCH |
 | §GL1 advisory; human counter-sign | UNCHANGED — writes nothing; advisory. | MATCH |
@@ -107,7 +113,8 @@ composite), "vault-dottie/Codex Governance/Dottie-Adjudicate-Stream-Backend-Pass
 committed at vault-dottie development <HEAD> + corporate-reporting f928152. Open Pass-2 with a GCR + Rule Anchor Table;
 hard-gate against the THEO Golden Handler + Backend Conformance; emit APPROVED or REJECTED only. NEW v4 SSE endpoint on
 func-dottie-stream: input {review_id}; fetches sigma_get_review (+files) as-user; loads the workbook set ONCE (OBO via
-vault-dms) + builds ctx; adjudicates ALL exceptions (checks.filter status!=='pass') in ONE gpt-5 Responses tool-loop
+vault-dms) + builds ctx; adjudicates ALL exceptions (checks.filter status!=='pass') in one streaming call, each via a
+BOUNDED per-exception gpt-5 tool-loop (adjudicateOne) reusing the shared ctx
 against the BUNDLED deterministic engine (byte-verbatim from deployed func-sigma: tool-loop ec50418 + sheet-tools
 81eb2c4b + registry); streams event: delta{kind:text|thinking} (thinking via reasoning:{summary:"auto"} →
 reasoning_summary_text.delta), tool/tool_result, exception, verdict{control_id, check:CheckData}, done{summary,cleared}.
