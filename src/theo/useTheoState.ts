@@ -7,7 +7,7 @@ import { theoClient } from "./services/theoClient";
 import { getCachedRecents, setCachedRecents, getCachedConversation, setCachedConversation, getCachedSelf, setCachedSelf, isPrincipalBound, bindPrincipal } from "./services/theoSnapshot";
 import { stripArtifactRefs } from "./lib/artifacts";
 import { buildSystemPrompt, greeting } from "./lib/prompt";
-import { MODEL } from "./swapBlock";
+import { MODEL, DOTTIE_CAPABILITIES } from "./swapBlock";
 import { STYLES } from "./data";
 import type { AgentToolCall, AppContext, Artifact, ArtifactSummary, Citation, ComposerAttachment, ConversationSummary, ConversationDetail, FileDownload, InlineImage, InlineVideo, KDraft, Message, NpDraft, OpenArtifact, Person, Project, ProjectMember, PublishedConversation, SentAttachment, Settings, StyleKey, Finding, Flag, View } from "./types";
 
@@ -231,6 +231,11 @@ export function useTheoState(launchAppContext?: AppContext) {
   // get-or-create this review's project and apply ONLY if we're still on the same review (reviewArmRef).
   useEffect(() => {
     reviewArmRef.current = currentRid;
+    // §GL: Dottie has NO Projects backend (DOTTIE_CAPABILITIES.projects=false), so she must NOT arm a
+    // Theo-style per-review project — in app-aware review mode that path fail-closes with a spurious
+    // "Couldn't open that project" toast. The governance loop keys off currentRid + governance_claim (not
+    // reviewProject), so skipping the arm is safe; Theo (projects=true) is unaffected.
+    if (!DOTTIE_CAPABILITIES.projects) { setReviewProject(null); return; }
     if (!currentRid) { setReviewProject(null); return; }
     setReviewProject((prev) => (prev && prev.rid === currentRid ? prev : null));
     const fund = reviewAc && typeof reviewAc.fund_name === "string" && reviewAc.fund_name.trim() ? reviewAc.fund_name : "Review";

@@ -6,7 +6,7 @@
 
 ```
 Role: Claude Code
-Turn Type: Pass 1 — Codex-rejection correction / delta-evidence pack (code-bearing; Governance Loop reviewer side)
+Turn Type: Pass 1 — delta-evidence pack (code-bearing; Governance Loop reviewer side); re-issue 2 — post-deploy review-arm-guard hardening (found in dev-SWA loop verification)
 Grounding Mode: Full Baseline Grounding
 Pass: Pass 1
 Sub-phase Track: N/A
@@ -15,6 +15,8 @@ Grounding parent (source baseline): vault-dottie development 67e77806dd58b6bba97
 The reviewed artifact is the CHILD commit adding this package + the 5 source edits; its commit SHA + this VEP's own blob are reviewer-stamped (self-contained `.md`). The 5 changed source files' proposed blobs are concrete (below).
 
 Delta basis (rejection-correction): prior push `9ccc058` REJECTED on §6D(3) app-aware-only isolation — `governanceVerdictSet` was not cleared on `newChat()` / switch-to-general, and the "Return to Theo" button was gated only on the (possibly stale) verdict set. Correction (2 files): (1) `newChat()` now clears `governanceVerdictSet` + `governanceBusy` — and since `setAgentMode` funnels through `newChat()` (useTheoState `:1300`), switching to general (or any fresh chat) drops the set; (2) the TheoMain button is additionally gated on `t.agentMode === "app-aware"` (defense-in-depth — general mode never shows it). New blobs: `useTheoState.ts` `b568392d79d641584764decf71bcef49e0413d82`, `TheoMain.tsx` `b3fc7180f21aebbdf4c07cc743c0002816c61dcb`. The other 3 files are unchanged.
+
+Delta 2 (post-deploy verification hardening — `useTheoState.ts` only, `b568392`→`adcca5c`): dev-SWA loop verification (2026-08-08) surfaced a spurious **"Couldn't open that project"** toast in app-aware review mode. Cause: Dottie's *transplanted* review-project arm (`getOrCreateReviewProject`→`startInProject`) — a Theo feature — runs on review launch, but Dottie has **no Projects backend** (`DOTTIE_CAPABILITIES.projects: false`), so `startInProject` fail-closes. Fix: guard the arm — `if (!DOTTIE_CAPABILITIES.projects) { setReviewProject(null); return; }` (import `DOTTIE_CAPABILITIES`). The governance loop keys off `currentRid` + `governance_claim`, not `reviewProject`, so skipping the arm is safe; Theo (projects:true) is unaffected. Not part of the original reviewer feature — a pre-existing replica artifact surfaced by the loop.
 
 | # | Document / file (absolute path) | Read this turn | Currency (blob) |
 | - | ------------------------------- | -------------- | --------------- |
@@ -29,7 +31,7 @@ Delta basis (rejection-correction): prior push `9ccc058` REJECTED on §6D(3) app
 | --------------------------- | --------- | ------------- |
 | `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/services/gateway.live.ts` | `a3f95d5324be7e832d1dafe2c77cb299274238cf` | `69063f7586e0fcf79366c9303f51ecc3e7cb45f4` |
 | `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/services/theoClient.ts` | `f83e728b6617d58b0bf3423e9dab658647e2337a` | `42d1d9c2986e54e65b8257b501fefe6f36842208` |
-| `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/useTheoState.ts` | `8aa18758a2a8b30749246a9341f4261aff95f1cf` | `b568392d79d641584764decf71bcef49e0413d82` (re-issue: `newChat()` clears the verdict set) |
+| `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/useTheoState.ts` | `8aa18758a2a8b30749246a9341f4261aff95f1cf` | `adcca5c87fd10961394f5b9cf41f71a9e95269d8` (re-issue: `newChat()` clears the verdict set; re-issue 2: review-arm guarded off when `projects` capability is false) |
 | `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/TheoSurface.tsx` | `c45bb669490ab1eefdfed786b291b73cb102fb09` | `22df56b69c9ae62e07a2bea81799b929bdd1b9c0` |
 | `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/components/TheoMain.tsx` | `e7b8c38d1486a429137cc398b66058da537811e8` | `b3fc7180f21aebbdf4c07cc743c0002816c61dcb` (re-issue: button gated on app-aware) |
 
