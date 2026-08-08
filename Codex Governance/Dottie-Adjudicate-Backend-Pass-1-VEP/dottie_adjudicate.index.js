@@ -285,8 +285,17 @@ function extractVerdictPayload(text) {
   return obj;
 }
 
+function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+// Retry budget for transient gpt-5 throttling/overload (429/503). Adjudicating a review's exceptions
+// fires several multi-turn Responses calls in sequence; a low-capacity deployment (e.g. gpt-5 in uksouth)
+// returns 429 under that burst. We honor Retry-After when present, else exponential backoff, bounded.
+const RESPONSES_MAX_RETRIES = 4;
+const RESPONSES_BACKOFF_CAP_MS = 30000;
+
 // One buffered Responses-API turn. `useTools` false omits the tool catalog entirely (the model cannot call a tool),
 // used for the final forcing turn so an exhausted loop still yields a verdict instead of an empty answer.
+// Retries a 429/503 (throttle/overload) up to RESPONSES_MAX_RETRIES — honoring Retry-After, else exponential
+// backoff — so a single rate-limited turn does not fail the whole exception (it just slows down).
 async function callResponses(token, inputItems, useTools) {
   const reqObj = {
     model: AZURE_OPENAI_DEPLOYMENT,
@@ -298,14 +307,28 @@ async function callResponses(token, inputItems, useTools) {
   if (useTools) reqObj.tools = SIGMA_TOOLS;
   const requestBody = JSON.stringify(reqObj);
   const url = `${AZURE_OPENAI_ENDPOINT}/openai/responses?api-version=${RESPONSES_API_VERSION}`;
-  const r = await requestUrl(url, {
+  const opts = {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
       "Content-Length": Buffer.byteLength(requestBody),
     },
-  }, requestBody);
+  };
+  let r;
+  for (let attempt = 0; attempt <= RESPONSES_MAX_RETRIES; attempt++) {
+    r = await requestUrl(url, opts, requestBody);
+    if ((r.statusCode === 429 || r.statusCode === 503) && attempt < RESPONSES_MAX_RETRIES) {
+      const hdr = r.headers || {};
+      const raSec = parseInt(hdr["retry-after"] || hdr["Retry-After"], 10);
+      const delayMs = Number.isFinite(raSec) && raSec > 0
+        ? Math.min(raSec * 1000, RESPONSES_BACKOFF_CAP_MS)
+        : Math.min(1000 * Math.pow(2, attempt), RESPONSES_BACKOFF_CAP_MS);
+      await sleep(delayMs);
+      continue;
+    }
+    break;
+  }
   return { statusCode: r.statusCode, payload: parseJsonSafe(r.body) };
 }
 
