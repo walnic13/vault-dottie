@@ -1,0 +1,12 @@
+{
+  "name": "vaultgpt-func-dottie-stream",
+  "version": "1.0.0",
+  "description": "Dottie streaming sidecar — dottie_message_stream + dottie_adjudicate_stream (governance watch-it-work).",
+  "main": "src/functions/*.js",
+  "dependencies": {
+    "@azure/functions": "^4.5.0",
+    "pg": "^8.11.0",
+    "jimp": "0.22.12",
+    "xlsx": "0.18.5"
+  }
+}
