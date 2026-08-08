@@ -268,16 +268,45 @@ function readResponsesOutput(payload) {
 }
 
 const CHECK_BLOCK_RE = /\[\[CHECK\]\]\s*([\s\S]*?)\s*\[\[\/CHECK\]\]/;
+const VERDICTS = new Set(["concur", "caution", "challenge"]);
 
-// Extract the single [[CHECK]] block's parsed JSON (or null). The FE parseCheck is the authoritative renderer; this
-// is a convenience passthrough of the model's CheckData JSON for a direct (non-FE) consumer of verdict_payload.
+// Extract the single [[CHECK]] block's parsed JSON, or null if it is not a TRUSTED adjudication payload. This check
+// ALWAYS adjudicates (§C4 "this check always sets it"), so a trusted payload requires BOTH a non-empty `lead` AND a
+// `verdict` in the enum — a missing block, unparseable JSON, empty lead, or absent/invalid verdict all fail closed
+// (→ null), and the handler then returns a non-200 rather than a hollow 200. The FE parseCheck stays the renderer.
 function extractVerdictPayload(text) {
   if (typeof text !== "string") return null;
   const m = text.match(CHECK_BLOCK_RE);
   if (!m) return null;
   const obj = parseJsonSafe(m[1]);
-  if (!obj || typeof obj !== "object" || typeof obj.lead !== "string" || !obj.lead.trim()) return null;
+  if (!obj || typeof obj !== "object") return null;
+  if (typeof obj.lead !== "string" || !obj.lead.trim()) return null;
+  if (typeof obj.verdict !== "string" || !VERDICTS.has(obj.verdict)) return null;
   return obj;
+}
+
+// One buffered Responses-API turn. `useTools` false omits the tool catalog entirely (the model cannot call a tool),
+// used for the final forcing turn so an exhausted loop still yields a verdict instead of an empty answer.
+async function callResponses(token, inputItems, useTools) {
+  const reqObj = {
+    model: AZURE_OPENAI_DEPLOYMENT,
+    instructions: ADJUDICATION_SYSTEM_PROMPT,
+    input: inputItems,
+    reasoning: { effort: "medium" },
+    max_output_tokens: DEFAULT_MAX_OUTPUT_TOKENS,
+  };
+  if (useTools) reqObj.tools = SIGMA_TOOLS;
+  const requestBody = JSON.stringify(reqObj);
+  const url = `${AZURE_OPENAI_ENDPOINT}/openai/responses?api-version=${RESPONSES_API_VERSION}`;
+  const r = await requestUrl(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      "Content-Length": Buffer.byteLength(requestBody),
+    },
+  }, requestBody);
+  return { statusCode: r.statusCode, payload: parseJsonSafe(r.body) };
 }
 
 module.exports = async function (context, req) {
@@ -370,32 +399,14 @@ module.exports = async function (context, req) {
 
     // ---- Buffered Responses-API tool loop (mirrors dottie_message_stream mechanics, stream:false). ----
     let inputItems = [{ role: "user", content: [{ type: "input_text", text: userPrompt }] }];
-    let finalText = "";
+    let finalText = null;   // null ⇒ no terminal (no-tool) turn yet; the model was still calling tools.
     let respModel = AZURE_OPENAI_DEPLOYMENT;
 
     for (let turn = 0; turn <= MAX_TOOL_TURNS; turn++) {
-      const requestBody = JSON.stringify({
-        model: AZURE_OPENAI_DEPLOYMENT,
-        instructions: ADJUDICATION_SYSTEM_PROMPT,
-        input: inputItems,
-        tools: SIGMA_TOOLS,
-        reasoning: { effort: "medium" },
-        max_output_tokens: DEFAULT_MAX_OUTPUT_TOKENS,
-      });
-      const url = `${AZURE_OPENAI_ENDPOINT}/openai/responses?api-version=${RESPONSES_API_VERSION}`;
-      const r = await requestUrl(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          "Content-Length": Buffer.byteLength(requestBody),
-        },
-      }, requestBody);
-
-      const payload = parseJsonSafe(r.body);
-      if (r.statusCode < 200 || r.statusCode >= 300 || !payload) {
-        const message = (payload && payload.error && payload.error.message) || `Azure OpenAI request failed (HTTP ${r.statusCode}).`;
-        context.log.error("dottie_adjudicate upstream error", r.statusCode, message);
+      const { statusCode, payload } = await callResponses(token, inputItems, true);
+      if (statusCode < 200 || statusCode >= 300 || !payload) {
+        const message = (payload && payload.error && payload.error.message) || `Azure OpenAI request failed (HTTP ${statusCode}).`;
+        context.log.error("dottie_adjudicate upstream error", statusCode, message);
         return send(context, 502, errorBody("UPSTREAM_ERROR", message, 502));
       }
       if (typeof payload.model === "string") respModel = payload.model;
@@ -419,7 +430,31 @@ module.exports = async function (context, req) {
       }
     }
 
+    // Fail-closed on budget exhaustion (§C4 "this check always sets it"): if the loop ended while the model was
+    // still calling tools, force ONE final turn with NO tools so it MUST produce its verdict now from what it has —
+    // never fall through with an empty answer.
+    if (finalText === null) {
+      inputItems = inputItems.concat([{
+        role: "user",
+        content: [{ type: "input_text", text: "You have exhausted your tool budget. Do NOT call any more tools. Emit your [[CHECK]] verdict now, based only on what you have already gathered; lower your confidence if you could not fully verify." }],
+      }]);
+      const { statusCode, payload } = await callResponses(token, inputItems, false);
+      if (statusCode < 200 || statusCode >= 300 || !payload) {
+        const message = (payload && payload.error && payload.error.message) || `Azure OpenAI request failed (HTTP ${statusCode}).`;
+        context.log.error("dottie_adjudicate forcing-turn upstream error", statusCode, message);
+        return send(context, 502, errorBody("UPSTREAM_ERROR", message, 502));
+      }
+      if (typeof payload.model === "string") respModel = payload.model;
+      finalText = readResponsesOutput(payload).text;
+    }
+
+    // Fail-closed verdict gate: this check ALWAYS yields a verdict (§C4). A missing/unparseable [[CHECK]] block, or a
+    // block without a valid {verdict ∈ enum, non-empty lead}, is a failure — return a non-200, never a hollow 200.
     const verdictPayload = extractVerdictPayload(finalText);
+    if (!verdictPayload) {
+      context.log.error("dottie_adjudicate produced no parseable [[CHECK]] verdict");
+      return send(context, 502, errorBody("NO_VERDICT", "The adjudication did not produce a verdict.", 502));
+    }
     return send(context, 200, successBody({
       review_id: reviewId,
       control_id: controlId,
