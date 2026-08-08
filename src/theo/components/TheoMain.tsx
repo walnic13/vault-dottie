@@ -111,7 +111,7 @@ export function TheoMain({ t, mode, suppressNarrowHeader, onRequestAgentHandoff 
                 "Return to Theo" affordance hands the verdict set back to Theo (App Host §6D(4)). Shown only
                 when a host callback is wired AND a verdict set exists; the cleared/changes hint reads off
                 the set's summary. `governanceBusy` disables it mid-run. */}
-            {onRequestAgentHandoff && t.governanceVerdictSet && (
+            {onRequestAgentHandoff && t.governanceVerdictSet && t.agentMode === "app-aware" && (
               <button
                 disabled={t.governanceBusy}
                 onClick={() => onRequestAgentHandoff({ target_agent: "theo", claim: t.governanceVerdictSet as Record<string, unknown> })}

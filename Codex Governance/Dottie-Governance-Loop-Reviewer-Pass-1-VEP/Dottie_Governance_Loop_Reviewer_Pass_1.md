@@ -6,13 +6,15 @@
 
 ```
 Role: Claude Code
-Turn Type: Pass 1 — Frontend Verified Evidence Pack (code-bearing; Governance Loop reviewer side)
+Turn Type: Pass 1 — Codex-rejection correction / delta-evidence pack (code-bearing; Governance Loop reviewer side)
 Grounding Mode: Full Baseline Grounding
 Pass: Pass 1
 Sub-phase Track: N/A
-Grounding parent (source baseline): vault-dottie development 67e77806dd58b6bba977691bd5d0736b6a79f303 (+ authority: vault-origin loop contract 3dcd976, Codex-APPROVED)
+Grounding parent (source baseline): vault-dottie development 67e77806dd58b6bba977691bd5d0736b6a79f303 (prior rejected push 9ccc058 → this re-issue; + authority: vault-origin loop contract 3dcd976, Codex-APPROVED)
 ```
 The reviewed artifact is the CHILD commit adding this package + the 5 source edits; its commit SHA + this VEP's own blob are reviewer-stamped (self-contained `.md`). The 5 changed source files' proposed blobs are concrete (below).
+
+Delta basis (rejection-correction): prior push `9ccc058` REJECTED on §6D(3) app-aware-only isolation — `governanceVerdictSet` was not cleared on `newChat()` / switch-to-general, and the "Return to Theo" button was gated only on the (possibly stale) verdict set. Correction (2 files): (1) `newChat()` now clears `governanceVerdictSet` + `governanceBusy` — and since `setAgentMode` funnels through `newChat()` (useTheoState `:1300`), switching to general (or any fresh chat) drops the set; (2) the TheoMain button is additionally gated on `t.agentMode === "app-aware"` (defense-in-depth — general mode never shows it). New blobs: `useTheoState.ts` `b568392d79d641584764decf71bcef49e0413d82`, `TheoMain.tsx` `b3fc7180f21aebbdf4c07cc743c0002816c61dcb`. The other 3 files are unchanged.
 
 | # | Document / file (absolute path) | Read this turn | Currency (blob) |
 | - | ------------------------------- | -------------- | --------------- |
@@ -27,9 +29,9 @@ The reviewed artifact is the CHILD commit adding this package + the 5 source edi
 | --------------------------- | --------- | ------------- |
 | `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/services/gateway.live.ts` | `a3f95d5324be7e832d1dafe2c77cb299274238cf` | `69063f7586e0fcf79366c9303f51ecc3e7cb45f4` |
 | `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/services/theoClient.ts` | `f83e728b6617d58b0bf3423e9dab658647e2337a` | `42d1d9c2986e54e65b8257b501fefe6f36842208` |
-| `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/useTheoState.ts` | `8aa18758a2a8b30749246a9341f4261aff95f1cf` | `8156e650b2763ae7806fbf59d6d38aa6cfd19946` |
+| `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/useTheoState.ts` | `8aa18758a2a8b30749246a9341f4261aff95f1cf` | `b568392d79d641584764decf71bcef49e0413d82` (re-issue: `newChat()` clears the verdict set) |
 | `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/TheoSurface.tsx` | `c45bb669490ab1eefdfed786b291b73cb102fb09` | `22df56b69c9ae62e07a2bea81799b929bdd1b9c0` |
-| `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/components/TheoMain.tsx` | `e7b8c38d1486a429137cc398b66058da537811e8` | `5e50aaa0054d623047c8fd50cbfaca7d5f97fb94` |
+| `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/components/TheoMain.tsx` | `e7b8c38d1486a429137cc398b66058da537811e8` | `b3fc7180f21aebbdf4c07cc743c0002816c61dcb` (re-issue: button gated on app-aware) |
 
 ## Rule Anchor Table
 
@@ -52,9 +54,9 @@ API dependency: **`dottie_adjudicate`** (DEPLOYED ②, blob `a3ad1ce`, golden-cu
 |---|---|---|---|
 | `gateway.live.ts` | new `adjudicate` client (mirrors `sendMessage`: `authHeaders` → `fetch(${apiBase}/api/dottie_adjudicate)` → envelope unwrap) | `adjudicate(reviewId: string, claim: { kind; control_id; theo_assessment?; preparer_response? }, opts?): Promise<{ message: string; verdict: unknown \| null; control_id: string }>` | ADDITIVE |
 | `theoClient.ts` | import `adjudicate as gatewayAdjudicate` + façade passthrough | `adjudicate(reviewId, claim, opts) { return gatewayAdjudicate(reviewId, claim, opts); }` | ADDITIVE |
-| `useTheoState.ts` | derive `govClaim`/`govNonce` off `reviewAc`; `governanceVerdictSet`/`governanceBusy` state; nonce-guarded effect (mirrors `reviewArmRef`) that adjudicates each item, injects `[[CHECK]]` turns via `setMessages`, assembles the set; expose both on the hook return | effect keyed on `[govNonce]`; reads `governance_claim`/`governance_nonce` from `effectiveAppContext.app_context` (general mode blanks it) | ALLOWED DELTA (new derived state + effect; no existing behaviour changed) |
+| `useTheoState.ts` | derive `govClaim`/`govNonce` off `reviewAc`; `governanceVerdictSet`/`governanceBusy` state; nonce-guarded effect (mirrors `reviewArmRef`) that adjudicates each item, injects `[[CHECK]]` turns via `setMessages`, assembles the set; expose both on the hook return. **Re-issue: `newChat()` now clears `governanceVerdictSet`+`governanceBusy`** (and `setAgentMode` funnels through `newChat()`, so switch-to-general clears it too — §6D(3) isolation) | effect keyed on `[govNonce]`; reads `governance_claim`/`governance_nonce` from `effectiveAppContext.app_context` (general mode blanks it); verdict set dropped on any thread reset | ALLOWED DELTA (new derived state + effect + clear-on-reset; no existing behaviour changed) |
 | `TheoSurface.tsx` | add optional `onRequestAgentHandoff` prop; pass to `TheoMain` at BOTH render sites (panel + standalone) | `onRequestAgentHandoff?: (handoff: { target_agent: string; claim: Record<string, unknown> }) => void;` | ADDITIVE (optional) |
-| `TheoMain.tsx` | add optional `onRequestAgentHandoff` prop; render the "Return to Theo" header affordance gated on `t.governanceVerdictSet` (disabled while `t.governanceBusy`) | button `onClick` → `onRequestAgentHandoff({ target_agent:'theo', claim: t.governanceVerdictSet })` | ADDITIVE (optional) |
+| `TheoMain.tsx` | add optional `onRequestAgentHandoff` prop; render the "Return to Theo" header affordance. **Re-issue: gated on `t.governanceVerdictSet` AND `t.agentMode === "app-aware"`** (disabled while `t.governanceBusy`) — general mode never shows it | button `onClick` → `onRequestAgentHandoff({ target_agent:'theo', claim: t.governanceVerdictSet })` | ADDITIVE (optional) |
 
 **No existing behaviour changes.** General mode blanks `effectiveAppContext` so the effect never runs; a surface with no `onRequestAgentHandoff` (standalone) hides the button; the deployed chat/`[[CHECK]]` render path is reused verbatim.
 
@@ -65,6 +67,7 @@ API dependency: **`dottie_adjudicate`** (DEPLOYED ②, blob `a3ad1ce`, golden-cu
 - **G-3 — Advisory.** `cleared`/verdicts drive only UI; nothing authoritative is mutated in Sigma (matches Loop §GL1 + First-Check advisory stance). PROCEED.
 - **G-4 — Env-var fix is a promotion concern.** The prod `VITE_DOTTIE_FUNCTIONS_URL`→`VITE_FUNCTIONS_URL` fix lives in `azure-static-web-apps-main.yml` (a `main`-branch workflow); per the two-SWA pattern it is applied on `main` at promotion, NOT carried by a dev→main app promotion. Out of scope here; tracked for promotion. Disclosed.
 - **G-5 — Verify on dev-SWA (Pass-3).** Full loop (Theo note → Dottie verdicts → Return to Theo) is exercised once Phase 1c lands; Walter verifies the co-landed set on the dev-SWA. `tsc` clean. PROCEED.
+- **G-6 — Codex re-issue (§6D(3) app-aware isolation).** Prior push `9ccc058` left `governanceVerdictSet` uncleared on `newChat()` / switch-to-general, with the Return-to-Theo button gated only on the stale set. Fixed: `newChat()` clears the set + busy flag (and `setAgentMode`→`newChat()` covers the general switch), and the button is additionally gated on `t.agentMode === "app-aware"`. So the verdict set + affordance exist ONLY in app-aware mode for the current thread; a fresh chat or general switch drops them. `tsc` clean; lint PASS. PROCEED.
 
 ## §PERSISTENCE — Governor §1.1A
 Committed + pushed to `development` this turn: the 5 FE files + this VEP under `Codex Governance/Dottie-Governance-Loop-Reviewer-Pass-1-VEP/`. No unrelated files; no Class B `.xlsx`.

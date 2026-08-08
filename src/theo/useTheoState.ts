@@ -564,7 +564,7 @@ export function useTheoState(launchAppContext?: AppContext) {
   // takes the DISCARD path, not the keep-partial path — the fresh thread replaces the list anyway).
   // This also covers selectRecent / startInProject / deleteConversation / the host newChatNonce, which
   // all funnel through newChat() to reset the thread.
-  function newChat() { pushNavIfDestinationChanges({ k: "newchat" }); abortRef.current?.abort(); setMessages([]); setConversationId(null); setChatProject(null); setOpenArt(null); theoClient.resetArtifacts(); setArtifacts([]); clearComposer(); applyView("chats"); }  // B4h: fresh thread = fresh in-memory artifact set. VEP-1: single-owned history via applyView (not the pushing go)
+  function newChat() { pushNavIfDestinationChanges({ k: "newchat" }); abortRef.current?.abort(); setMessages([]); setConversationId(null); setChatProject(null); setOpenArt(null); theoClient.resetArtifacts(); setArtifacts([]); clearComposer(); setGovernanceVerdictSet(null); setGovernanceBusy(false); applyView("chats"); }  // B4h: fresh thread = fresh in-memory artifact set. §GL: a fresh thread also drops any governance verdict set (and setAgentMode funnels through here, so switching to general clears it too — §6D(3) isolation). VEP-1: single-owned history via applyView (not the pushing go)
   // B4c/B4d: AWAIT the project's full load (metadata + knowledge, held in chatProject) before switching
   // to chat, so the first turn's system prompt (buildSystemPrompt(…, chatProject)) always includes it.
   // A fire-and-forget load could otherwise race the first send — the "Start a chat" button stays enabled.
