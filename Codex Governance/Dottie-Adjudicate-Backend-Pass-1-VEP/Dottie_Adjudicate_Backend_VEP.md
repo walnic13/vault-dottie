@@ -1,0 +1,100 @@
+# Dottie `dottie_adjudicate` Backend — the first governance check (adjudicate an exception clearance) — Pass-1 VEP (CODE-BEARING)
+
+> Reviewer: **Codex** (backend). THEO backend governor + Golden Handler regime. **Code-bearing** — the handler + function.json are in this package (`dottie_adjudicate.index.js` / `.function.json`); the DEPLOYED primary reference (`dottie_ask`) pair is shipped byte-verbatim in `PRIMARY_REFERENCE.dottie_ask.*`. Implements package **②** of the Codex-**APPROVED** VO-AH Dottie Governance First-Check Contract §C4 (vault-origin contract blob `1bf7334`): a NEW `func-dottie` endpoint that runs a **gpt-5 tool-loop** declaring Sigma's six deterministic review tools (via the DEPLOYED `sigma_governance_tool`, §C2), re-derives an exception INDEPENDENTLY, judges whether the clearance holds, and emits ONE `[[CHECK]]…[[/CHECK]]` block (the deployed governance-output mechanism). **Read/compute-only — writes nothing to Sigma; NO migration; NO schema; advisory** (the reviewer counter-sign stays Sigma's integrity gate).
+
+## Grounding Conformance Receipt
+
+```
+Role: Claude Code
+Turn Type: Pass 1 — Backend Verified Evidence Pack (code-bearing; golden handler)
+Grounding Mode: Full Baseline Grounding
+Pass: Pass 1
+Sub-phase Track: N/A
+Turn issued against HEAD: vault-dottie development 92e3439 (+ authority: vault-origin contract blob 1bf7334, Codex-APPROVED)
+```
+
+| # | Document / file (absolute path) | Read this turn | Currency (blob @ HEAD) |
+| - | ------------------------------- | -------------- | ---------------------- |
+| 1 | AUTHORITY (Codex-APPROVED) — VO-AH Dottie Governance First-Check Contract §C4/§C3 — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-origin/Codex Governance/VO-AH-Dottie-Governance-First-Check-Contract-Pass-1/VO_AH_Dottie_Governance_First_Check_Contract_Pass_1.md` | `Read` this turn | `1bf7334a7a06e41b0278f65c7ccf4f96fcc586f7` (APPROVED) |
+| 2 | Claude Code THEO Backend Governor — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/governance/CLAUDE_CODE_THEO_BACKEND_GOVERNOR_STANDARD.md` | grounded | `e44cdd85d3d0e5df332dc754cdec731e2e68022e` |
+| 3 | THEO Golden Handler Standard (§2 PR pairing; §3 as-user/RLS; §5 mirror; §5.5 Kudu deploy) — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/governance/THEO_GOLDEN_HANDLER_STANDARD.md` | `Read` this turn | `f8f0e5ea36447502e35fb87b373c94e376f05cbb` |
+| 4 | THEO Backend Grounding Conformance — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/governance/THEO_GROUNDING_CONFORMANCE_STANDARD.md` | grounded | `7c0d902bdff3b6c0af475b483e31ed796214e57b` |
+| 5 | Codex THEO Backend Review Standard — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/governance/CODEX_THEO_BACKEND_REVIEW_STANDARD.md` | grounded | `d2e1b9881b6e2ed7d77921a055feffb0852257fd` |
+| 6 | PRIMARY REFERENCE (DEPLOYED; shipped byte-verbatim) — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/Codex Governance/Dottie-Adjudicate-Backend-Pass-1-VEP/PRIMARY_REFERENCE.dottie_ask.index.js` (+ `.function.json`) | `Read(full)` this turn; **fetched live from func-dottie wwwroot + hash-matched** | `531568ca1ef7768ad2ce11fd8692f90911a265ad` (= live VFS byte-for-byte) |
+| 7 | TOOL-LOOP REFERENCE (DEPLOYED, func-dottie-stream) — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/Codex Governance/Dottie-D2-Stream-Backend-Pass-1-VEP/proposed-app/src/functions/dottie_message_stream.js` (Responses-API `function_call`/`function_call_output` loop) | `Read` this turn | `51807a160c63a46cb6a47d44eba1f6529f3ec492` |
+| 8 | SIGMA ACT ENDPOINT (DEPLOYED, package ①) — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/sigma/Codex Governance/Sigma-Backend-Governance-Tool-Pass-1-VEP/handlers/sigma_governance_tool/index.js` | grounded (deployed + golden-curl-verified this session) | `ec0c783e20fdb6978cba8c498952d6213e43967c` |
+| 9 | SIGMA CONTEXT ENDPOINT (DEPLOYED) — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/sigma/Codex Governance/Sigma-Backend-SummaryFigures-Pass-1-VEP/handlers/sigma_get_review/index.js` (returns `{ review, checks[] }`) | `Read(full)` this turn; **fetched live from func-sigma wwwroot + hash-matched** | `7486300f8fa48af25c98a63291eb5d981a1f652d` (= live VFS) |
+| 10 | DEPLOYED engine tool set (the six tools + descriptions) — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/sigma/Codex Governance/Sigma-Backend-2-ReviewAgent-Pass-1-VEP/engine/tool-loop.js` | grounded (live-VFS hash-matched this session) | `ec50418273880dd051a33561dbb76fa4b4792a22` |
+| 11 | FE RENDERER CONTRACT (DEPLOYED) — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/lib/check.ts` (`CheckData` / `parseCheck`) | `Read(full)` this turn | `53fd892efab9541299efe2106c7ed3d3162fcb96` |
+| 12 | NEW handler (this package) — `c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/Codex Governance/Dottie-Adjudicate-Backend-Pass-1-VEP/dottie_adjudicate.index.js` (+ function.json) | authored this turn | `f2d1b0e29666251f509e829331e235eacea41198` (+ function.json `d49458688b3cd0e7786d71908773560857a2afd8`) |
+
+## Rule Anchor Table
+
+| Source doc (absolute path) | Clause id | Verbatim clause text (read this turn) | Applied in output at |
+| -------------------------- | --------- | ------------------------------------- | -------------------- |
+| c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-origin/Codex Governance/VO-AH-Dottie-Governance-First-Check-Contract-Pass-1/VO_AH_Dottie_Governance_First_Check_Contract_Pass_1.md | §C4 | "out { verdict_payload }" | handler returns `successBody({ review_id, control_id, message, verdict_payload, model })` |
+| c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-origin/Codex Governance/VO-AH-Dottie-Governance-First-Check-Contract-Pass-1/VO_AH_Dottie_Governance_First_Check_Contract_Pass_1.md | §C4 | "the SAME mechanism Dottie already uses for a substantive/adjudication answer" | the model emits ONE `[[CHECK]]` block per `ADJUDICATION_SYSTEM_PROMPT`; handler returns it in `message` |
+| c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-origin/Codex Governance/VO-AH-Dottie-Governance-First-Check-Contract-Pass-1/VO_AH_Dottie_Governance_First_Check_Contract_Pass_1.md | §CODEX/§6D(2) | "as the signed-in user on the shared EasyAuth audience" | `sigmaGet`/`sigmaPost` forward the caller's bearer to func-sigma; `review_id` injected server-side |
+| c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/governance/THEO_GOLDEN_HANDLER_STANDARD.md | §3 | "honouring deployed RLS" | all Sigma calls run as the user (no elevated creds); Sigma's owner∨reviewer RLS applies unchanged |
+| c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/governance/THEO_GOLDEN_HANDLER_STANDARD.md | §5 | "EXACT / ALLOWED DELTA / DEVIATION" | §5.1 Structural Mirror Table classifies every region against the primary reference |
+| c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/src/theo/lib/check.ts | header | "the structured body of a [[CHECK]]...[[/CHECK]] block" | the emit contract in `ADJUDICATION_SYSTEM_PROMPT` mirrors the deployed `CheckData` field set |
+| c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/Codex Governance/Dottie-Adjudicate-Backend-Pass-1-VEP/PRIMARY_REFERENCE.dottie_ask.index.js | getAadToken | "Client-credentials token for a given Azure resource scope" | handler `getAadToken` + `requestUrl` + envelope helpers EXACT-mirror the primary reference |
+| c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/vault-dottie/Codex Governance/Dottie-D2-Stream-Backend-Pass-1-VEP/proposed-app/src/functions/dottie_message_stream.js | tool-loop | "re-open the turn" | handler tool-loop mirrors the deployed Responses-API function_call/function_call_output accumulation (buffered) |
+| c:/Users/WalterMansfield/Vault Group LLP/Innovate - Documents/Tax Workpapers Project/2026/sigma/Codex Governance/Sigma-Backend-SummaryFigures-Pass-1-VEP/handlers/sigma_get_review/index.js | checks-select | "control_id, control_group, ctype, severity, status, computed, delta, cell_refs" | pre-fetch extracts the exception row for `control_id` and feeds its recorded figures to the model |
+
+## §1 — Feature identification / sourcing
+Implements package ② of the APPROVED first-check contract (§C4/§C3). NEW endpoint `POST /api/dottie_adjudicate` on `func-dottie` (`vaultgpt-func-dottie`, v1 classic, Kudu-VFS). It is the governance-agent half of §6D(2): given `{ review_id, claim:{ kind:'exception_clearance', control_id, theo_assessment?, preparer_response? } }`, func-dottie (a) pre-fetches the review + recorded checks via the DEPLOYED `sigma_get_review` (as-user), (b) runs a gpt-5 tool-loop declaring the six §C2 tools — each call dispatched to the DEPLOYED `sigma_governance_tool` (as-user, `review_id` injected server-side) — to INDEPENDENTLY re-derive, (c) judges the clearance and emits ONE `[[CHECK]]` block. Writes nothing to Sigma. No other-repo change.
+
+## §2 — Primary Reference
+**PRIMARY REFERENCE: `dottie_ask`** (`PRIMARY_REFERENCE.dottie_ask.index.js` + `.function.json`, shipped byte-verbatim from the **deployed** handler at blob `531568ca` — fetched live from `func-dottie` `wwwroot/dottie_ask/index.js` and hash-matched this turn; Golden Handler §2 — the one deployed handler on the SAME app with the same structural role: EasyAuth-gated v1 handler that mints a client-credentials token and calls the in-tenant gpt-5 deployment). The new handler EXACT-mirrors its `corsHeaders`/`send`/`nowIso`/`errorBody`/`successBody`/`getPrincipal`/`getClaimValue`/`requestUrl`/`parseJsonSafe`/`getAadToken` and its OID-claim gate. It diverges (all §C4-mandated) by: (a) the model call is the **Responses API** (buffered) with a bounded function-tool loop — the deployed tool-loop mechanics are the SECONDARY reference `dottie_message_stream` (currency #7); (b) it forwards the user bearer to func-sigma for as-user Sigma calls; (c) it emits a `[[CHECK]]` block (the deployed `CheckData` emit contract, currency #11). Not composite; not greenfield.
+
+## §5.1 — Component Structural Mirror Table
+| Region (new handler) | Reference region | Classification |
+|---|---|---|
+| `corsHeaders` / `send` / `nowIso` / `errorBody` / `successBody` | `dottie_ask` (PR) | EXACT (+ `x-ms-token-aad-access-token` added to allow-headers for as-user forwarding) |
+| `getPrincipal` / `getClaimValue` / OID gate → 401 | `dottie_ask` (PR) | EXACT |
+| `requestUrl` / `parseJsonSafe` / `getAadToken` (client-creds; `OPENAI_SCOPE`) | `dottie_ask` (PR) | EXACT (byte-identical) |
+| body parse (`req.body` string/object/JSON) | `dottie_ask` (PR) | EXACT |
+| `getUserBearer` (Authorization → `x-ms-token-aad-access-token` fallback) | `dottie_message_stream` userBearer + `sigma_governance_tool` `getOboInputToken` | ALLOWED DELTA (as-user forwarding to func-sigma) |
+| fail-closed input validation (`review_id` uuid; `claim` object; `kind==='exception_clearance'`; `control_id` non-empty; `theo_assessment`/`preparer_response` typed) → 400 | (governance §3 fail-closed; matches package ① discipline) | ALLOWED DELTA (deterministic 400s before any upstream call) |
+| `sigmaGet`/`sigmaPost` (forward bearer to func-sigma) + `sigma_get_review` pre-fetch + exception extraction (404/422) | `sigma_get_review` (currency #9) | ALLOWED DELTA (as-user read; `{review, checks[]}`; 0-visible → 404; control absent → 422) |
+| Responses-API buffered tool loop (`readResponsesOutput`; `function_call`/`function_call_output` accumulation; `MAX_TOOL_TURNS`) | `dottie_message_stream` (currency #7) | ALLOWED DELTA (buffered, not streamed; declares the six §C2 tools) |
+| `dispatchSigmaTool` (→ `sigma_governance_tool`, `review_id` injected; never throws; `{result}`/`{error}`) | `dottie_message_stream` `dispatchTodoTool` (as-user, unwrap `{data}`/`{error}`) | ALLOWED DELTA (§C2 act dispatch) |
+| `[[CHECK]]` emit via `ADJUDICATION_SYSTEM_PROMPT` + `extractVerdictPayload` | `dottie_message_stream` `DOTTIE_SYSTEM_PROMPT` emit section + `CheckData` (currency #11) | ALLOWED DELTA (adjudication persona; verdict always set) |
+| success envelope `{ review_id, control_id, message, verdict_payload, model }` | `dottie_ask` `successBody` | ALLOWED DELTA (adjudication payload; `message` carries the block) |
+| catch → 500 (`context.log.error`, generic message) | `dottie_ask` (PR) | EXACT |
+
+**No DEVIATION.** Every divergence is an ALLOWED DELTA mandated by §C4 (tool-loop, as-user Sigma dispatch, `[[CHECK]]` emit); the auth/envelope/token/model-transport scaffold is EXACT to the deployed `dottie_ask`.
+
+## §5.2 — Golden SQL
+**NONE.** The handler issues no SQL. It makes read/compute-only HTTP calls to Sigma (`sigma_get_review`, `sigma_governance_tool`) as the signed-in user; Sigma owns all DB access (and itself only reads). No migration, no table, no schema change in either repo.
+
+## §5.3 — Golden Curl (run at Pass-3, post-Kudu-deploy)
+```
+TOKEN=$(az account get-access-token --resource api://4e1a1e31-5c20-4480-99e4-098901707d9e --query accessToken -o tsv)   # as wmansfield@vault-tax.com
+curl -sS -X POST "https://vaultgpt-func-dottie.azurewebsites.net/api/dottie_adjudicate" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"review_id":"<a real review VISIBLE to the signed-in user, with a resolved workbook set + an exception>","claim":{"kind":"exception_clearance","control_id":"<a control_id present in that review>","preparer_response":"Recalculated; the K total now ties."}}'
+# Expect 200: { "data": { "review_id":"…", "control_id":"…", "message":"…[[CHECK]]{…}[[/CHECK]]…", "verdict_payload": { "verdict":"concur|caution|challenge", "lead":"…", … }, "model":"gpt-5…" }, "meta": {…} }
+```
+Negative asserts (no real review needed): no token → 401 (platform EasyAuth); `{}` (missing `review_id`) → 400; malformed `review_id` → 400; `claim.kind:"other"` → 400; missing `claim.control_id` → 400; a review the user cannot see → 404 NOT_FOUND (no 403 leak); a valid review with no check for that `control_id` → 422 CONTROL_NOT_IN_REVIEW. `review_id`/`control_id` are runtime values bound to a real visible review at verification.
+
+## §GAP — Gap Register
+**PROCEED.**
+- **G-1 — six-tool subset (grounded decision, disclosed).** The DEPLOYED engine is a 9-tool superset (`list_sheets`/`read_cell`/`recompute_control` beyond the six). This handler declares only the six §C2 tools — sufficient for exception-clearance adjudication (re-derive via `find_label`/`get_range`/`tie_out`/`k1_box_tie`). Widening to the extra tools would require a contract amendment + package ① widening; deliberately deferred. Keeps this package inside the APPROVED §C2 catalog. Disclosed.
+- **G-2 — shared audience satisfied (verified).** `func-dottie` and `func-sigma` share EasyAuth app `4e1a1e31-…` / audience `api://4e1a1e31-…` (verified via `az webapp auth` this session), so the forwarded user bearer authenticates at func-sigma. The §PREREQ Walter-executed gate is met.
+- **G-3 — advisory, writes nothing.** The handler never mutates Sigma; the reviewer counter-sign (`sigma_signoff_review`) stays the integrity gate (matches `theo_assessment` being descriptive, not authorization-bearing). Disclosed.
+- **G-4 — Responses-API buffered.** The deployed tool-loop evidence (`dottie_message_stream`) uses the Responses API; this handler mirrors it with `stream:false` (adjudication is one request → one verdict). No streaming/SSE surface. Env `AZURE_OPENAI_RESPONSES_API_VERSION` defaults to the deployed stream handler's value. PROCEED.
+- **G-5 — deploy is Pass-3 (Kudu VFS).** On APPROVED, Claude Code deploys `dottie_adjudicate/{index.js,function.json}` to `vaultgpt-func-dottie` via Kudu VFS (classic per-function), restart, `syncfunctiontriggers`, then runs §5.3. No new app setting required (`AZURE_OPENAI_*`, `AAD_*` already present for `dottie_ask`; `SIGMA_API_BASE_URL` defaults to the public func-sigma host).
+- **G-6 — no schema/migration/model-secret/dependency.** Node built-ins only (`http`/`https`/`URL`); `dependencies:{}` unchanged. PROCEED.
+
+## §5.4 — Parity Checklist
+As-user (bearer forwarded; `review_id` injected server-side so the model cannot retarget) ✓ · no elevated creds (no service principal against Sigma; client-creds token used ONLY for the in-tenant gpt-5, exactly as `dottie_ask`) ✓ · **input fail-closed** (uuid `review_id`; `claim` object; `kind` gate; non-empty `control_id`; typed `theo_assessment`/`preparer_response`; all before any upstream call) ✓ · writes nothing to Sigma ✓ · leaks no tokens/OIDs/URLs (errors generic; `context.log.error` logs no body/token) ✓ · tool dispatch never throws (returns `{error}` the model can read) ✓ · `[[CHECK]]` shape matches the deployed `parseCheck`/`CheckData` ✓ · `node --check` clean ✓ · envelope matches the deployed `successBody`/`errorBody` conventions ✓.
+
+## Mechanical lint
+`node tools/lint_microstep_submission.mjs "Codex Governance/Dottie-Adjudicate-Backend-Pass-1-VEP/Dottie_Adjudicate_Backend_VEP.md" --repo-root .` — expect PASS.
+
+## Requested action
+Codex Pass-2 backend review against the THEO Golden Handler + Backend Conformance. Code-bearing; the DEPLOYED primary reference (`dottie_ask`) is shipped byte-verbatim in `PRIMARY_REFERENCE.dottie_ask.*`. Confirm: (1) implements the APPROVED §C4 contract — gpt-5 tool-loop over the six §C2 tools, as-user, `review_id` server-injected, re-derive + judge, emit ONE `[[CHECK]]` block, writes nothing; (2) auth/envelope/token/model-transport regions EXACT to the deployed `dottie_ask` (§5.1); the tool-loop mirrors the deployed `dottie_message_stream` (buffered); (3) fail-closed input; as-user Sigma calls honour deployed RLS; (4) no schema/writes/model-secret/dependency. On APPROVED, Claude Code deploys via Kudu VFS + runs the golden curl. Emit APPROVED or REJECTED only.
+
+*End of Dottie `dottie_adjudicate` Pass-1 Backend VEP (code-bearing).*
